@@ -26,7 +26,8 @@
   - carts
   - cart_items
   - inventory_reservations
-  - inventory_items (reserved counter)
+  - inventory_reservation_requests (async queue)
+  - inventory_stocks (reserved counter)
 
 ## Flows
 - Add item:

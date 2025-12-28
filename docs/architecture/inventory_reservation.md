@@ -24,6 +24,7 @@
    - Atomically update `inventory_stocks`:
      - `reserved = reserved + qty` only if `stock - reserved >= qty`.
    - If update fails, rollback and return out-of-stock.
+   - Digital variants skip reservation and inventory updates.
 
 2) Release (expiry or cart item removal):
    - Background worker selects expired `active` reservations using `FOR UPDATE SKIP LOCKED`.

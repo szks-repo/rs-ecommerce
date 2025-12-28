@@ -16,6 +16,11 @@
 ## Development
 - `docs/dev/setup.md`
 
+## Workspace Layout
+- `rs-ecommerce` (root crate): API server
+- `crates/common`: shared telemetry/env helpers
+- `crates/workers/inventory-worker`: inventory reservation worker
+
 ## Operations
 - `docs/operations/audit_log.md`
 - `docs/operations/logging.md`

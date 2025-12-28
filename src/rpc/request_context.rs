@@ -6,6 +6,8 @@ use axum::{
 };
 use axum::http::HeaderValue;
 use tracing::info;
+use opentelemetry::trace::{TraceContextExt, TraceId};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Clone, Default)]
 pub struct RequestContext {
@@ -27,6 +29,10 @@ pub async fn inject_request_context(req: Request<Body>, next: Next) -> Response 
     let method = req.method().clone();
     let path = req.uri().path().to_string();
     let request_id = ctx.request_id.clone();
+    // Attach trace_id to the current span if available (OpenTelemetry).
+    if let Some(trace_id) = current_trace_id().or_else(|| request_id.clone()) {
+        tracing::Span::current().record("trace_id", &trace_id);
+    }
     let mut res = REQUEST_CONTEXT
         .scope(ctx.clone(), async move {
             info!(
@@ -95,4 +101,15 @@ fn extract_user_agent(headers: &HeaderMap) -> Option<String> {
         .get(axum::http::header::USER_AGENT)
         .and_then(|v| v.to_str().ok())
         .map(|v| v.to_string())
+}
+
+fn current_trace_id() -> Option<String> {
+    let span = tracing::Span::current();
+    let ctx = span.context();
+    let trace_id = ctx.span().span_context().trace_id();
+    if trace_id == TraceId::INVALID {
+        None
+    } else {
+        Some(trace_id.to_string())
+    }
 }

@@ -2,12 +2,14 @@
 
 ## Purpose
 - Manage order lifecycle, status transitions, and shipments.
+- Support digital fulfillment with signed URLs.
 
 ## Scope
 - Included:
   - Order list/read (backoffice)
   - Status updates (bank transfer / COD)
   - Shipment create/update
+  - Issue digital delivery links for digital variants
 - Excluded:
   - Payment capture automation (future)
   - Returns/refunds (future)
@@ -15,9 +17,13 @@
 ## Domain Model (draft)
 - Entities:
   - Order
+  - OrderItem
   - Shipment
+  - DigitalDelivery
 - Invariants:
   - Shipment belongs to order
+- Digital deliveries exist only for digital variants
+  - URL expiry / max downloads are resolved per product or store defaults
 
 ## APIs
 - BackofficeService.ListOrders
@@ -28,7 +34,9 @@
 ## Data Model
 - Tables:
   - orders
+  - order_items
   - shipments
+  - digital_deliveries
 
 ## Flows
 - Checkout:

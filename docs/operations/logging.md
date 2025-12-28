@@ -11,6 +11,7 @@
 
 ## Correlation
 - `x-request-id` is injected and logged in the HTTP trace span.
+- `trace_id` is logged when OpenTelemetry is enabled; otherwise `request_id` is used as a fallback.
 - Pass `x-request-id` across services when available.
 
 ## Health
@@ -24,6 +25,7 @@
 - The API server uses `tower_http::TraceLayer` for request spans.
 - Workers should emit batch/loop metrics (done/failed) per cycle.
 - Workers support `LOG_FORMAT=json` and `RUST_LOG` like the API.
+- Responses include `x-request-id` when provided or generated.
 
 ## OpenTelemetry (Jaeger)
 - Use OTLP exporter with Jaeger Collector.

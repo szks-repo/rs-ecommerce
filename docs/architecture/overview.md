@@ -77,16 +77,32 @@
 - vendors
   - id, tenant_id, name, commission_rate, status
   - For single-brand, vendor may be the tenant's own store (1:1)
+- stores
+  - id, tenant_id, name, status
+- store_locations
+  - id, store_id, code, name, status
 - products
-  - id, tenant_id, vendor_id, title, description, status
+  - id, tenant_id, store_id, vendor_id, title, description, status
+- product_locations
+  - product_id, location_id
+- store_digital_settings
+  - store_id, default_url_ttl_seconds, default_max_downloads
+- product_digital_settings
+  - product_id, url_ttl_seconds, max_downloads
 - variants
-  - id, product_id, sku, price, compare_at, weight, options
-- inventory
-  - id, variant_id, stock, reserved
+  - id, product_id, sku, fulfillment_type, price_amount, compare_at_amount, status
+- inventory_stocks
+  - id, tenant_id, store_id, location_id, variant_id, stock, reserved
+- inventory_reservations
+  - id, tenant_id, store_id, cart_id, variant_id, qty, status, expires_at
+- inventory_reservation_requests
+  - id, tenant_id, store_id, cart_id, variant_id, qty, status, is_hot
 - orders
   - id, tenant_id, customer_id, status, total, payment_method
 - order_items
   - id, order_id, vendor_id, variant_id, price, qty
+- digital_deliveries
+  - id, order_item_id, provider, object_key, url_expires_at, status
 - payments
   - id, order_id, method (bank_transfer | cod), status
 - shipments
@@ -113,12 +129,18 @@
 
 ## Events / Async
 
+### Inventory Reservation Worker
+- Add-to-cart enqueues reservation requests.
+- Worker processes queue in small batches and releases expired holds.
+- Hot items are separated via `is_hot` to avoid blocking other traffic.
+
 ### Core Events
 - product.updated
 - inventory.updated
 - price.updated
 - order.placed
 - inventory.reservation.expired
+ - inventory.reservation.requested
 - order.status_changed
 
 ### Uses

@@ -16,11 +16,14 @@
 ## Domain Model (draft)
 - Entities:
   - Product
-  - Variant
-  - InventoryItem
+  - Variant (SKU)
+  - InventoryStock
+  - StoreLocation
 - Invariants:
   - Variant belongs to a product
-  - Inventory is per variant
+  - Inventory is per variant + location (physical only)
+  - Product can be linked to one or more store locations
+  - Digital variants do not require inventory rows
 
 ## APIs
 - BackofficeService.CreateProduct / UpdateProduct
@@ -31,8 +34,10 @@
 ## Data Model
 - Tables:
   - products
+  - product_locations
+  - store_locations
   - variants
-  - inventory_items
+  - inventory_stocks
 
 ## Flows
 - Product create/update:

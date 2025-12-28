@@ -9,6 +9,19 @@ DROP TABLE IF EXISTS inventory_items;
 DROP TABLE IF EXISTS variants;
 DROP TABLE IF EXISTS products;
 
+CREATE TABLE IF NOT EXISTS store_locations (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL REFERENCES tenants(id),
+    store_id uuid NOT NULL REFERENCES stores(id),
+    code text NOT NULL,
+    name text NOT NULL,
+    status text NOT NULL,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (store_id, code)
+);
+
 CREATE TABLE IF NOT EXISTS products (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
@@ -21,10 +34,31 @@ CREATE TABLE IF NOT EXISTS products (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS product_locations (
+    product_id uuid NOT NULL REFERENCES products(id),
+    location_id uuid NOT NULL REFERENCES store_locations(id),
+    PRIMARY KEY (product_id, location_id)
+);
+
+CREATE TABLE IF NOT EXISTS store_digital_settings (
+    store_id uuid PRIMARY KEY REFERENCES stores(id),
+    default_url_ttl_seconds int NOT NULL DEFAULT 86400,
+    default_max_downloads int,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS product_digital_settings (
+    product_id uuid PRIMARY KEY REFERENCES products(id),
+    url_ttl_seconds int,
+    max_downloads int,
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS variants (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id uuid NOT NULL REFERENCES products(id),
     sku text NOT NULL,
+    fulfillment_type text NOT NULL DEFAULT 'physical',
     price_amount bigint NOT NULL,
     price_currency text NOT NULL,
     compare_at_amount bigint,
@@ -44,11 +78,12 @@ CREATE TABLE IF NOT EXISTS inventory_stocks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
     store_id uuid NOT NULL REFERENCES stores(id),
+    location_id uuid NOT NULL REFERENCES store_locations(id),
     variant_id uuid NOT NULL REFERENCES variants(id),
     stock int NOT NULL,
     reserved int NOT NULL,
     updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (variant_id)
+    UNIQUE (variant_id, location_id)
 );
 
 -- Reservation records (time-bound holds).
@@ -127,4 +162,17 @@ CREATE TABLE IF NOT EXISTS order_items (
     price_amount bigint NOT NULL,
     price_currency text NOT NULL,
     quantity int NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS digital_deliveries (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_item_id uuid NOT NULL REFERENCES order_items(id),
+    provider text NOT NULL, -- gcs | s3 | other
+    object_key text NOT NULL,
+    url_expires_at timestamptz,
+    max_downloads int,
+    downloaded_count int NOT NULL DEFAULT 0,
+    status text NOT NULL, -- active | expired | revoked
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );

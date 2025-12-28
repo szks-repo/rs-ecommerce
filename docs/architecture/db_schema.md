@@ -52,6 +52,16 @@ Note: In single-brand mode, a tenant can have exactly one vendor representing th
 
 Note: `store_settings` and related configuration tables are linked by `store_id` (keeping `tenant_id` for now).
 
+### store_locations
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- code (text, unique per store)
+- name (text)
+- status (text)
+- metadata (jsonb)
+- created_at, updated_at
+
 ## Catalog (v2)
 
 ### products
@@ -64,10 +74,27 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - status (text) -- draft | active | archived
 - created_at, updated_at
 
+### product_locations
+- product_id (uuid, fk -> products.id)
+- location_id (uuid, fk -> store_locations.id)
+
+### store_digital_settings
+- store_id (uuid, fk -> stores.id)
+- default_url_ttl_seconds (int)
+- default_max_downloads (int, nullable)
+- updated_at
+
+### product_digital_settings
+- product_id (uuid, fk -> products.id)
+- url_ttl_seconds (int, nullable)
+- max_downloads (int, nullable)
+- updated_at
+
 ### variants
 - id (uuid, pk)
 - product_id (uuid, fk -> products.id)
 - sku (text, unique per product)
+- fulfillment_type (text) -- physical | digital
 - price_amount (bigint)
 - price_currency (text)
 - compare_at_amount (bigint, nullable)
@@ -81,6 +108,7 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - id (uuid, pk)
 - tenant_id (uuid, fk -> tenants.id)
 - store_id (uuid, fk -> stores.id)
+- location_id (uuid, fk -> store_locations.id)
 - variant_id (uuid, fk -> variants.id)
 - stock (int)
 - reserved (int)
@@ -168,8 +196,20 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - order_id (uuid, fk -> orders.id)
 - vendor_id (uuid, fk -> vendors.id)
 - variant_id (uuid, fk -> variants.id)
-- price (numeric)
+- price_amount (bigint)
+- price_currency (text)
 - quantity (int)
+
+### digital_deliveries
+- id (uuid, pk)
+- order_item_id (uuid, fk -> order_items.id)
+- provider (text) -- gcs | s3 | other
+- object_key (text)
+- url_expires_at (timestamptz, nullable)
+- max_downloads (int, nullable)
+- downloaded_count (int)
+- status (text) -- active | expired | revoked
+- created_at, updated_at
 
 ### order_addresses
 - id (uuid, pk)
@@ -226,21 +266,29 @@ Search index is external (Meilisearch). Track update cursors if needed:
 - last_product_sync_at (timestamp)
 
 ## Indices (Initial)
-- products(tenant_id, status)
-- variants(product_id)
-- inventory_items(variant_id)
+- products(store_id, status)
+- store_locations(store_id, code)
+- store_digital_settings(store_id)
+- product_digital_settings(product_id)
+- variants(product_id, sku)
+- inventory_stocks(variant_id, location_id)
+- inventory_reservations(expires_at) WHERE status = 'active'
+- inventory_reservation_requests(status, is_hot, created_at)
 - orders(tenant_id, created_at)
 - order_items(order_id)
+- digital_deliveries(order_item_id)
 - customers(tenant_id, email)
 - shipments(order_id, vendor_id)
 - carts(tenant_id, created_at)
 
 ## Constraints (Initial)
-- variants.sku unique per tenant
-- inventory_items.stock >= 0
-- inventory_items.reserved >= 0
+- variants.sku unique per product
+- inventory_stocks.stock >= 0
+- inventory_stocks.reserved >= 0
+- inventory_reservations.quantity > 0
 - order_items.quantity > 0
 - cart_items.quantity > 0
+- digital_deliveries.downloaded_count >= 0
 
 ## Notes
 - Split orders into vendor shipments for mall mode.
