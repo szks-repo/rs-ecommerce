@@ -29,6 +29,10 @@ The current approach is:
 - The middleware currently maps tokens to `ActorContext` for audit logging.
 - Full JWT verification design is documented in `docs/api/auth.md`.
 
+## Identity (single entry)
+Identity関連のAPIは `IdentityService` のみを公開する。  
+`AuthService` / `StoreStaffService` / `RoleService` は削除済み。
+
 ## Endpoints
 - POST `/rpc/{fully.qualified.Service/Method}`
 - Example: `/rpc/ecommerce.v1.StorefrontService/ListProducts`

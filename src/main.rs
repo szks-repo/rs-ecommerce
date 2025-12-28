@@ -5,6 +5,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 mod catalog;
 mod cart;
 mod audit;
+mod identity;
 mod order;
 mod promotion;
 mod infrastructure;

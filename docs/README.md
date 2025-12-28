@@ -4,6 +4,8 @@
 - `docs/architecture/overview.md`
 - `docs/architecture/db_schema.md`
 - `docs/architecture/proto_organization.md`
+- `docs/architecture/auth_ui.md`
+- `docs/architecture/identity.md`
 
 ## API
 - `docs/api/connectrpc.md`
@@ -37,3 +39,5 @@
 - Setup
   - `docs/features/setup/overview.md`
   - `docs/features/setup/api.md`
+  - `docs/features/setup/ui_spec.md`
+  - `docs/features/setup/login_ui_spec.md`

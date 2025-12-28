@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+// AuthService removed. Use IdentityService/SignIn.
+
+message SignInRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string email = 3;
+  string login_id = 4;
+  string phone = 5;
+  string password = 6;
+}
+
+message SignInResponse {
+  string access_token = 1;
+  string store_id = 2;
+  string tenant_id = 3;
+  string staff_id = 4;
+  string role = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}

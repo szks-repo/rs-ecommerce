@@ -3,7 +3,7 @@
 These examples use JSON-only ConnectRPC framing (proto JSON mapping).
 Requests are POST to `/rpc/{fully.qualified.Service/Method}` with `Content-Type: application/json`.
 Actor can be provided either in the request body (`actor`) or via headers:
-- `Authorization: Bearer <token>` (mapped to `actorId`, `actorType=api`)
+- `Authorization: Bearer <token>` (mapped to `actorId`, `actorType` from token claims)
 - `x-actor-id`, `x-actor-type` (manual override for local/dev)
 When `Authorization` is present, the server should treat it as authoritative and ignore the body `actor`.
 
@@ -155,52 +155,10 @@ Response:
 Request:
 ```json
 {
-  "tenantName": "Example Store",
-  "settings": {
-    "storeName": "Example Store",
-    "legalName": "Example Co., Ltd.",
-    "contactEmail": "support@example.com",
-    "contactPhone": "03-0000-0000",
-    "addressPrefecture": "Tokyo",
-    "addressCity": "Shibuya",
-    "addressLine1": "1-2-3",
-    "legalNotice": "特商法表記...",
-    "defaultLanguage": "ja",
-    "currency": "JPY",
-    "taxMode": "inclusive",
-    "taxRounding": "round",
-    "orderInitialStatus": "PENDING_PAYMENT",
-    "codEnabled": true,
-    "codFee": { "currency": "JPY", "amount": 330 },
-    "bankName": "Example Bank",
-    "bankBranch": "Shibuya",
-    "bankAccountType": "normal",
-    "bankAccountNumber": "1234567",
-    "bankAccountName": "EXAMPLE",
-    "theme": "default",
-    "brandColor": "#000000"
-  },
-  "mall": {
-    "enabled": false,
-    "commissionRate": 0.0,
-    "vendorApprovalRequired": true
-  },
-  "defaultZone": {
-    "name": "Japan",
-    "domesticOnly": true,
-    "prefectures": [
-      { "code": "JP-13", "name": "Tokyo" }
-    ]
-  },
-  "defaultRate": {
-    "name": "Standard",
-    "fee": { "currency": "JPY", "amount": 660 }
-  },
-  "defaultTaxRule": {
-    "name": "VAT",
-    "rate": 0.1,
-    "appliesTo": "all"
-  },
+  "storeName": "Example Store",
+  "ownerEmail": "owner@example.com",
+  "ownerPassword": "your-password",
+  "ownerLoginId": "owner-001",
   "actor": { "actorId": "admin_123", "actorType": "admin" }
 }
 ```
@@ -209,9 +167,9 @@ Response:
 ```json
 {
   "tenantId": "generated",
-  "vendorId": "generated",
-  "settings": { "storeName": "Example Store" },
-  "mall": { "enabled": false }
+  "storeId": "generated",
+  "ownerStaffId": "generated",
+  "vendorId": "generated"
 }
 ```
 
@@ -220,40 +178,11 @@ Response:
 ```bash
 curl -X POST http://localhost:8080/rpc/ecommerce.v1.SetupService/InitializeStore \
   -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer api_admin_123' \
-  -H 'x-actor-id: admin_123' \
-  -H 'x-actor-type: admin' \
   -d '{
-    "tenantName": "Example Store",
-    "settings": {
-      "storeName": "Example Store",
-      "legalName": "Example Co., Ltd.",
-      "contactEmail": "support@example.com",
-      "contactPhone": "03-0000-0000",
-      "addressPrefecture": "Tokyo",
-      "addressCity": "Shibuya",
-      "addressLine1": "1-2-3",
-      "legalNotice": "特商法表記...",
-      "defaultLanguage": "ja",
-      "currency": "JPY",
-      "taxMode": "inclusive",
-      "taxRounding": "round",
-      "orderInitialStatus": "PENDING_PAYMENT",
-      "codEnabled": true,
-      "codFee": { "currency": "JPY", "amount": 330 },
-      "bankName": "Example Bank",
-      "bankBranch": "Shibuya",
-      "bankAccountType": "normal",
-      "bankAccountNumber": "1234567",
-      "bankAccountName": "EXAMPLE",
-      "theme": "default",
-      "brandColor": "#000000"
-    },
-    "mall": {
-      "enabled": false,
-      "commissionRate": 0.0,
-      "vendorApprovalRequired": true
-    },
+    "storeName": "Example Store",
+    "ownerEmail": "owner@example.com",
+    "ownerPassword": "your-password",
+    "ownerLoginId": "owner-001",
     "actor": { "actorId": "admin_123", "actorType": "admin" }
   }'
 ```

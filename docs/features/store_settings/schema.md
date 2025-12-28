@@ -5,7 +5,8 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 ## Core Settings
 
 ### store_settings
-- tenant_id (uuid, pk, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- tenant_id (uuid, fk -> tenants.id) -- legacy (kept for now)
 - store_name (text)
 - legal_name (text)
 - contact_email (text)
@@ -41,7 +42,8 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 
 ### shipping_zones
 - id (uuid, pk)
-- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- tenant_id (uuid, fk -> tenants.id) -- legacy (kept for now)
 - name (text)
 - domestic_only (bool)
 - created_at, updated_at
@@ -66,7 +68,8 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 
 ### tax_rules
 - id (uuid, pk)
-- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- tenant_id (uuid, fk -> tenants.id) -- legacy (kept for now)
 - name (text)
 - rate (numeric) -- 0.1 for 10%
 - applies_to (text) -- all | category | shipping
@@ -75,7 +78,8 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 ## Mall Settings
 
 ### mall_settings
-- tenant_id (uuid, pk, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- tenant_id (uuid, fk -> tenants.id) -- legacy (kept for now)
 - enabled (bool)
 - commission_rate (numeric)
 - vendor_approval_required (bool)

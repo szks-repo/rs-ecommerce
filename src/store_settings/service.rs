@@ -14,7 +14,7 @@ use crate::{
 
 pub async fn get_store_settings(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
@@ -26,10 +26,10 @@ pub async fn get_store_settings(
                bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
                theme, brand_color, logo_url, favicon_url
         FROM store_settings
-        WHERE tenant_id = $1
+        WHERE store_id = $1
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_one(&state.db)
     .await
     .map_err(db::error)?;
@@ -71,12 +71,13 @@ pub async fn get_store_settings(
 
 pub async fn update_store_settings(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     settings: pb::StoreSettings,
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     validate_store_settings(&settings)?;
-    let before = get_store_settings(state, tenant_id.clone()).await.ok();
+    let before = get_store_settings(state, store_id.clone()).await.ok();
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     sqlx::query(
         r#"
@@ -89,7 +90,7 @@ pub async fn update_store_settings(
             bank_name = $21, bank_branch = $22, bank_account_type = $23, bank_account_number = $24,
             bank_account_name = $25, theme = $26, brand_color = $27, logo_url = $28, favicon_url = $29,
             updated_at = now()
-        WHERE tenant_id = $30
+        WHERE store_id = $30
         "#,
     )
     .bind(&settings.store_name)
@@ -121,7 +122,7 @@ pub async fn update_store_settings(
     .bind(&settings.brand_color)
     .bind(&settings.logo_url)
     .bind(&settings.favicon_url)
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -132,7 +133,7 @@ pub async fn update_store_settings(
             tenant_id.clone(),
             "store_settings.update",
             Some("store_settings"),
-            Some(tenant_id.clone()),
+            Some(store_id.clone()),
             to_json_opt(before),
             to_json_opt(Some(settings.clone())),
             actor.clone(),
@@ -145,6 +146,7 @@ pub async fn update_store_settings(
 
 pub async fn initialize_store_settings(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     settings: pb::StoreSettings,
     mall: pb::MallSettings,
@@ -156,7 +158,7 @@ pub async fn initialize_store_settings(
     sqlx::query(
         r#"
         INSERT INTO store_settings (
-            tenant_id, store_name, legal_name, contact_email, contact_phone,
+            store_id, tenant_id, store_name, legal_name, contact_email, contact_phone,
             address_prefecture, address_city, address_line1, address_line2, legal_notice,
             default_language, primary_domain, subdomain, https_enabled, currency,
             tax_mode, tax_rounding, order_initial_status, cod_enabled,
@@ -165,11 +167,13 @@ pub async fn initialize_store_settings(
         ) VALUES (
             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
             $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
-            $21,$22,$23,$24,$25,$26,$27,$28,$29,$30
+            $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+            $31
         )
         ON CONFLICT (tenant_id) DO NOTHING
         "#,
     )
+    .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(&settings.store_name)
     .bind(&settings.legal_name)
@@ -210,7 +214,7 @@ pub async fn initialize_store_settings(
             tenant_id.clone(),
             "store_settings.initialize",
             Some("store_settings"),
-            Some(tenant_id.clone()),
+            Some(store_id.clone()),
             None,
             to_json_opt(Some(settings.clone())),
             actor.clone(),
@@ -220,14 +224,15 @@ pub async fn initialize_store_settings(
 
     sqlx::query(
         r#"
-        INSERT INTO mall_settings (tenant_id, enabled, commission_rate, vendor_approval_required)
-        VALUES ($1,$2,$3,$4)
+        INSERT INTO mall_settings (store_id, tenant_id, enabled, commission_rate, vendor_approval_required)
+        VALUES ($1,$2,$3,$4,$5)
         ON CONFLICT (tenant_id)
         DO UPDATE SET enabled = EXCLUDED.enabled,
                       commission_rate = EXCLUDED.commission_rate,
                       vendor_approval_required = EXCLUDED.vendor_approval_required
         "#,
     )
+    .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(mall.enabled)
     .bind(mall.commission_rate)
@@ -242,7 +247,7 @@ pub async fn initialize_store_settings(
             tenant_id.clone(),
             "mall_settings.initialize",
             Some("mall_settings"),
-            Some(tenant_id.clone()),
+            Some(store_id.clone()),
             None,
             to_json_opt(Some(mall.clone())),
             actor.clone(),
@@ -255,16 +260,16 @@ pub async fn initialize_store_settings(
 
 pub async fn get_mall_settings(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
         SELECT enabled, commission_rate, vendor_approval_required
         FROM mall_settings
-        WHERE tenant_id = $1
+        WHERE store_id = $1
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_one(&state.db)
     .await
     .map_err(db::error)?;
@@ -278,23 +283,24 @@ pub async fn get_mall_settings(
 
 pub async fn update_mall_settings(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     mall: pb::MallSettings,
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     validate_mall_settings(&mall)?;
-    let before = get_mall_settings(state, tenant_id.clone()).await.ok();
+    let before = get_mall_settings(state, store_id.clone()).await.ok();
     sqlx::query(
         r#"
         UPDATE mall_settings
         SET enabled = $1, commission_rate = $2, vendor_approval_required = $3
-        WHERE tenant_id = $4
+        WHERE store_id = $4
         "#,
     )
     .bind(mall.enabled)
     .bind(mall.commission_rate)
     .bind(mall.vendor_approval_required)
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -305,7 +311,7 @@ pub async fn update_mall_settings(
             tenant_id.clone(),
             "mall_settings.update",
             Some("mall_settings"),
-            Some(tenant_id.clone()),
+            Some(store_id.clone()),
             to_json_opt(before),
             to_json_opt(Some(mall.clone())),
             actor.clone(),
@@ -318,17 +324,17 @@ pub async fn update_mall_settings(
 
 pub async fn list_shipping_zones(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
 ) -> Result<Vec<pb::ShippingZone>, (StatusCode, Json<ConnectError>)> {
     let zones = sqlx::query(
         r#"
         SELECT id::text as id, name, domestic_only
         FROM shipping_zones
-        WHERE tenant_id = $1
+        WHERE store_id = $1
         ORDER BY created_at ASC
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -368,6 +374,7 @@ pub async fn list_shipping_zones(
 
 pub async fn upsert_shipping_zone(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     zone: pb::ShippingZone,
     actor: Option<pb::ActorContext>,
@@ -383,11 +390,12 @@ pub async fn upsert_shipping_zone(
     if zone.id.is_empty() {
         sqlx::query(
             r#"
-            INSERT INTO shipping_zones (id, tenant_id, name, domestic_only)
-            VALUES ($1,$2,$3,$4)
+            INSERT INTO shipping_zones (id, store_id, tenant_id, name, domestic_only)
+            VALUES ($1,$2,$3,$4,$5)
             "#,
         )
         .bind(zone_id)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .bind(parse_uuid(&tenant_id, "tenant_id")?)
         .bind(&zone.name)
         .bind(zone.domestic_only)
@@ -399,13 +407,13 @@ pub async fn upsert_shipping_zone(
             r#"
             UPDATE shipping_zones
             SET name = $1, domestic_only = $2, updated_at = now()
-            WHERE id = $3 AND tenant_id = $4
+            WHERE id = $3 AND store_id = $4
             "#,
         )
         .bind(&zone.name)
         .bind(zone.domestic_only)
         .bind(zone_id)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -459,6 +467,7 @@ pub async fn upsert_shipping_zone(
 
 pub async fn delete_shipping_zone(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     zone_id: String,
     actor: Option<pb::ActorContext>,
@@ -470,9 +479,9 @@ pub async fn delete_shipping_zone(
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
-    let res = sqlx::query("DELETE FROM shipping_zones WHERE id = $1 AND tenant_id = $2")
+    let res = sqlx::query("DELETE FROM shipping_zones WHERE id = $1 AND store_id = $2")
         .bind(zone_uuid)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -498,7 +507,7 @@ pub async fn delete_shipping_zone(
 
 pub async fn list_shipping_rates(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
     zone_id: String,
 ) -> Result<Vec<pb::ShippingRate>, (StatusCode, Json<ConnectError>)> {
     let rows = sqlx::query(
@@ -508,11 +517,11 @@ pub async fn list_shipping_rates(
                r.fee_amount, r.fee_currency
         FROM shipping_rates r
         JOIN shipping_zones z ON z.id = r.zone_id
-        WHERE z.tenant_id = $1 AND r.zone_id = $2
+        WHERE z.store_id = $1 AND r.zone_id = $2
         ORDER BY r.created_at ASC
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&zone_id, "zone_id")?)
     .fetch_all(&state.db)
     .await
@@ -542,6 +551,7 @@ pub async fn list_shipping_rates(
 
 pub async fn upsert_shipping_rate(
     state: &AppState,
+    _store_id: String,
     tenant_id: String,
     rate: pb::ShippingRate,
     actor: Option<pb::ActorContext>,
@@ -623,6 +633,7 @@ pub async fn upsert_shipping_rate(
 
 pub async fn delete_shipping_rate(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     rate_id: String,
     actor: Option<pb::ActorContext>,
@@ -631,10 +642,10 @@ pub async fn delete_shipping_rate(
         r#"
         DELETE FROM shipping_rates r
         USING shipping_zones z
-        WHERE r.zone_id = z.id AND z.tenant_id = $1 AND r.id = $2
+        WHERE r.zone_id = z.id AND z.store_id = $1 AND r.id = $2
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&rate_id, "rate_id")?)
     .execute(&state.db)
     .await
@@ -660,17 +671,17 @@ pub async fn delete_shipping_rate(
 
 pub async fn list_tax_rules(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
 ) -> Result<Vec<pb::TaxRule>, (StatusCode, Json<ConnectError>)> {
     let rows = sqlx::query(
         r#"
         SELECT id::text as id, name, rate, applies_to
         FROM tax_rules
-        WHERE tenant_id = $1
+        WHERE store_id = $1
         ORDER BY created_at ASC
         "#,
     )
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -688,6 +699,7 @@ pub async fn list_tax_rules(
 
 pub async fn upsert_tax_rule(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     rule: pb::TaxRule,
     actor: Option<pb::ActorContext>,
@@ -701,11 +713,12 @@ pub async fn upsert_tax_rule(
     if rule.id.is_empty() {
         sqlx::query(
             r#"
-            INSERT INTO tax_rules (id, tenant_id, name, rate, applies_to)
-            VALUES ($1,$2,$3,$4,$5)
+            INSERT INTO tax_rules (id, store_id, tenant_id, name, rate, applies_to)
+            VALUES ($1,$2,$3,$4,$5,$6)
             "#,
         )
         .bind(rule_id)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .bind(parse_uuid(&tenant_id, "tenant_id")?)
         .bind(&rule.name)
         .bind(rule.rate)
@@ -718,14 +731,14 @@ pub async fn upsert_tax_rule(
             r#"
             UPDATE tax_rules
             SET name = $1, rate = $2, applies_to = $3, updated_at = now()
-            WHERE id = $4 AND tenant_id = $5
+            WHERE id = $4 AND store_id = $5
             "#,
         )
         .bind(&rule.name)
         .bind(rule.rate)
         .bind(&rule.applies_to)
         .bind(rule_id)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .execute(&state.db)
         .await
         .map_err(db::error)?;
@@ -757,13 +770,14 @@ pub async fn upsert_tax_rule(
 
 pub async fn delete_tax_rule(
     state: &AppState,
+    store_id: String,
     tenant_id: String,
     rule_id: String,
     actor: Option<pb::ActorContext>,
 ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
-    let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND tenant_id = $2")
+    let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND store_id = $2")
         .bind(parse_uuid(&rule_id, "rule_id")?)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
         .execute(&state.db)
         .await
         .map_err(db::error)?;
@@ -824,6 +838,38 @@ fn actor_fields(actor: Option<pb::ActorContext>) -> (Option<String>, String) {
 
 fn to_json_opt<T: serde::Serialize>(value: Option<T>) -> Option<serde_json::Value> {
     value.and_then(|v| serde_json::to_value(v).ok())
+}
+
+pub async fn resolve_store_context(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    tenant: Option<pb::TenantContext>,
+) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
+    if let Some(store) = store.and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id) }) {
+        let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
+            .bind(parse_uuid(&store, "store_id")?)
+            .fetch_one(&state.db)
+            .await
+            .map_err(db::error)?;
+        let tenant_id: String = row.get("tenant_id");
+        return Ok((store, tenant_id));
+    }
+    if let Some(tenant_id) = tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
+        let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
+            .bind(parse_uuid(&tenant_id, "tenant_id")?)
+            .fetch_one(&state.db)
+            .await
+            .map_err(db::error)?;
+        let store_id: String = row.get("id");
+        return Ok((store_id, tenant_id));
+    }
+    Err((
+        StatusCode::BAD_REQUEST,
+        Json(ConnectError {
+            code: "invalid_argument",
+            message: "store.store_id or tenant.tenant_id is required".to_string(),
+        }),
+    ))
 }
 
 pub fn validate_store_settings(

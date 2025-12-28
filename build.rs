@@ -19,6 +19,10 @@ fn main() {
         "proto/ecommerce/v1/store_settings.proto",
         "proto/ecommerce/v1/setup.proto",
         "proto/ecommerce/v1/audit.proto",
+        "proto/ecommerce/v1/auth.proto",
+        "proto/ecommerce/v1/store_staff.proto",
+        "proto/ecommerce/v1/permissions.proto",
+        "proto/ecommerce/v1/identity.proto",
     ];
     let includes = &["proto"];
 

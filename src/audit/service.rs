@@ -22,18 +22,18 @@ pub async fn list_audit_logs(
     let mut qb = QueryBuilder::new(
         r#"
         SELECT id::text as id,
-               actor_id,
-               actor_type,
-               action,
-               target_type,
-               target_id,
-               request_id,
-               ip_address,
-               user_agent,
-               before_json,
-               after_json,
-               metadata_json,
-               created_at
+            actor_id,
+            actor_type,
+            action,
+            target_type,
+            target_id,
+            request_id,
+            ip_address,
+            user_agent,
+            before_json,
+            after_json,
+            metadata_json,
+            created_at
         FROM audit_logs
         WHERE tenant_id = 
         "#,

@@ -4,57 +4,57 @@ ConnectRPC JSON-only endpoints under `/rpc/ecommerce.v1.StoreSettingsService/*`.
 
 ## Store Settings
 - GetStoreSettings
-  - input: tenant
+  - input: store (preferred), tenant (fallback)
   - output: settings
 - UpdateStoreSettings
-  - input: tenant, settings
+  - input: store (preferred), tenant (fallback), settings
   - output: settings
 - InitializeStoreSettings
-  - input: tenant, settings, mall
+  - input: store (preferred), tenant (fallback), settings, mall
   - output: settings, mall
 
 ## Mall Settings
 - GetMallSettings
-  - input: tenant
+  - input: store (preferred), tenant (fallback)
   - output: mall
 - UpdateMallSettings
-  - input: tenant, mall
+  - input: store (preferred), tenant (fallback), mall
   - output: mall
 
 ## Shipping Zones
 - ListShippingZones
-  - input: tenant
+  - input: store (preferred), tenant (fallback)
   - output: zones[]
 - UpsertShippingZone
-  - input: tenant, zone
+  - input: store (preferred), tenant (fallback), zone
   - output: zone
 - DeleteShippingZone
-  - input: tenant, zone_id
+  - input: store (preferred), tenant (fallback), zone_id
   - output: deleted
 
 ## Shipping Rates
 - ListShippingRates
-  - input: tenant, zone_id
+  - input: store (preferred), tenant (fallback), zone_id
   - output: rates[]
 - UpsertShippingRate
-  - input: tenant, rate
+  - input: store (preferred), tenant (fallback), rate
   - output: rate
 - DeleteShippingRate
-  - input: tenant, rate_id
+  - input: store (preferred), tenant (fallback), rate_id
   - output: deleted
 
 ## Tax Rules
 - ListTaxRules
-  - input: tenant
+  - input: store (preferred), tenant (fallback)
   - output: rules[]
 - UpsertTaxRule
-  - input: tenant, rule
+  - input: store (preferred), tenant (fallback), rule
   - output: rule
 - DeleteTaxRule
-  - input: tenant, rule_id
+  - input: store (preferred), tenant (fallback), rule_id
   - output: deleted
 
 ## Setup
 - InitializeStore (SetupService)
-  - input: tenant_name, settings, mall, default_zone, default_rate, default_tax_rule
-  - output: tenant_id, vendor_id, settings, mall
+  - input: store_name, owner_email, owner_password, owner_login_id
+  - output: tenant_id, store_id, owner_staff_id, vendor_id

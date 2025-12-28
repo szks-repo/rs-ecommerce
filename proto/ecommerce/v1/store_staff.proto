@@ -1,0 +1,25 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+
+// StoreStaffService removed. Use IdentityService/CreateStaff.
+
+message CreateStaffRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string email = 3;
+  string login_id = 4;
+  string phone = 5;
+  string password = 6;
+  string role = 7; // owner | admin | staff
+  ActorContext actor = 8;
+}
+
+message CreateStaffResponse {
+  string staff_id = 1;
+  string store_id = 2;
+  string tenant_id = 3;
+  string role = 4;
+}

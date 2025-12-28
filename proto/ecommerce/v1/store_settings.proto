@@ -91,7 +91,8 @@ message TaxRule {
 }
 
 message GetStoreSettingsRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
 }
 
 message GetStoreSettingsResponse {
@@ -99,9 +100,10 @@ message GetStoreSettingsResponse {
 }
 
 message UpdateStoreSettingsRequest {
-  TenantContext tenant = 1;
-  StoreSettings settings = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  StoreSettings settings = 3;
+  ActorContext actor = 4;
 }
 
 message UpdateStoreSettingsResponse {
@@ -109,10 +111,11 @@ message UpdateStoreSettingsResponse {
 }
 
 message InitializeStoreSettingsRequest {
-  TenantContext tenant = 1;
-  StoreSettings settings = 2;
-  MallSettings mall = 3;
-  ActorContext actor = 4;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  StoreSettings settings = 3;
+  MallSettings mall = 4;
+  ActorContext actor = 5;
 }
 
 message InitializeStoreSettingsResponse {
@@ -121,7 +124,8 @@ message InitializeStoreSettingsResponse {
 }
 
 message GetMallSettingsRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
 }
 
 message GetMallSettingsResponse {
@@ -129,9 +133,10 @@ message GetMallSettingsResponse {
 }
 
 message UpdateMallSettingsRequest {
-  TenantContext tenant = 1;
-  MallSettings mall = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  MallSettings mall = 3;
+  ActorContext actor = 4;
 }
 
 message UpdateMallSettingsResponse {
@@ -139,7 +144,8 @@ message UpdateMallSettingsResponse {
 }
 
 message ListShippingZonesRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
 }
 
 message ListShippingZonesResponse {
@@ -147,9 +153,10 @@ message ListShippingZonesResponse {
 }
 
 message UpsertShippingZoneRequest {
-  TenantContext tenant = 1;
-  ShippingZone zone = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  ShippingZone zone = 3;
+  ActorContext actor = 4;
 }
 
 message UpsertShippingZoneResponse {
@@ -157,9 +164,10 @@ message UpsertShippingZoneResponse {
 }
 
 message DeleteShippingZoneRequest {
-  TenantContext tenant = 1;
-  string zone_id = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string zone_id = 3;
+  ActorContext actor = 4;
 }
 
 message DeleteShippingZoneResponse {
@@ -167,8 +175,9 @@ message DeleteShippingZoneResponse {
 }
 
 message ListShippingRatesRequest {
-  TenantContext tenant = 1;
-  string zone_id = 2;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string zone_id = 3;
 }
 
 message ListShippingRatesResponse {
@@ -176,9 +185,10 @@ message ListShippingRatesResponse {
 }
 
 message UpsertShippingRateRequest {
-  TenantContext tenant = 1;
-  ShippingRate rate = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  ShippingRate rate = 3;
+  ActorContext actor = 4;
 }
 
 message UpsertShippingRateResponse {
@@ -186,9 +196,10 @@ message UpsertShippingRateResponse {
 }
 
 message DeleteShippingRateRequest {
-  TenantContext tenant = 1;
-  string rate_id = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string rate_id = 3;
+  ActorContext actor = 4;
 }
 
 message DeleteShippingRateResponse {
@@ -196,7 +207,8 @@ message DeleteShippingRateResponse {
 }
 
 message ListTaxRulesRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
 }
 
 message ListTaxRulesResponse {
@@ -204,9 +216,10 @@ message ListTaxRulesResponse {
 }
 
 message UpsertTaxRuleRequest {
-  TenantContext tenant = 1;
-  TaxRule rule = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  TaxRule rule = 3;
+  ActorContext actor = 4;
 }
 
 message UpsertTaxRuleResponse {
@@ -214,9 +227,10 @@ message UpsertTaxRuleResponse {
 }
 
 message DeleteTaxRuleRequest {
-  TenantContext tenant = 1;
-  string rule_id = 2;
-  ActorContext actor = 3;
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string rule_id = 3;
+  ActorContext actor = 4;
 }
 
 message DeleteTaxRuleResponse {

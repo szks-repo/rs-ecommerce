@@ -1,6 +1,6 @@
 # Store Settings Scope (Draft)
 
-Store settings cover **operational configuration** for a tenant (store).  
+Store settings cover **operational configuration** for a store.  
 Domain data such as customers/orders/products are **not** part of settings.
 
 ## Included in Store Settings
@@ -64,5 +64,6 @@ Domain data such as customers/orders/products are **not** part of settings.
 - Products / Inventory / Pricing (actual data)
 
 ## Notes
+- Settings are linked by `store_id` (tenant_id is kept for migration compatibility).
 - Japan-focused shipping means address fields: prefecture/city/line1/line2.
 - Future: multi-currency, international shipping, multi-language catalogs.

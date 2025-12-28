@@ -8,6 +8,10 @@ message TenantContext {
   string tenant_id = 1;
 }
 
+message StoreContext {
+  string store_id = 1;
+}
+
 message ActorContext {
   string actor_id = 1;
   string actor_type = 2; // admin | staff | system | api

@@ -30,6 +30,28 @@ Tenancy is enforced with `tenant_id` on all core tables.
 
 Note: In single-brand mode, a tenant can have exactly one vendor representing the store itself.
 
+## Stores & Staff
+
+### stores
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- name (text)
+- status (text)
+- created_at, updated_at
+
+### store_staff
+- id (uuid, pk)
+- store_id (uuid, fk -> stores.id)
+- email (text, nullable)
+- login_id (text, nullable)
+- phone (text, nullable)
+- password_hash (text, nullable)
+- role (text) -- owner | admin | staff
+- status (text)
+- created_at, updated_at
+
+Note: `store_settings` and related configuration tables are linked by `store_id` (keeping `tenant_id` for now).
+
 ## Catalog
 
 ### products

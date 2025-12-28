@@ -1,4 +1,5 @@
-use axum::{Router, routing::post, middleware};
+use axum::{Router, routing::post, middleware, http::{HeaderValue, Method}};
+use tower_http::cors::CorsLayer;
 
 use crate::AppState;
 
@@ -10,8 +11,23 @@ mod store_settings;
 mod setup;
 mod audit;
 pub mod request_context;
+mod identity;
 
 pub fn router() -> Router<AppState> {
+    let cors = CorsLayer::new()
+        .allow_methods([Method::POST, Method::OPTIONS])
+        .allow_headers([
+            axum::http::header::CONTENT_TYPE,
+            axum::http::header::AUTHORIZATION,
+            axum::http::header::HeaderName::from_static("x-actor-id"),
+            axum::http::header::HeaderName::from_static("x-actor-type"),
+            axum::http::header::HeaderName::from_static("x-request-id"),
+        ])
+        .allow_origin([
+            HeaderValue::from_static("http://localhost:3000"),
+            HeaderValue::from_static("http://127.0.0.1:3000"),
+        ]);
+
     Router::new()
         .route(
             "/rpc/ecommerce.v1.StorefrontService/ListProducts",
@@ -157,10 +173,32 @@ pub fn router() -> Router<AppState> {
             "/rpc/ecommerce.v1.SetupService/InitializeStore",
             post(setup::initialize_store),
         )
+        // IdentityService is the single entry point for staff auth/roles.
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/SignIn",
+            post(identity::sign_in),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/CreateStaff",
+            post(identity::create_staff),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/CreateRole",
+            post(identity::create_role),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/AssignRoleToStaff",
+            post(identity::assign_role_to_staff),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/ListRoles",
+            post(identity::list_roles),
+        )
         .route(
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
             post(audit::list_audit_logs),
         )
         .layer(middleware::from_fn(actor::inject_actor))
         .layer(middleware::from_fn(request_context::inject_request_context))
+        .layer(cors)
 }

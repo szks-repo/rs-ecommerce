@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+
+// RoleService removed. Use IdentityService role endpoints.
+
+message Role {
+  string id = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message Permission {
+  string id = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message CreateRoleRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string key = 3;
+  string name = 4;
+  string description = 5;
+  repeated string permission_keys = 6;
+  ActorContext actor = 7;
+}
+
+message CreateRoleResponse {
+  Role role = 1;
+}
+
+message AssignRoleToStaffRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string staff_id = 3;
+  string role_id = 4;
+  ActorContext actor = 5;
+}
+
+message AssignRoleToStaffResponse {
+  bool assigned = 1;
+}
+
+message ListRolesRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message ListRolesResponse {
+  repeated Role roles = 1;
+}
