@@ -1,0 +1,224 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+
+service StoreSettingsService {
+  rpc GetStoreSettings(GetStoreSettingsRequest) returns (GetStoreSettingsResponse);
+  rpc UpdateStoreSettings(UpdateStoreSettingsRequest) returns (UpdateStoreSettingsResponse);
+  rpc InitializeStoreSettings(InitializeStoreSettingsRequest) returns (InitializeStoreSettingsResponse);
+
+  rpc GetMallSettings(GetMallSettingsRequest) returns (GetMallSettingsResponse);
+  rpc UpdateMallSettings(UpdateMallSettingsRequest) returns (UpdateMallSettingsResponse);
+
+  rpc ListShippingZones(ListShippingZonesRequest) returns (ListShippingZonesResponse);
+  rpc UpsertShippingZone(UpsertShippingZoneRequest) returns (UpsertShippingZoneResponse);
+  rpc DeleteShippingZone(DeleteShippingZoneRequest) returns (DeleteShippingZoneResponse);
+
+  rpc ListShippingRates(ListShippingRatesRequest) returns (ListShippingRatesResponse);
+  rpc UpsertShippingRate(UpsertShippingRateRequest) returns (UpsertShippingRateResponse);
+  rpc DeleteShippingRate(DeleteShippingRateRequest) returns (DeleteShippingRateResponse);
+
+  rpc ListTaxRules(ListTaxRulesRequest) returns (ListTaxRulesResponse);
+  rpc UpsertTaxRule(UpsertTaxRuleRequest) returns (UpsertTaxRuleResponse);
+  rpc DeleteTaxRule(DeleteTaxRuleRequest) returns (DeleteTaxRuleResponse);
+}
+
+message StoreSettings {
+  string store_name = 1;
+  string legal_name = 2;
+  string contact_email = 3;
+  string contact_phone = 4;
+  string address_prefecture = 5;
+  string address_city = 6;
+  string address_line1 = 7;
+  string address_line2 = 8;
+  string legal_notice = 9;
+  string default_language = 10;
+  string primary_domain = 11;
+  string subdomain = 12;
+  bool https_enabled = 13;
+  string currency = 14;
+  string tax_mode = 15; // inclusive | exclusive
+  string tax_rounding = 16; // floor | round | ceil
+  string order_initial_status = 17; // pending_payment | pending_shipment
+  bool cod_enabled = 18;
+  Money cod_fee = 19;
+  string bank_name = 20;
+  string bank_branch = 21;
+  string bank_account_type = 22;
+  string bank_account_number = 23;
+  string bank_account_name = 24;
+  string theme = 25;
+  string brand_color = 26;
+  string logo_url = 27;
+  string favicon_url = 28;
+}
+
+message MallSettings {
+  bool enabled = 1;
+  double commission_rate = 2;
+  bool vendor_approval_required = 3;
+}
+
+message ShippingZone {
+  string id = 1;
+  string name = 2;
+  bool domestic_only = 3;
+  repeated Prefecture prefectures = 4;
+}
+
+message Prefecture {
+  string code = 1; // JP-13
+  string name = 2; // Tokyo
+}
+
+message ShippingRate {
+  string id = 1;
+  string zone_id = 2;
+  string name = 3;
+  Money min_subtotal = 4;
+  Money max_subtotal = 5;
+  Money fee = 6;
+}
+
+message TaxRule {
+  string id = 1;
+  string name = 2;
+  double rate = 3; // 0.1 for 10%
+  string applies_to = 4; // all | category | shipping
+}
+
+message GetStoreSettingsRequest {
+  TenantContext tenant = 1;
+}
+
+message GetStoreSettingsResponse {
+  StoreSettings settings = 1;
+}
+
+message UpdateStoreSettingsRequest {
+  TenantContext tenant = 1;
+  StoreSettings settings = 2;
+  ActorContext actor = 3;
+}
+
+message UpdateStoreSettingsResponse {
+  StoreSettings settings = 1;
+}
+
+message InitializeStoreSettingsRequest {
+  TenantContext tenant = 1;
+  StoreSettings settings = 2;
+  MallSettings mall = 3;
+  ActorContext actor = 4;
+}
+
+message InitializeStoreSettingsResponse {
+  StoreSettings settings = 1;
+  MallSettings mall = 2;
+}
+
+message GetMallSettingsRequest {
+  TenantContext tenant = 1;
+}
+
+message GetMallSettingsResponse {
+  MallSettings mall = 1;
+}
+
+message UpdateMallSettingsRequest {
+  TenantContext tenant = 1;
+  MallSettings mall = 2;
+  ActorContext actor = 3;
+}
+
+message UpdateMallSettingsResponse {
+  MallSettings mall = 1;
+}
+
+message ListShippingZonesRequest {
+  TenantContext tenant = 1;
+}
+
+message ListShippingZonesResponse {
+  repeated ShippingZone zones = 1;
+}
+
+message UpsertShippingZoneRequest {
+  TenantContext tenant = 1;
+  ShippingZone zone = 2;
+  ActorContext actor = 3;
+}
+
+message UpsertShippingZoneResponse {
+  ShippingZone zone = 1;
+}
+
+message DeleteShippingZoneRequest {
+  TenantContext tenant = 1;
+  string zone_id = 2;
+  ActorContext actor = 3;
+}
+
+message DeleteShippingZoneResponse {
+  bool deleted = 1;
+}
+
+message ListShippingRatesRequest {
+  TenantContext tenant = 1;
+  string zone_id = 2;
+}
+
+message ListShippingRatesResponse {
+  repeated ShippingRate rates = 1;
+}
+
+message UpsertShippingRateRequest {
+  TenantContext tenant = 1;
+  ShippingRate rate = 2;
+  ActorContext actor = 3;
+}
+
+message UpsertShippingRateResponse {
+  ShippingRate rate = 1;
+}
+
+message DeleteShippingRateRequest {
+  TenantContext tenant = 1;
+  string rate_id = 2;
+  ActorContext actor = 3;
+}
+
+message DeleteShippingRateResponse {
+  bool deleted = 1;
+}
+
+message ListTaxRulesRequest {
+  TenantContext tenant = 1;
+}
+
+message ListTaxRulesResponse {
+  repeated TaxRule rules = 1;
+}
+
+message UpsertTaxRuleRequest {
+  TenantContext tenant = 1;
+  TaxRule rule = 2;
+  ActorContext actor = 3;
+}
+
+message UpsertTaxRuleResponse {
+  TaxRule rule = 1;
+}
+
+message DeleteTaxRuleRequest {
+  TenantContext tenant = 1;
+  string rule_id = 2;
+  ActorContext actor = 3;
+}
+
+message DeleteTaxRuleResponse {
+  bool deleted = 1;
+}

@@ -1,0 +1,3 @@
+# Setup API (draft)
+
+- InitializeStore

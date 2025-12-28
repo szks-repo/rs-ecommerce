@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "google/protobuf/timestamp.proto";
+
+message TenantContext {
+  string tenant_id = 1;
+}
+
+message ActorContext {
+  string actor_id = 1;
+  string actor_type = 2; // admin | staff | system | api
+}
+
+message Money {
+  string currency = 1; // ISO 4217
+  int64 amount = 2; // minor units (e.g. JPY=1, USD=100)
+}
+
+message PageInfo {
+  int32 page_size = 1;
+  string page_token = 2;
+}
+
+message PageResult {
+  string next_page_token = 1;
+}
+
+message Address {
+  string name = 1;
+  string postal_code = 2;
+  string prefecture = 3;
+  string city = 4;
+  string line1 = 5;
+  string line2 = 6;
+  string phone = 7;
+}
+
+enum PaymentMethod {
+  PAYMENT_METHOD_UNSPECIFIED = 0;
+  PAYMENT_METHOD_BANK_TRANSFER = 1;
+  PAYMENT_METHOD_COD = 2;
+}
+
+enum OrderStatus {
+  ORDER_STATUS_UNSPECIFIED = 0;
+  ORDER_STATUS_PENDING_PAYMENT = 1;
+  ORDER_STATUS_PENDING_SHIPMENT = 2;
+  ORDER_STATUS_SHIPPED = 3;
+  ORDER_STATUS_COMPLETED = 4;
+  ORDER_STATUS_CANCELED = 5;
+}
+
+enum ShipmentStatus {
+  SHIPMENT_STATUS_UNSPECIFIED = 0;
+  SHIPMENT_STATUS_PENDING = 1;
+  SHIPMENT_STATUS_SHIPPED = 2;
+  SHIPMENT_STATUS_DELIVERED = 3;
+  SHIPMENT_STATUS_CANCELED = 4;
+}
+
+message AuditInfo {
+  string created_by = 1;
+  google.protobuf.Timestamp created_at = 2;
+  string updated_by = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}

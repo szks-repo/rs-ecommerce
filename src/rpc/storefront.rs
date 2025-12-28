@@ -1,0 +1,144 @@
+use axum::{
+    Json,
+    body::Bytes,
+    http::{HeaderMap, StatusCode},
+    extract::State,
+};
+
+use crate::{
+    AppState,
+    pb::pb,
+    catalog, cart,
+    infrastructure::{db, search::SearchProduct},
+    rpc::json::{ConnectError, parse_request, require_tenant_id},
+};
+
+pub async fn list_products(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListProductsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListProductsRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant)?;
+    db::ping(&state).await?;
+    let products = catalog::service::list_products(&state, tenant_id).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListProductsResponse {
+            products,
+            page: Some(pb::PageResult {
+                next_page_token: String::new(),
+            }),
+        }),
+    ))
+}
+
+pub async fn get_product(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::GetProductResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::GetProductRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant)?;
+    db::ping(&state).await?;
+    let product = catalog::service::get_product(&state, tenant_id, req.product_id).await?;
+    Ok((StatusCode::OK, Json(pb::GetProductResponse { product })))
+}
+
+pub async fn search_products(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::SearchProductsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::SearchProductsRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant)?;
+    db::ping(&state).await?;
+    let hits = state.search.search_products(&req.query, 50, &tenant_id).await?;
+    let products = hits_to_products(hits, tenant_id);
+    Ok((
+        StatusCode::OK,
+        Json(pb::SearchProductsResponse {
+            products,
+            page: Some(pb::PageResult {
+                next_page_token: String::new(),
+            }),
+        }),
+    ))
+}
+
+fn hits_to_products(hits: Vec<SearchProduct>, tenant_id: String) -> Vec<pb::Product> {
+    hits.into_iter()
+        .map(|hit| pb::Product {
+            id: hit.id,
+            vendor_id: hit.vendor_id,
+            title: hit.title,
+            description: hit.description,
+            status: hit.status,
+            variants: Vec::new(),
+            updated_at: None,
+        })
+        .filter(|p| !tenant_id.is_empty() && !p.id.is_empty())
+        .collect()
+}
+
+pub async fn create_cart(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateCartResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateCartRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant.clone())?;
+    db::ping(&state).await?;
+    let cart = cart::service::create_cart(&state, tenant_id, req).await?;
+    Ok((StatusCode::OK, Json(pb::CreateCartResponse { cart: Some(cart) })))
+}
+
+pub async fn add_cart_item(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::AddCartItemResponse>), (StatusCode, Json<ConnectError>)> {
+    let _req = parse_request::<pb::AddCartItemRequest>(&headers, body)?;
+    db::ping(&state).await?;
+    Ok((StatusCode::OK, Json(pb::AddCartItemResponse { cart: None })))
+}
+
+pub async fn update_cart_item(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpdateCartItemResponse>), (StatusCode, Json<ConnectError>)> {
+    let _req = parse_request::<pb::UpdateCartItemRequest>(&headers, body)?;
+    db::ping(&state).await?;
+    Ok((StatusCode::OK, Json(pb::UpdateCartItemResponse { cart: None })))
+}
+
+pub async fn remove_cart_item(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::RemoveCartItemResponse>), (StatusCode, Json<ConnectError>)> {
+    let _req = parse_request::<pb::RemoveCartItemRequest>(&headers, body)?;
+    db::ping(&state).await?;
+    Ok((StatusCode::OK, Json(pb::RemoveCartItemResponse { cart: None })))
+}
+
+pub async fn checkout(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CheckoutResponse>), (StatusCode, Json<ConnectError>)> {
+    let _req = parse_request::<pb::CheckoutRequest>(&headers, body)?;
+    db::ping(&state).await?;
+    Ok((StatusCode::OK, Json(pb::CheckoutResponse { order: None })))
+}
+
+pub async fn get_order(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::GetOrderResponse>), (StatusCode, Json<ConnectError>)> {
+    let _req = parse_request::<pb::GetOrderRequest>(&headers, body)?;
+    db::ping(&state).await?;
+    Ok((StatusCode::OK, Json(pb::GetOrderResponse { order: None })))
+}

@@ -1,0 +1,235 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ecommerce/v1/common.proto";
+
+service BackofficeService {
+  rpc ListProducts(ListProductsAdminRequest) returns (ListProductsAdminResponse);
+  rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
+  rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+
+  rpc CreateVariant(CreateVariantRequest) returns (CreateVariantResponse);
+  rpc UpdateVariant(UpdateVariantRequest) returns (UpdateVariantResponse);
+
+  rpc SetInventory(SetInventoryRequest) returns (SetInventoryResponse);
+
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
+  rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
+
+  rpc CreateShipment(CreateShipmentRequest) returns (CreateShipmentResponse);
+  rpc UpdateShipmentStatus(UpdateShipmentStatusRequest) returns (UpdateShipmentStatusResponse);
+
+  rpc CreatePromotion(CreatePromotionRequest) returns (CreatePromotionResponse);
+  rpc UpdatePromotion(UpdatePromotionRequest) returns (UpdatePromotionResponse);
+}
+
+message ProductAdmin {
+  string id = 1;
+  string vendor_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message VariantAdmin {
+  string id = 1;
+  string product_id = 2;
+  string sku = 3;
+  Money price = 4;
+  Money compare_at = 5;
+  string status = 6;
+}
+
+message InventoryAdmin {
+  string variant_id = 1;
+  int32 stock = 2;
+  int32 reserved = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message OrderAdmin {
+  string id = 1;
+  string customer_id = 2;
+  OrderStatus status = 3;
+  Money total = 4;
+  PaymentMethod payment_method = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+message ShipmentAdmin {
+  string id = 1;
+  string order_id = 2;
+  string vendor_id = 3;
+  ShipmentStatus status = 4;
+  string tracking_no = 5;
+  string carrier = 6;
+}
+
+message PromotionAdmin {
+  string id = 1;
+  string code = 2;
+  string discount_type = 3; // fixed | percent
+  Money value = 4;
+  string status = 5;
+  google.protobuf.Timestamp starts_at = 6;
+  google.protobuf.Timestamp ends_at = 7;
+}
+
+message ListProductsAdminRequest {
+  TenantContext tenant = 1;
+  string vendor_id = 2; // optional for mall mode
+  PageInfo page = 3;
+}
+
+message ListProductsAdminResponse {
+  repeated ProductAdmin products = 1;
+  PageResult page = 2;
+}
+
+message CreateProductRequest {
+  TenantContext tenant = 1;
+  string vendor_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  ActorContext actor = 6;
+}
+
+message CreateProductResponse {
+  ProductAdmin product = 1;
+}
+
+message UpdateProductRequest {
+  TenantContext tenant = 1;
+  string product_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  ActorContext actor = 6;
+}
+
+message UpdateProductResponse {
+  ProductAdmin product = 1;
+}
+
+message CreateVariantRequest {
+  TenantContext tenant = 1;
+  string product_id = 2;
+  string sku = 3;
+  Money price = 4;
+  Money compare_at = 5;
+  string status = 6;
+  ActorContext actor = 7;
+}
+
+message CreateVariantResponse {
+  VariantAdmin variant = 1;
+}
+
+message UpdateVariantRequest {
+  TenantContext tenant = 1;
+  string variant_id = 2;
+  Money price = 3;
+  Money compare_at = 4;
+  string status = 5;
+  ActorContext actor = 6;
+}
+
+message UpdateVariantResponse {
+  VariantAdmin variant = 1;
+}
+
+message SetInventoryRequest {
+  TenantContext tenant = 1;
+  string variant_id = 2;
+  int32 stock = 3;
+  int32 reserved = 4;
+  ActorContext actor = 5;
+}
+
+message SetInventoryResponse {
+  InventoryAdmin inventory = 1;
+}
+
+message ListOrdersRequest {
+  TenantContext tenant = 1;
+  OrderStatus status = 2;
+  PageInfo page = 3;
+}
+
+message ListOrdersResponse {
+  repeated OrderAdmin orders = 1;
+  PageResult page = 2;
+}
+
+message UpdateOrderStatusRequest {
+  TenantContext tenant = 1;
+  string order_id = 2;
+  OrderStatus status = 3;
+  ActorContext actor = 4;
+}
+
+message UpdateOrderStatusResponse {
+  OrderAdmin order = 1;
+}
+
+message CreateShipmentRequest {
+  TenantContext tenant = 1;
+  string order_id = 2;
+  string vendor_id = 3;
+  ShipmentStatus status = 4;
+  string tracking_no = 5;
+  string carrier = 6;
+  ActorContext actor = 7;
+}
+
+message CreateShipmentResponse {
+  ShipmentAdmin shipment = 1;
+}
+
+message UpdateShipmentStatusRequest {
+  TenantContext tenant = 1;
+  string shipment_id = 2;
+  ShipmentStatus status = 3;
+  string tracking_no = 4;
+  string carrier = 5;
+  ActorContext actor = 6;
+}
+
+message UpdateShipmentStatusResponse {
+  ShipmentAdmin shipment = 1;
+}
+
+message CreatePromotionRequest {
+  TenantContext tenant = 1;
+  string code = 2;
+  string discount_type = 3;
+  Money value = 4;
+  string status = 5;
+  google.protobuf.Timestamp starts_at = 6;
+  google.protobuf.Timestamp ends_at = 7;
+  ActorContext actor = 8;
+}
+
+message CreatePromotionResponse {
+  PromotionAdmin promotion = 1;
+}
+
+message UpdatePromotionRequest {
+  TenantContext tenant = 1;
+  string promotion_id = 2;
+  string code = 3;
+  string discount_type = 4;
+  Money value = 5;
+  string status = 6;
+  google.protobuf.Timestamp starts_at = 7;
+  google.protobuf.Timestamp ends_at = 8;
+  ActorContext actor = 9;
+}
+
+message UpdatePromotionResponse {
+  PromotionAdmin promotion = 1;
+}

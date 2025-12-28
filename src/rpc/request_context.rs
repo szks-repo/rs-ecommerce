@@ -1,0 +1,98 @@
+use axum::{
+    body::Body,
+    http::{HeaderMap, Request},
+    middleware::Next,
+    response::Response,
+};
+use axum::http::HeaderValue;
+use tracing::info;
+
+#[derive(Clone, Default)]
+pub struct RequestContext {
+    pub request_id: Option<String>,
+    pub ip_address: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+tokio::task_local! {
+    static REQUEST_CONTEXT: RequestContext;
+}
+
+pub async fn inject_request_context(req: Request<Body>, next: Next) -> Response {
+    let ctx = RequestContext {
+        request_id: extract_request_id(req.headers()),
+        ip_address: extract_ip_address(req.headers()),
+        user_agent: extract_user_agent(req.headers()),
+    };
+    let method = req.method().clone();
+    let path = req.uri().path().to_string();
+    let request_id = ctx.request_id.clone();
+    let mut res = REQUEST_CONTEXT
+        .scope(ctx.clone(), async move {
+            info!(
+                request_id = request_id.as_deref().unwrap_or(""),
+                method = %method,
+                path = %path,
+                "request start"
+            );
+            next.run(req).await
+        })
+        .await;
+    info!(
+        request_id = ctx.request_id.as_deref().unwrap_or(""),
+        status = %res.status(),
+        "request end"
+    );
+    attach_request_id(&mut res, ctx.request_id);
+    res
+}
+
+fn attach_request_id(res: &mut Response, request_id: Option<String>) {
+    let Some(request_id) = request_id else { return };
+    if let Ok(value) = HeaderValue::from_str(&request_id) {
+        res.headers_mut().insert("x-request-id", value);
+    }
+}
+
+pub fn current() -> Option<RequestContext> {
+    REQUEST_CONTEXT.try_with(|ctx| ctx.clone()).ok()
+}
+
+fn extract_request_id(headers: &HeaderMap) -> Option<String> {
+    if let Some(value) = headers.get("x-request-id") {
+        if let Ok(value) = value.to_str() {
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    Some(uuid::Uuid::new_v4().to_string())
+}
+
+fn extract_ip_address(headers: &HeaderMap) -> Option<String> {
+    if let Some(value) = headers.get("x-forwarded-for") {
+        if let Ok(value) = value.to_str() {
+            if let Some(first) = value.split(',').next() {
+                let first = first.trim();
+                if !first.is_empty() {
+                    return Some(first.to_string());
+                }
+            }
+        }
+    }
+    if let Some(value) = headers.get("x-real-ip") {
+        if let Ok(value) = value.to_str() {
+            if !value.is_empty() {
+                return Some(value.to_string());
+            }
+        }
+    }
+    None
+}
+
+fn extract_user_agent(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(axum::http::header::USER_AGENT)
+        .and_then(|v| v.to_str().ok())
+        .map(|v| v.to_string())
+}

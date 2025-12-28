@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ecommerce/v1/common.proto";
+
+service AuditService {
+  rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+}
+
+message AuditLog {
+  string id = 1;
+  string actor_id = 2;
+  string actor_type = 3;
+  string action = 4;
+  string target_type = 5;
+  string target_id = 6;
+  string request_id = 7;
+  string ip_address = 8;
+  string user_agent = 9;
+  string before_json = 10;
+  string after_json = 11;
+  string metadata_json = 12;
+  google.protobuf.Timestamp created_at = 13;
+}
+
+message ListAuditLogsRequest {
+  TenantContext tenant = 1;
+  string actor_id = 2;
+  string actor_type = 3;
+  string action = 4;
+  string target_type = 5;
+  string target_id = 6;
+  google.protobuf.Timestamp from_time = 7;
+  google.protobuf.Timestamp to_time = 8;
+  string request_id = 9;
+  string ip_address = 10;
+  string user_agent = 11;
+  PageInfo page = 12;
+}
+
+message ListAuditLogsResponse {
+  repeated AuditLog logs = 1;
+  PageResult page = 2;
+}

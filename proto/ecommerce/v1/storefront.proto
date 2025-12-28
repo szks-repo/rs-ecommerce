@@ -1,0 +1,155 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ecommerce/v1/common.proto";
+
+service StorefrontService {
+  rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
+  rpc GetProduct(GetProductRequest) returns (GetProductResponse);
+  rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+
+  rpc CreateCart(CreateCartRequest) returns (CreateCartResponse);
+  rpc AddCartItem(AddCartItemRequest) returns (AddCartItemResponse);
+  rpc UpdateCartItem(UpdateCartItemRequest) returns (UpdateCartItemResponse);
+  rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse);
+  rpc Checkout(CheckoutRequest) returns (CheckoutResponse);
+
+  rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
+}
+
+message Product {
+  string id = 1;
+  string vendor_id = 2;
+  string title = 3;
+  string description = 4;
+  string status = 5;
+  repeated Variant variants = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message Variant {
+  string id = 1;
+  string sku = 2;
+  Money price = 3;
+  Money compare_at = 4;
+  string status = 5;
+}
+
+message Cart {
+  string id = 1;
+  string customer_id = 2;
+  repeated CartItem items = 3;
+  Money total = 4;
+  string status = 5;
+}
+
+message CartItem {
+  string id = 1;
+  string vendor_id = 2;
+  string variant_id = 3;
+  Money price = 4;
+  int32 quantity = 5;
+}
+
+message Order {
+  string id = 1;
+  string customer_id = 2;
+  OrderStatus status = 3;
+  Money total = 4;
+  PaymentMethod payment_method = 5;
+  Address shipping_address = 6;
+  Address billing_address = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ListProductsRequest {
+  TenantContext tenant = 1;
+  PageInfo page = 2;
+}
+
+message ListProductsResponse {
+  repeated Product products = 1;
+  PageResult page = 2;
+}
+
+message GetProductRequest {
+  TenantContext tenant = 1;
+  string product_id = 2;
+}
+
+message GetProductResponse {
+  Product product = 1;
+}
+
+message SearchProductsRequest {
+  TenantContext tenant = 1;
+  string query = 2;
+  PageInfo page = 3;
+}
+
+message SearchProductsResponse {
+  repeated Product products = 1;
+  PageResult page = 2;
+}
+
+message CreateCartRequest {
+  TenantContext tenant = 1;
+  string customer_id = 2; // optional for guest
+}
+
+message CreateCartResponse {
+  Cart cart = 1;
+}
+
+message AddCartItemRequest {
+  TenantContext tenant = 1;
+  string cart_id = 2;
+  string variant_id = 3;
+  int32 quantity = 4;
+}
+
+message AddCartItemResponse {
+  Cart cart = 1;
+}
+
+message UpdateCartItemRequest {
+  TenantContext tenant = 1;
+  string cart_item_id = 2;
+  int32 quantity = 3;
+}
+
+message UpdateCartItemResponse {
+  Cart cart = 1;
+}
+
+message RemoveCartItemRequest {
+  TenantContext tenant = 1;
+  string cart_item_id = 2;
+}
+
+message RemoveCartItemResponse {
+  Cart cart = 1;
+}
+
+message CheckoutRequest {
+  TenantContext tenant = 1;
+  string cart_id = 2;
+  PaymentMethod payment_method = 3;
+  Address shipping_address = 4;
+  Address billing_address = 5;
+}
+
+message CheckoutResponse {
+  Order order = 1;
+}
+
+message GetOrderRequest {
+  TenantContext tenant = 1;
+  string order_id = 2;
+}
+
+message GetOrderResponse {
+  Order order = 1;
+}

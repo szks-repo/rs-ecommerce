@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+import "ecommerce/v1/store_settings.proto";
+
+service SetupService {
+  // One-time initial setup. Creates tenant + vendor + store settings + mall settings + defaults.
+  rpc InitializeStore(InitializeStoreRequest) returns (InitializeStoreResponse);
+}
+
+message InitializeStoreRequest {
+  string tenant_name = 1;
+  StoreSettings settings = 2;
+  MallSettings mall = 3;
+  ShippingZone default_zone = 4;
+  ShippingRate default_rate = 5;
+  TaxRule default_tax_rule = 6;
+  ActorContext actor = 7;
+}
+
+message InitializeStoreResponse {
+  string tenant_id = 1;
+  string vendor_id = 2;
+  StoreSettings settings = 3;
+  MallSettings mall = 4;
+}

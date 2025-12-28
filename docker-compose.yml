@@ -1,0 +1,52 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    volumes:
+      - .:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target:/app/target
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://rs:rs@db:5432/rs_ecommerce
+      REDIS_URL: redis://redis:6379
+      MEILI_URL: http://meilisearch:7700
+      MEILI_MASTER_KEY: local-master-key
+    depends_on:
+      - db
+      - redis
+      - meilisearch
+    ports:
+      - "8080:8080"
+
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: rs
+      POSTGRES_PASSWORD: rs
+      POSTGRES_DB: rs_ecommerce
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    environment:
+      MEILI_ENV: development
+      MEILI_MASTER_KEY: local-master-key
+    ports:
+      - "7700:7700"
+
+volumes:
+  pgdata:
+  cargo-registry:
+  cargo-git:
+  target:
