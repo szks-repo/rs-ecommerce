@@ -3,6 +3,12 @@ name = "rs-ecommerce"
 version = "0.1.0"
 edition = "2024"
 
+[workspace]
+members = [
+    "crates/common",
+    "crates/workers/inventory-worker",
+]
+
 [dependencies]
 axum = "0.7"
 anyhow = "1"
@@ -18,13 +24,18 @@ meilisearch-sdk = "0.24"
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "macros", "migrate", "uuid", "chrono"] }
 tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.26"
+opentelemetry = "0.25"
+opentelemetry_sdk = { version = "0.25", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.25", features = ["grpc-tonic"] }
+rs-common = { path = "crates/common" }
 jsonwebtoken = "9"
 once_cell = "1"
 reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 argon2 = "0.5"
 rand_core = "0.6"
-tower-http = { version = "0.6", features = ["cors"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
 
 [build-dependencies]
 prost = "0.12"

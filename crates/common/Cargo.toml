@@ -1,0 +1,12 @@
+[package]
+name = "rs-common"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tracing-opentelemetry = "0.26"
+opentelemetry = "0.25"
+opentelemetry_sdk = { version = "0.25", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.25", features = ["grpc-tonic"] }

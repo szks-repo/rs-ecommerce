@@ -9,7 +9,6 @@ use axum::{
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::db,
     rpc::json::{ConnectError, parse_request},
     setup,
 };
@@ -24,7 +23,6 @@ pub async fn initialize_store(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    db::ping(&state).await?;
     let resp = setup::service::initialize_store(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }

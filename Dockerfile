@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY Cargo.toml Cargo.lock* ./
 
+COPY crates ./crates
 COPY src ./src
 COPY build.rs ./build.rs
 RUN cargo fetch

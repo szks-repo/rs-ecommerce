@@ -10,7 +10,6 @@ use crate::{
     AppState,
     pb::pb,
     rpc::json::{ConnectError, parse_request},
-    infrastructure::db,
     store_settings,
 };
 
@@ -23,7 +22,6 @@ pub async fn get_store_settings(
     let req = parse_request::<pb::GetStoreSettingsRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    db::ping(&state).await?;
     let settings = store_settings::service::get_store_settings(&state, store_id).await?;
     Ok((StatusCode::OK, Json(pb::GetStoreSettingsResponse { settings: Some(settings) })))
 }
@@ -47,7 +45,6 @@ pub async fn update_store_settings(
             }),
         )
     })?;
-    db::ping(&state).await?;
     let settings =
         store_settings::service::update_store_settings(&state, store_id, tenant_id, settings, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateStoreSettingsResponse { settings: Some(settings) })))
@@ -77,7 +74,6 @@ pub async fn initialize_store_settings(
         commission_rate: 0.0,
         vendor_approval_required: true,
     });
-    db::ping(&state).await?;
     let (settings, mall) =
         store_settings::service::initialize_store_settings(
             &state,
@@ -106,7 +102,6 @@ pub async fn get_mall_settings(
     let req = parse_request::<pb::GetMallSettingsRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    db::ping(&state).await?;
     let mall = store_settings::service::get_mall_settings(&state, store_id).await?;
     Ok((StatusCode::OK, Json(pb::GetMallSettingsResponse { mall: Some(mall) })))
 }
@@ -126,7 +121,6 @@ pub async fn update_mall_settings(
         commission_rate: 0.0,
         vendor_approval_required: true,
     });
-    db::ping(&state).await?;
     let mall = store_settings::service::update_mall_settings(&state, store_id, tenant_id, mall, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateMallSettingsResponse { mall: Some(mall) })))
 }
@@ -140,7 +134,6 @@ pub async fn list_shipping_zones(
     let req = parse_request::<pb::ListShippingZonesRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    db::ping(&state).await?;
     let zones = store_settings::service::list_shipping_zones(&state, store_id).await?;
     Ok((StatusCode::OK, Json(pb::ListShippingZonesResponse { zones })))
 }
@@ -164,7 +157,6 @@ pub async fn upsert_shipping_zone(
             }),
         )
     })?;
-    db::ping(&state).await?;
     let zone =
         store_settings::service::upsert_shipping_zone(&state, store_id, tenant_id, zone, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpsertShippingZoneResponse { zone: Some(zone) })))
@@ -180,7 +172,6 @@ pub async fn delete_shipping_zone(
     let (store_id, tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);
-    db::ping(&state).await?;
     let deleted =
         store_settings::service::delete_shipping_zone(&state, store_id, tenant_id, req.zone_id, actor).await?;
     Ok((StatusCode::OK, Json(pb::DeleteShippingZoneResponse { deleted })))
@@ -195,7 +186,6 @@ pub async fn list_shipping_rates(
     let req = parse_request::<pb::ListShippingRatesRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    db::ping(&state).await?;
     let rates = store_settings::service::list_shipping_rates(&state, store_id, req.zone_id).await?;
     Ok((StatusCode::OK, Json(pb::ListShippingRatesResponse { rates })))
 }
@@ -219,7 +209,6 @@ pub async fn upsert_shipping_rate(
             }),
         )
     })?;
-    db::ping(&state).await?;
     let rate =
         store_settings::service::upsert_shipping_rate(&state, store_id, tenant_id, rate, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpsertShippingRateResponse { rate: Some(rate) })))
@@ -235,7 +224,6 @@ pub async fn delete_shipping_rate(
     let (store_id, tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);
-    db::ping(&state).await?;
     let deleted =
         store_settings::service::delete_shipping_rate(&state, store_id, tenant_id, req.rate_id, actor).await?;
     Ok((StatusCode::OK, Json(pb::DeleteShippingRateResponse { deleted })))
@@ -250,7 +238,6 @@ pub async fn list_tax_rules(
     let req = parse_request::<pb::ListTaxRulesRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    db::ping(&state).await?;
     let rules = store_settings::service::list_tax_rules(&state, store_id).await?;
     Ok((StatusCode::OK, Json(pb::ListTaxRulesResponse { rules })))
 }
@@ -274,7 +261,6 @@ pub async fn upsert_tax_rule(
             }),
         )
     })?;
-    db::ping(&state).await?;
     let rule =
         store_settings::service::upsert_tax_rule(&state, store_id, tenant_id, rule, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpsertTaxRuleResponse { rule: Some(rule) })))
@@ -290,7 +276,6 @@ pub async fn delete_tax_rule(
     let (store_id, tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);
-    db::ping(&state).await?;
     let deleted =
         store_settings::service::delete_tax_rule(&state, store_id, tenant_id, req.rule_id, actor).await?;
     Ok((StatusCode::OK, Json(pb::DeleteTaxRuleResponse { deleted })))

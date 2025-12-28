@@ -2,6 +2,8 @@ use std::time::Duration;
 
 use anyhow::Result;
 use sqlx::{PgPool, Row, postgres::PgPoolOptions};
+use tracing::info;
+use rs_common::{telemetry, env};
 
 #[derive(Debug)]
 struct ReservationRequest {
@@ -16,21 +18,31 @@ struct ReservationRequest {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    telemetry::init_tracing("inventory-worker");
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&db_url)
         .await?;
 
-    let batch_size = env_usize("INVENTORY_WORKER_BATCH_SIZE", 50) as i64;
-    let ttl_seconds = env_i64("INVENTORY_RESERVATION_TTL_SECONDS", 900);
-    let sleep_ms = env_u64("INVENTORY_WORKER_SLEEP_MS", 500);
-    let oneshot = env_bool("INVENTORY_WORKER_ONESHOT", false);
+    let batch_size = env::env_usize("INVENTORY_WORKER_BATCH_SIZE", 50) as i64;
+    let ttl_seconds = env::env_i64("INVENTORY_RESERVATION_TTL_SECONDS", 900);
+    let sleep_ms = env::env_u64("INVENTORY_WORKER_SLEEP_MS", 500);
+    let oneshot = env::env_bool("INVENTORY_WORKER_ONESHOT", false);
 
     loop {
-        process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
-        process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
-        release_expired_reservations(&pool, batch_size).await?;
+        let (hot_done, hot_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
+        let (normal_done, normal_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
+        let released = release_expired_reservations(&pool, batch_size).await?;
+
+        info!(
+            hot_done,
+            hot_failed,
+            normal_done,
+            normal_failed,
+            released,
+            "inventory worker batch completed"
+        );
 
         if oneshot {
             break;
@@ -46,8 +58,10 @@ async fn process_queue_batch(
     batch_size: i64,
     ttl_seconds: i64,
     is_hot: bool,
-) -> Result<()> {
+) -> Result<(usize, usize)> {
     let mut tx = pool.begin().await?;
+    let mut done = 0usize;
+    let mut failed = 0usize;
     let rows = sqlx::query(
         r#"
         WITH cte AS (
@@ -81,17 +95,21 @@ async fn process_queue_batch(
             variant_id: row.get("variant_id"),
             quantity: row.get("quantity"),
         };
-        process_request(pool, request, ttl_seconds).await?;
+        if process_request(pool, request, ttl_seconds).await? {
+            done += 1;
+        } else {
+            failed += 1;
+        }
     }
 
-    Ok(())
+    Ok((done, failed))
 }
 
 async fn process_request(
     pool: &PgPool,
     request: ReservationRequest,
     ttl_seconds: i64,
-) -> Result<()> {
+) -> Result<bool> {
     let mut tx = pool.begin().await?;
     let updated = sqlx::query(
         r#"
@@ -153,10 +171,10 @@ async fn process_request(
     }
 
     tx.commit().await?;
-    Ok(())
+    Ok(updated.rows_affected() == 1)
 }
 
-async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<()> {
+async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<usize> {
     let mut tx = pool.begin().await?;
     let rows = sqlx::query(
         r#"
@@ -179,6 +197,7 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
     .fetch_all(&mut *tx)
     .await?;
 
+    let released = rows.len();
     for row in rows {
         let variant_id: uuid::Uuid = row.get("variant_id");
         let quantity: i32 = row.get("quantity");
@@ -197,33 +216,5 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
     }
 
     tx.commit().await?;
-    Ok(())
-}
-
-fn env_usize(key: &str, default: usize) -> usize {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
-
-fn env_i64(key: &str, default: i64) -> i64 {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
-
-fn env_u64(key: &str, default: u64) -> u64 {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(default)
-}
-
-fn env_bool(key: &str, default: bool) -> bool {
-    std::env::var(key)
-        .ok()
-        .and_then(|v| v.parse::<bool>().ok())
-        .unwrap_or(default)
+    Ok(released)
 }

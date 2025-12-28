@@ -9,7 +9,7 @@ use crate::{
     AppState,
     pb::pb,
     catalog, cart,
-    infrastructure::{db, search::SearchProduct},
+    infrastructure::search::SearchProduct,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
 };
 
@@ -20,7 +20,6 @@ pub async fn list_products(
 ) -> Result<(StatusCode, Json<pb::ListProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListProductsRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    db::ping(&state).await?;
     let products = catalog::service::list_products(&state, tenant_id).await?;
     Ok((
         StatusCode::OK,
@@ -40,7 +39,6 @@ pub async fn get_product(
 ) -> Result<(StatusCode, Json<pb::GetProductResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::GetProductRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    db::ping(&state).await?;
     let product = catalog::service::get_product(&state, tenant_id, req.product_id).await?;
     Ok((StatusCode::OK, Json(pb::GetProductResponse { product })))
 }
@@ -52,7 +50,6 @@ pub async fn search_products(
 ) -> Result<(StatusCode, Json<pb::SearchProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::SearchProductsRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    db::ping(&state).await?;
     let hits = state.search.search_products(&req.query, 50, &tenant_id).await?;
     let products = hits_to_products(hits, tenant_id);
     Ok((
@@ -88,7 +85,6 @@ pub async fn create_cart(
 ) -> Result<(StatusCode, Json<pb::CreateCartResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateCartRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let cart = cart::service::create_cart(&state, tenant_id, req).await?;
     Ok((StatusCode::OK, Json(pb::CreateCartResponse { cart: Some(cart) })))
 }
@@ -100,7 +96,6 @@ pub async fn add_cart_item(
 ) -> Result<(StatusCode, Json<pb::AddCartItemResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::AddCartItemRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let cart = cart::service::add_cart_item(&state, tenant_id, req).await?;
     Ok((StatusCode::OK, Json(pb::AddCartItemResponse { cart: Some(cart) })))
 }
@@ -112,7 +107,6 @@ pub async fn update_cart_item(
 ) -> Result<(StatusCode, Json<pb::UpdateCartItemResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateCartItemRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let cart = cart::service::update_cart_item(&state, tenant_id, req).await?;
     Ok((StatusCode::OK, Json(pb::UpdateCartItemResponse { cart: Some(cart) })))
 }
@@ -124,7 +118,6 @@ pub async fn remove_cart_item(
 ) -> Result<(StatusCode, Json<pb::RemoveCartItemResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::RemoveCartItemRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let cart = cart::service::remove_cart_item(&state, tenant_id, req).await?;
     Ok((StatusCode::OK, Json(pb::RemoveCartItemResponse { cart: Some(cart) })))
 }
@@ -136,17 +129,15 @@ pub async fn checkout(
 ) -> Result<(StatusCode, Json<pb::CheckoutResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CheckoutRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let order = cart::service::checkout(&state, tenant_id, req).await?;
     Ok((StatusCode::OK, Json(pb::CheckoutResponse { order: Some(order) })))
 }
 
 pub async fn get_order(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::GetOrderResponse>), (StatusCode, Json<ConnectError>)> {
     let _req = parse_request::<pb::GetOrderRequest>(&headers, body)?;
-    db::ping(&state).await?;
     Ok((StatusCode::OK, Json(pb::GetOrderResponse { order: None })))
 }

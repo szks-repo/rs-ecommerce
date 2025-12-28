@@ -10,6 +10,9 @@ services:
       - target:/app/target
     environment:
       RUST_LOG: info
+      LOG_FORMAT: json
+      ENABLE_OTEL: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       DATABASE_URL: postgres://rs:rs@db:5432/rs_ecommerce
       REDIS_URL: redis://redis:6379
       MEILI_URL: http://meilisearch:7700
@@ -24,7 +27,7 @@ services:
 
   inventory-worker:
     build: .
-    command: ["cargo", "run", "--bin", "inventory_worker"]
+    command: ["cargo", "run", "-p", "inventory-worker"]
     volumes:
       - .:/app
       - cargo-registry:/usr/local/cargo/registry
@@ -32,6 +35,9 @@ services:
       - target:/app/target
     environment:
       RUST_LOG: info
+      LOG_FORMAT: json
+      ENABLE_OTEL: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
       DATABASE_URL: postgres://rs:rs@db:5432/rs_ecommerce
       INVENTORY_WORKER_ONESHOT: "false"
       INVENTORY_WORKER_BATCH_SIZE: "50"
@@ -39,6 +45,7 @@ services:
       INVENTORY_WORKER_SLEEP_MS: "500"
     depends_on:
       - db
+      - jaeger
 
   db:
     image: postgres:16
@@ -63,6 +70,12 @@ services:
       MEILI_MASTER_KEY: local-master-key
     ports:
       - "7700:7700"
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.58
+    ports:
+      - "16686:16686"
+      - "4317:4317"
 
 volumes:
   pgdata:

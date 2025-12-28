@@ -1,5 +1,6 @@
-use axum::{Router, routing::post, middleware, http::{HeaderValue, Method}};
-use tower_http::cors::CorsLayer;
+use axum::{Router, routing::post, middleware, http::{HeaderValue, Method, Request}};
+use tower_http::{cors::CorsLayer, trace::TraceLayer};
+use tracing::info_span;
 
 use crate::AppState;
 
@@ -198,6 +199,19 @@ pub fn router() -> Router<AppState> {
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
             post(audit::list_audit_logs),
         )
+        .layer(TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
+            let request_id = req
+                .headers()
+                .get("x-request-id")
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("-");
+            info_span!(
+                "http_request",
+                method = %req.method(),
+                uri = %req.uri(),
+                request_id = %request_id
+            )
+        }))
         .layer(middleware::from_fn(actor::inject_actor))
         .layer(middleware::from_fn(request_context::inject_request_context))
         .layer(cors)

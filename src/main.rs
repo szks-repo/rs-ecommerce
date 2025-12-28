@@ -1,6 +1,6 @@
-use axum::routing::get;
+use axum::{routing::get, extract::State, Json, http::StatusCode};
+use rs_common::telemetry;
 use sqlx::{PgPool, postgres::PgPoolOptions};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 mod catalog;
 mod cart;
@@ -17,10 +17,7 @@ mod setup;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::from_default_env())
-        .with(tracing_subscriber::fmt::layer())
-        .init();
+    telemetry::init_tracing("rs-ecommerce");
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
     let db = PgPoolOptions::new()
@@ -52,6 +49,9 @@ pub struct AppState {
     pub search: infrastructure::search::SearchClient,
 }
 
-async fn health() -> &'static str {
-    "ok"
+async fn health(
+    State(state): State<AppState>,
+) -> Result<&'static str, (StatusCode, Json<rpc::json::ConnectError>)> {
+    infrastructure::db::ping(&state).await?;
+    Ok("ok")
 }

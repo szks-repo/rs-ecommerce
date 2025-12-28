@@ -1,0 +1,13 @@
+[package]
+name = "inventory-worker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+chrono = { version = "0.4", default-features = false, features = ["clock"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "macros", "uuid", "chrono"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+uuid = { version = "1", features = ["v4"] }
+rs-common = { path = "../../common" }
+tracing = "0.1"

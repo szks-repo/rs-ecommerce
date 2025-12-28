@@ -10,7 +10,6 @@ use crate::{
     AppState,
     pb::pb,
     catalog, order, promotion,
-    infrastructure::db,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
 };
 
@@ -22,7 +21,6 @@ pub async fn list_products(
 ) -> Result<(StatusCode, Json<pb::ListProductsAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListProductsAdminRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    db::ping(&state).await?;
     let products = catalog::service::list_products_admin(&state, tenant_id).await?;
     Ok((
         StatusCode::OK,
@@ -44,7 +42,6 @@ pub async fn create_product(
     let req = parse_request::<pb::CreateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let product = catalog::service::create_product(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreateProductResponse { product: Some(product) })))
 }
@@ -58,7 +55,6 @@ pub async fn update_product(
     let req = parse_request::<pb::UpdateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let product = catalog::service::update_product(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateProductResponse { product: Some(product) })))
 }
@@ -71,7 +67,6 @@ pub async fn create_variant(
 ) -> Result<(StatusCode, Json<pb::CreateVariantResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    db::ping(&state).await?;
     let variant = catalog::service::create_variant(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreateVariantResponse { variant: Some(variant) })))
 }
@@ -84,7 +79,6 @@ pub async fn update_variant(
 ) -> Result<(StatusCode, Json<pb::UpdateVariantResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    db::ping(&state).await?;
     let variant = catalog::service::update_variant(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateVariantResponse { variant: Some(variant) })))
 }
@@ -98,7 +92,6 @@ pub async fn set_inventory(
     let req = parse_request::<pb::SetInventoryRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let inventory = catalog::service::set_inventory(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::SetInventoryResponse { inventory: Some(inventory) })))
 }
@@ -111,7 +104,6 @@ pub async fn list_orders(
 ) -> Result<(StatusCode, Json<pb::ListOrdersResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListOrdersRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    db::ping(&state).await?;
     let orders = order::service::list_orders(&state, tenant_id, req.status).await?;
     Ok((
         StatusCode::OK,
@@ -133,7 +125,6 @@ pub async fn update_order_status(
     let req = parse_request::<pb::UpdateOrderStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let order = order::service::update_order_status(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateOrderStatusResponse { order: Some(order) })))
 }
@@ -146,7 +137,6 @@ pub async fn create_shipment(
 ) -> Result<(StatusCode, Json<pb::CreateShipmentResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateShipmentRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    db::ping(&state).await?;
     let shipment = order::service::create_shipment(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreateShipmentResponse { shipment: Some(shipment) })))
 }
@@ -159,7 +149,6 @@ pub async fn update_shipment_status(
 ) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateShipmentStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    db::ping(&state).await?;
     let shipment = order::service::update_shipment_status(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateShipmentStatusResponse { shipment: Some(shipment) })))
 }
@@ -173,7 +162,6 @@ pub async fn create_promotion(
     let req = parse_request::<pb::CreatePromotionRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let promotion = promotion::service::create_promotion(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreatePromotionResponse { promotion: Some(promotion) })))
 }
@@ -187,7 +175,6 @@ pub async fn update_promotion(
     let req = parse_request::<pb::UpdatePromotionRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    db::ping(&state).await?;
     let promotion = promotion::service::update_promotion(&state, tenant_id, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdatePromotionResponse { promotion: Some(promotion) })))
 }

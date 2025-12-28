@@ -18,6 +18,7 @@
 
 ## Operations
 - `docs/operations/audit_log.md`
+- `docs/operations/logging.md`
 
 ## Features
 - Store Settings
