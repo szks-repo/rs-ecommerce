@@ -6,6 +6,7 @@
 - `docs/architecture/proto_organization.md`
 - `docs/architecture/auth_ui.md`
 - `docs/architecture/identity.md`
+- `docs/architecture/inventory_reservation.md`
 
 ## API
 - `docs/api/connectrpc.md`

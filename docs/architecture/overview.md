@@ -118,6 +118,7 @@
 - inventory.updated
 - price.updated
 - order.placed
+- inventory.reservation.expired
 - order.status_changed
 
 ### Uses

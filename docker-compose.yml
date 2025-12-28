@@ -22,6 +22,24 @@ services:
     ports:
       - "8080:8080"
 
+  inventory-worker:
+    build: .
+    command: ["cargo", "run", "--bin", "inventory_worker"]
+    volumes:
+      - .:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target:/app/target
+    environment:
+      RUST_LOG: info
+      DATABASE_URL: postgres://rs:rs@db:5432/rs_ecommerce
+      INVENTORY_WORKER_ONESHOT: "false"
+      INVENTORY_WORKER_BATCH_SIZE: "50"
+      INVENTORY_RESERVATION_TTL_SECONDS: "900"
+      INVENTORY_WORKER_SLEEP_MS: "500"
+    depends_on:
+      - db
+
   db:
     image: postgres:16
     environment:

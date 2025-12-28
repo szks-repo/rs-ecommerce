@@ -7,6 +7,7 @@
 - Included:
   - Create cart
   - Add/update/remove items
+  - Inventory reservation on add-to-cart (TTL hold)
 - Excluded:
   - Price recalculation rules (future)
   - Cart expiration policy (future)
@@ -24,11 +25,15 @@
 - Tables:
   - carts
   - cart_items
+  - inventory_reservations
+  - inventory_items (reserved counter)
 
 ## Flows
 - Add item:
   1. Validate variant
-  2. Update cart totals
+  2. Create inventory reservation (time-bound)
+  3. Update cart totals
+  4. Release reservation on expiry or remove
 
 ## Audit
 - Actions:

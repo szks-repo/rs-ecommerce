@@ -98,9 +98,11 @@ pub async fn add_cart_item(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::AddCartItemResponse>), (StatusCode, Json<ConnectError>)> {
-    let _req = parse_request::<pb::AddCartItemRequest>(&headers, body)?;
+    let req = parse_request::<pb::AddCartItemRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant.clone())?;
     db::ping(&state).await?;
-    Ok((StatusCode::OK, Json(pb::AddCartItemResponse { cart: None })))
+    let cart = cart::service::add_cart_item(&state, tenant_id, req).await?;
+    Ok((StatusCode::OK, Json(pb::AddCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn update_cart_item(
@@ -108,9 +110,11 @@ pub async fn update_cart_item(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::UpdateCartItemResponse>), (StatusCode, Json<ConnectError>)> {
-    let _req = parse_request::<pb::UpdateCartItemRequest>(&headers, body)?;
+    let req = parse_request::<pb::UpdateCartItemRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant.clone())?;
     db::ping(&state).await?;
-    Ok((StatusCode::OK, Json(pb::UpdateCartItemResponse { cart: None })))
+    let cart = cart::service::update_cart_item(&state, tenant_id, req).await?;
+    Ok((StatusCode::OK, Json(pb::UpdateCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn remove_cart_item(
@@ -118,9 +122,11 @@ pub async fn remove_cart_item(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::RemoveCartItemResponse>), (StatusCode, Json<ConnectError>)> {
-    let _req = parse_request::<pb::RemoveCartItemRequest>(&headers, body)?;
+    let req = parse_request::<pb::RemoveCartItemRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant.clone())?;
     db::ping(&state).await?;
-    Ok((StatusCode::OK, Json(pb::RemoveCartItemResponse { cart: None })))
+    let cart = cart::service::remove_cart_item(&state, tenant_id, req).await?;
+    Ok((StatusCode::OK, Json(pb::RemoveCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn checkout(
@@ -128,9 +134,11 @@ pub async fn checkout(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::CheckoutResponse>), (StatusCode, Json<ConnectError>)> {
-    let _req = parse_request::<pb::CheckoutRequest>(&headers, body)?;
+    let req = parse_request::<pb::CheckoutRequest>(&headers, body)?;
+    let tenant_id = require_tenant_id(req.tenant.clone())?;
     db::ping(&state).await?;
-    Ok((StatusCode::OK, Json(pb::CheckoutResponse { order: None })))
+    let order = cart::service::checkout(&state, tenant_id, req).await?;
+    Ok((StatusCode::OK, Json(pb::CheckoutResponse { order: Some(order) })))
 }
 
 pub async fn get_order(

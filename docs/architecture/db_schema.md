@@ -52,53 +52,64 @@ Note: In single-brand mode, a tenant can have exactly one vendor representing th
 
 Note: `store_settings` and related configuration tables are linked by `store_id` (keeping `tenant_id` for now).
 
-## Catalog
+## Catalog (v2)
 
 ### products
 - id (uuid, pk)
 - tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
 - vendor_id (uuid, fk -> vendors.id)
 - title (text)
 - description (text)
 - status (text) -- draft | active | archived
 - created_at, updated_at
 
-### product_options
-- id (uuid, pk)
-- product_id (uuid, fk -> products.id)
-- name (text)
-- position (int)
-
-### product_option_values
-- id (uuid, pk)
-- product_option_id (uuid, fk -> product_options.id)
-- value (text)
-- position (int)
-
 ### variants
 - id (uuid, pk)
 - product_id (uuid, fk -> products.id)
-- sku (text, unique per tenant)
-- price (numeric)
-- compare_at (numeric, nullable)
-- weight (numeric, nullable)
+- sku (text, unique per product)
+- price_amount (bigint)
+- price_currency (text)
+- compare_at_amount (bigint, nullable)
+- compare_at_currency (text, nullable)
 - status (text)
 - created_at, updated_at
 
-### variant_option_values
-- id (uuid, pk)
-- variant_id (uuid, fk -> variants.id)
-- product_option_value_id (uuid, fk -> product_option_values.id)
+## Inventory (v2)
 
-## Inventory
-
-### inventory_items
+### inventory_stocks
 - id (uuid, pk)
 - tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
 - variant_id (uuid, fk -> variants.id)
 - stock (int)
 - reserved (int)
 - updated_at
+
+### inventory_reservations
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- cart_id (uuid, fk -> carts.id)
+- cart_item_id (uuid, fk -> cart_items.id, nullable)
+- variant_id (uuid, fk -> variants.id)
+- quantity (int)
+- status (text) -- active | expired | consumed | released
+- expires_at (timestamptz)
+- created_at, updated_at
+
+### inventory_reservation_requests (async queue)
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- cart_id (uuid, fk -> carts.id)
+- cart_item_id (uuid, fk -> cart_items.id, nullable)
+- variant_id (uuid, fk -> variants.id)
+- quantity (int)
+- status (text) -- queued | processing | done | failed
+- is_hot (bool)
+- idempotency_key (text)
+- created_at, updated_at
 
 ## Customers
 

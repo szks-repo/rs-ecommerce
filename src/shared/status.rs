@@ -30,6 +30,14 @@ pub fn payment_method_from_string(method: String) -> i32 {
     }
 }
 
+pub fn payment_method_to_string(method: i32) -> Option<&'static str> {
+    match pb::PaymentMethod::try_from(method).ok()? {
+        pb::PaymentMethod::BankTransfer => Some("bank_transfer"),
+        pb::PaymentMethod::Cod => Some("cod"),
+        pb::PaymentMethod::Unspecified => None,
+    }
+}
+
 pub fn shipment_status_to_string(status: i32) -> &'static str {
     match pb::ShipmentStatus::try_from(status).ok() {
         Some(pb::ShipmentStatus::Pending) => "pending",
