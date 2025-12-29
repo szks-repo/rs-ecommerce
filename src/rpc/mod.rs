@@ -215,8 +215,8 @@ pub fn router() -> Router<AppState> {
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
             post(audit::list_audit_logs),
         )
-        .layer(middleware::from_fn(actor::inject_actor))
         .layer(middleware::from_fn(request_context::inject_request_context))
+        .layer(middleware::from_fn(actor::inject_actor))
         .layer(TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
             let request_id = req
                 .headers()

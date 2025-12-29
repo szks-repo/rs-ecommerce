@@ -21,6 +21,23 @@ The compose file provides defaults:
 docker compose up --build
 ```
 
+## Frontend (Admin UI)
+```bash
+cd frontend/admin-ui
+npm install
+npm run dev
+```
+
+## ConnectRPC Type Generation (Frontend)
+```bash
+# Install Buf CLI if not present (https://buf.build)
+buf --version
+buf generate
+```
+
+Generated files:
+- `frontend/admin-ui/src/gen`
+
 ## Initialize Store (example)
 ```bash
 curl -X POST http://localhost:8080/rpc/ecommerce.v1.SetupService/InitializeStore \
