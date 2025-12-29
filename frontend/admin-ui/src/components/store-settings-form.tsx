@@ -18,7 +18,22 @@ import { getStoreSettings, updateStoreSettings } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 
-export default function StoreSettingsForm() {
+type StoreSettingsSection =
+  | "basic"
+  | "payment"
+  | "payment-cod"
+  | "payment-bank"
+  | "tax"
+  | "appearance";
+
+export default function StoreSettingsForm({
+  sections,
+  submitLabel,
+}: {
+  sections?: StoreSettingsSection[];
+  submitLabel?: string;
+}) {
+  const visible = sections ?? ["basic", "payment", "tax", "appearance"];
   const [storeName, setStoreName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -167,224 +182,245 @@ export default function StoreSettingsForm() {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <Card className="border-neutral-200 bg-white text-neutral-900">
-        <CardHeader>
-          <CardTitle>1. Basic Information</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Store identity and contact details.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="storeName">Store Name</Label>
-            <Input id="storeName" value={storeName} onChange={(e) => setStoreName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="legalName">Legal Name</Label>
-            <Input id="legalName" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contactEmail">Contact Email</Label>
-            <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="contactPhone">Contact Phone</Label>
-            <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="addressPrefecture">Prefecture</Label>
-            <Input id="addressPrefecture" value={addressPrefecture} onChange={(e) => setAddressPrefecture(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="addressCity">City</Label>
-            <Input id="addressCity" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} required />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="addressLine1">Address Line 1</Label>
-            <Input id="addressLine1" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} required />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="addressLine2">Address Line 2</Label>
-            <Input id="addressLine2" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="legalNotice">Legal Notice</Label>
-            <Textarea id="legalNotice" value={legalNotice} onChange={(e) => setLegalNotice(e.target.value)} rows={3} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="defaultLanguage">Default Language</Label>
-            <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
-              <SelectTrigger id="defaultLanguage" className="bg-white">
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ja">Japanese (ja)</SelectItem>
-                <SelectItem value="en">English (en)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger id="currency" className="bg-white">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="JPY">JPY</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="primaryDomain">Primary Domain</Label>
-            <Input id="primaryDomain" value={primaryDomain} onChange={(e) => setPrimaryDomain(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="subdomain">Subdomain</Label>
-            <Input id="subdomain" value={subdomain} onChange={(e) => setSubdomain(e.target.value)} />
-          </div>
-          <div className="flex items-center justify-between md:col-span-2">
-            <div>
-              <Label htmlFor="httpsEnabled">HTTPS Enabled</Label>
-              <p className="text-xs text-neutral-500">Enable HTTPS for storefront domains.</p>
+      {visible.includes("basic") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Store identity and contact details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="storeName">Store Name</Label>
+              <Input id="storeName" value={storeName} onChange={(e) => setStoreName(e.target.value)} required />
             </div>
-            <Switch id="httpsEnabled" checked={httpsEnabled} onCheckedChange={setHttpsEnabled} />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-neutral-200 bg-white text-neutral-900">
-        <CardHeader>
-          <CardTitle>2. Payment Settings</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Bank transfer and COD configuration.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="flex items-center justify-between md:col-span-2">
-            <div>
-              <Label htmlFor="codEnabled">Cash on Delivery</Label>
-              <p className="text-xs text-neutral-500">Enable COD payments.</p>
+            <div className="space-y-2">
+              <Label htmlFor="legalName">Legal Name</Label>
+              <Input id="legalName" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
             </div>
-            <Switch id="codEnabled" checked={codEnabled} onCheckedChange={setCodEnabled} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="codFeeAmount">COD Fee Amount</Label>
-            <Input id="codFeeAmount" value={codFeeAmount} onChange={(e) => setCodFeeAmount(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="codFeeCurrency">COD Fee Currency</Label>
-            <Select value={codFeeCurrency} onValueChange={setCodFeeCurrency}>
-              <SelectTrigger id="codFeeCurrency" className="bg-white">
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="JPY">JPY</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name</Label>
-            <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankBranch">Bank Branch</Label>
-            <Input id="bankBranch" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankAccountType">Account Type</Label>
-            <Input id="bankAccountType" value={bankAccountType} onChange={(e) => setBankAccountType(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankAccountNumber">Account Number</Label>
-            <Input id="bankAccountNumber" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} required />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="bankAccountName">Account Name</Label>
-            <Input id="bankAccountName" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} required />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="space-y-2">
+              <Label htmlFor="contactEmail">Contact Email</Label>
+              <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contactPhone">Contact Phone</Label>
+              <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addressPrefecture">Prefecture</Label>
+              <Input id="addressPrefecture" value={addressPrefecture} onChange={(e) => setAddressPrefecture(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="addressCity">City</Label>
+              <Input id="addressCity" value={addressCity} onChange={(e) => setAddressCity(e.target.value)} required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="addressLine1">Address Line 1</Label>
+              <Input id="addressLine1" value={addressLine1} onChange={(e) => setAddressLine1(e.target.value)} required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="addressLine2">Address Line 2</Label>
+              <Input id="addressLine2" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="legalNotice">Legal Notice</Label>
+              <Textarea id="legalNotice" value={legalNotice} onChange={(e) => setLegalNotice(e.target.value)} rows={3} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="defaultLanguage">Default Language</Label>
+              <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
+                <SelectTrigger id="defaultLanguage" className="bg-white">
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ja">Japanese (ja)</SelectItem>
+                  <SelectItem value="en">English (en)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger id="currency" className="bg-white">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="JPY">JPY</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="primaryDomain">Primary Domain</Label>
+              <Input id="primaryDomain" value={primaryDomain} onChange={(e) => setPrimaryDomain(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subdomain">Subdomain</Label>
+              <Input id="subdomain" value={subdomain} onChange={(e) => setSubdomain(e.target.value)} />
+            </div>
+            <div className="flex items-center justify-between md:col-span-2">
+              <div>
+                <Label htmlFor="httpsEnabled">HTTPS Enabled</Label>
+                <p className="text-xs text-neutral-500">Enable HTTPS for storefront domains.</p>
+              </div>
+              <Switch id="httpsEnabled" checked={httpsEnabled} onCheckedChange={setHttpsEnabled} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className="border-neutral-200 bg-white text-neutral-900">
-        <CardHeader>
-          <CardTitle>3. Tax & Order Rules</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Default tax behavior and initial order status.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="taxMode">Tax Mode</Label>
-            <Select value={taxMode} onValueChange={setTaxMode}>
-              <SelectTrigger id="taxMode" className="bg-white">
-                <SelectValue placeholder="Select mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="inclusive">Inclusive</SelectItem>
-                <SelectItem value="exclusive">Exclusive</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="taxRounding">Tax Rounding</Label>
-            <Select value={taxRounding} onValueChange={setTaxRounding}>
-              <SelectTrigger id="taxRounding" className="bg-white">
-                <SelectValue placeholder="Select rounding" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="round">Round</SelectItem>
-                <SelectItem value="floor">Floor</SelectItem>
-                <SelectItem value="ceil">Ceil</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="orderInitialStatus">Order Initial Status</Label>
-            <Select value={orderInitialStatus} onValueChange={setOrderInitialStatus}>
-              <SelectTrigger id="orderInitialStatus" className="bg-white">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="pending_payment">pending_payment</SelectItem>
-                <SelectItem value="pending_shipment">pending_shipment</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
+      {(visible.includes("payment") || visible.includes("payment-cod")) && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Payment: Cash on Delivery</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Configure COD (cash on delivery).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center justify-between md:col-span-2">
+              <div>
+                <Label htmlFor="codEnabled">Cash on Delivery</Label>
+                <p className="text-xs text-neutral-500">Enable COD payments.</p>
+              </div>
+              <Switch id="codEnabled" checked={codEnabled} onCheckedChange={setCodEnabled} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="codFeeAmount">COD Fee Amount</Label>
+              <Input id="codFeeAmount" value={codFeeAmount} onChange={(e) => setCodFeeAmount(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="codFeeCurrency">COD Fee Currency</Label>
+              <Select value={codFeeCurrency} onValueChange={setCodFeeCurrency}>
+                <SelectTrigger id="codFeeCurrency" className="bg-white">
+                  <SelectValue placeholder="Select currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="JPY">JPY</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      <Card className="border-neutral-200 bg-white text-neutral-900">
-        <CardHeader>
-          <CardTitle>Appearance</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Theme and brand assets.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="theme">Theme</Label>
-            <Input id="theme" value={theme} onChange={(e) => setTheme(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="brandColor">Brand Color</Label>
-            <Input id="brandColor" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="logoUrl">Logo URL</Label>
-            <Input id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
-          </div>
-          <div className="space-y-2 md:col-span-2">
-            <Label htmlFor="faviconUrl">Favicon URL</Label>
-            <Input id="faviconUrl" value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
+      {(visible.includes("payment") || visible.includes("payment-bank")) && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Payment: Bank Transfer</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Configure bank transfer details.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="bankName">Bank Name</Label>
+              <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bankBranch">Bank Branch</Label>
+              <Input id="bankBranch" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bankAccountType">Account Type</Label>
+              <Input id="bankAccountType" value={bankAccountType} onChange={(e) => setBankAccountType(e.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bankAccountNumber">Account Number</Label>
+              <Input id="bankAccountNumber" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="bankAccountName">Account Name</Label>
+              <Input id="bankAccountName" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} required />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {visible.includes("tax") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Tax & Order Rules</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Default tax behavior and initial order status.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="taxMode">Tax Mode</Label>
+              <Select value={taxMode} onValueChange={setTaxMode}>
+                <SelectTrigger id="taxMode" className="bg-white">
+                  <SelectValue placeholder="Select mode" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inclusive">Inclusive</SelectItem>
+                  <SelectItem value="exclusive">Exclusive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="taxRounding">Tax Rounding</Label>
+              <Select value={taxRounding} onValueChange={setTaxRounding}>
+                <SelectTrigger id="taxRounding" className="bg-white">
+                  <SelectValue placeholder="Select rounding" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="round">Round</SelectItem>
+                  <SelectItem value="floor">Floor</SelectItem>
+                  <SelectItem value="ceil">Ceil</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="orderInitialStatus">Order Initial Status</Label>
+              <Select value={orderInitialStatus} onValueChange={setOrderInitialStatus}>
+                <SelectTrigger id="orderInitialStatus" className="bg-white">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pending_payment">pending_payment</SelectItem>
+                  <SelectItem value="pending_shipment">pending_shipment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {visible.includes("appearance") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Theme and brand assets.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="theme">Theme</Label>
+              <Input id="theme" value={theme} onChange={(e) => setTheme(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="brandColor">Brand Color</Label>
+              <Input id="brandColor" value={brandColor} onChange={(e) => setBrandColor(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="logoUrl">Logo URL</Label>
+              <Input id="logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="faviconUrl">Favicon URL</Label>
+              <Input id="faviconUrl" value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex items-center justify-end">
         <Button type="submit" disabled={isSaving || isLoading}>
-          {isSaving ? "Saving..." : "Save Settings"}
+          {isSaving ? "Saving..." : submitLabel ?? "Save Settings"}
         </Button>
       </div>
     </form>
