@@ -74,10 +74,10 @@ export default function StoreLocationForm() {
   }
 
   return (
-    <Card className="border-neutral-800 bg-neutral-900 text-neutral-100">
+    <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
         <CardTitle>Store Locations</CardTitle>
-        <CardDescription className="text-neutral-400">
+        <CardDescription className="text-neutral-500">
           Configure inventory locations (warehouses).
         </CardDescription>
       </CardHeader>
@@ -132,16 +132,16 @@ export default function StoreLocationForm() {
           </div>
         </form>
 
-        <div className="space-y-2 text-sm text-neutral-300">
+        <div className="space-y-2 text-sm text-neutral-600">
           {locations.length === 0 ? (
             <div>No locations yet.</div>
           ) : (
             locations.map((loc) => (
-              <div key={loc.id} className="rounded-lg border border-neutral-800 px-3 py-2">
-                <div className="text-neutral-100">
+              <div key={loc.id} className="rounded-lg border border-neutral-200 px-3 py-2">
+                <div className="text-neutral-900">
                   {loc.code} — {loc.name}
                 </div>
-                <div className="text-xs text-neutral-400">
+                <div className="text-xs text-neutral-500">
                   id: {loc.id} / status: {loc.status}
                 </div>
               </div>

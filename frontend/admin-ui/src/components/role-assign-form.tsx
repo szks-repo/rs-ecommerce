@@ -84,10 +84,10 @@ export default function RoleAssignForm() {
   }
 
   return (
-    <Card className="border-neutral-800 bg-neutral-900 text-neutral-100">
+    <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
         <CardTitle>Assign Role</CardTitle>
-        <CardDescription className="text-neutral-400">
+        <CardDescription className="text-neutral-500">
           Attach a role to a staff member.
         </CardDescription>
       </CardHeader>
@@ -112,7 +112,7 @@ export default function RoleAssignForm() {
           <div className="space-y-2">
             <Label htmlFor="roleId">Role ID</Label>
             <Select value={roleId} onValueChange={setRoleId}>
-            <SelectTrigger id="roleId" className="bg-neutral-950">
+            <SelectTrigger id="roleId" className="bg-white">
               <SelectValue placeholder={isLoadingRoles ? "Loading roles..." : "Select role"} />
             </SelectTrigger>
               <SelectContent>

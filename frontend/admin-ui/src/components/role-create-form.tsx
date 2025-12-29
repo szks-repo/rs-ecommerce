@@ -66,10 +66,10 @@ export default function RoleCreateForm() {
   }
 
   return (
-    <Card className="border-neutral-800 bg-neutral-900 text-neutral-100">
+    <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
         <CardTitle>Create Role</CardTitle>
-        <CardDescription className="text-neutral-400">
+        <CardDescription className="text-neutral-500">
           Define a role and its permissions.
         </CardDescription>
       </CardHeader>

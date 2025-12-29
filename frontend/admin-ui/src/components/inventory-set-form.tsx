@@ -52,10 +52,10 @@ export default function InventorySetForm() {
   }
 
   return (
-    <Card className="border-neutral-800 bg-neutral-900 text-neutral-100">
+    <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
         <CardTitle>Set Inventory</CardTitle>
-        <CardDescription className="text-neutral-400">
+        <CardDescription className="text-neutral-500">
           Update stock per location.
         </CardDescription>
       </CardHeader>

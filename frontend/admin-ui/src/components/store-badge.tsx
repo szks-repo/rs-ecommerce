@@ -13,7 +13,7 @@ export default function StoreBadge() {
   }, []);
 
   return (
-    <Alert className="border-neutral-800 bg-neutral-900 text-neutral-200">
+    <Alert className="border-neutral-200 bg-white text-neutral-700">
       <AlertTitle>Store Context</AlertTitle>
       <AlertDescription>
         store_id: {storeId || "-"} / tenant_id: {tenantId || "-"}
