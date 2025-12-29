@@ -45,7 +45,6 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 - code (text, unique per store)
 - name (text)
 - status (text)
-- metadata (jsonb)
 - created_at, updated_at
 
 ## Shipping (Japan)

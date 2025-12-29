@@ -71,7 +71,6 @@ message StoreLocation {
   string code = 2;
   string name = 3;
   string status = 4;
-  string metadata_json = 5;
 }
 
 message ShippingZone {

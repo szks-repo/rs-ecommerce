@@ -13,7 +13,6 @@ type StoreLocation = {
   code: string;
   name: string;
   status: string;
-  metadataJson?: string;
 };
 
 export default function StoreLocationForm() {
@@ -21,7 +20,6 @@ export default function StoreLocationForm() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState("active");
-  const [metadataJson, setMetadataJson] = useState("{}");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,7 +58,6 @@ export default function StoreLocationForm() {
             code,
             name,
             status,
-            metadataJson,
           },
         }
       );
@@ -68,7 +65,6 @@ export default function StoreLocationForm() {
       setCode("");
       setName("");
       setStatus("active");
-      setMetadataJson("{}");
       await loadLocations();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -126,14 +122,6 @@ export default function StoreLocationForm() {
                 id="locationStatus"
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="locationMetadata">Metadata (JSON)</Label>
-              <Input
-                id="locationMetadata"
-                value={metadataJson}
-                onChange={(e) => setMetadataJson(e.target.value)}
               />
             </div>
           </div>

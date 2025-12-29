@@ -59,7 +59,6 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - code (text, unique per store)
 - name (text)
 - status (text)
-- metadata (jsonb)
 - created_at, updated_at
 
 ## Product (v2)

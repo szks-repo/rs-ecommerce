@@ -11,7 +11,6 @@ use crate::{
         money::{money_from_parts, money_to_parts},
     },
 };
-use serde_json::Value;
 
 pub async fn get_store_settings(
     state: &AppState,
@@ -288,7 +287,7 @@ pub async fn list_store_locations(
 ) -> Result<Vec<pb::StoreLocation>, (StatusCode, Json<ConnectError>)> {
     let rows = sqlx::query(
         r#"
-        SELECT id::text as id, code, name, status, metadata
+        SELECT id::text as id, code, name, status
         FROM store_locations
         WHERE store_id = $1
         ORDER BY code ASC
@@ -306,9 +305,6 @@ pub async fn list_store_locations(
             code: row.get("code"),
             name: row.get("name"),
             status: row.get("status"),
-            metadata_json: row
-                .get::<serde_json::Value, _>("metadata")
-                .to_string(),
         })
         .collect())
 }
@@ -327,13 +323,11 @@ pub async fn upsert_store_location(
         parse_uuid(&location.id, "location_id")?
     };
 
-    let metadata = parse_metadata_json(&location.metadata_json)?;
-
     if location.id.is_empty() {
         sqlx::query(
             r#"
-            INSERT INTO store_locations (id, tenant_id, store_id, code, name, status, metadata)
-            VALUES ($1,$2,$3,$4,$5,$6,$7)
+            INSERT INTO store_locations (id, tenant_id, store_id, code, name, status)
+            VALUES ($1,$2,$3,$4,$5,$6)
             "#,
         )
         .bind(location_id)
@@ -342,7 +336,6 @@ pub async fn upsert_store_location(
         .bind(&location.code)
         .bind(&location.name)
         .bind(&location.status)
-        .bind(metadata)
         .execute(&state.db)
         .await
         .map_err(db::error)?;
@@ -350,14 +343,13 @@ pub async fn upsert_store_location(
         sqlx::query(
             r#"
             UPDATE store_locations
-            SET code = $1, name = $2, status = $3, metadata = $4, updated_at = now()
-            WHERE id = $5 AND store_id = $6
+            SET code = $1, name = $2, status = $3, updated_at = now()
+            WHERE id = $4 AND store_id = $5
             "#,
         )
         .bind(&location.code)
         .bind(&location.name)
         .bind(&location.status)
-        .bind(metadata)
         .bind(location_id)
         .bind(parse_uuid(&store_id, "store_id")?)
         .execute(&state.db)
@@ -370,7 +362,6 @@ pub async fn upsert_store_location(
         code: location.code,
         name: location.name,
         status: location.status,
-        metadata_json: location.metadata_json,
     };
 
     let _ = audit::record(
@@ -989,18 +980,36 @@ pub async fn resolve_store_context(
     if let Some(store) = store.and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id) }) {
         let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
             .bind(parse_uuid(&store, "store_id")?)
-            .fetch_one(&state.db)
+            .fetch_optional(&state.db)
             .await
             .map_err(db::error)?;
+        let Some(row) = row else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: "invalid_argument",
+                    message: "store_id not found".to_string(),
+                }),
+            ));
+        };
         let tenant_id: String = row.get("tenant_id");
         return Ok((store, tenant_id));
     }
     if let Some(tenant_id) = tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
         let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
             .bind(parse_uuid(&tenant_id, "tenant_id")?)
-            .fetch_one(&state.db)
+            .fetch_optional(&state.db)
             .await
             .map_err(db::error)?;
+        let Some(row) = row else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: "invalid_argument",
+                    message: "tenant_id not found".to_string(),
+                }),
+            ));
+        };
         let store_id: String = row.get("id");
         return Ok((store_id, tenant_id));
     }
@@ -1056,22 +1065,6 @@ fn validate_store_location(
     Ok(())
 }
 
-fn parse_metadata_json(
-    raw: &str,
-) -> Result<serde_json::Value, (StatusCode, Json<ConnectError>)> {
-    if raw.trim().is_empty() {
-        return Ok(serde_json::json!({}));
-    }
-    serde_json::from_str::<Value>(raw).map_err(|_| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: "invalid_argument",
-                message: "metadata_json must be valid JSON".to_string(),
-            }),
-        )
-    })
-}
 
 pub fn validate_mall_settings(
     mall: &pb::MallSettings,
