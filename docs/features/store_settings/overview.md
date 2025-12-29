@@ -66,4 +66,4 @@ Domain data such as customers/orders/products are **not** part of settings.
 ## Notes
 - Settings are linked by `store_id` (tenant_id is kept for migration compatibility).
 - Japan-focused shipping means address fields: prefecture/city/line1/line2.
-- Future: multi-currency, international shipping, multi-language catalogs.
+- Future: multi-currency, international shipping, multi-language product catalogs.

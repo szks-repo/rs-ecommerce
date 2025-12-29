@@ -4,6 +4,9 @@ import StoreBadge from "@/components/store-badge";
 import StaffCreateForm from "@/components/staff-create-form";
 import RoleCreateForm from "@/components/role-create-form";
 import RoleAssignForm from "@/components/role-assign-form";
+import ProductCreateForm from "@/components/product-create-form";
+import VariantCreateForm from "@/components/variant-create-form";
+import InventorySetForm from "@/components/inventory-set-form";
 
 export default function AdminDashboard() {
   return (
@@ -100,6 +103,15 @@ export default function AdminDashboard() {
           <div className="mt-8 grid gap-6 md:grid-cols-2">
             <RoleCreateForm />
             <RoleAssignForm />
+          </div>
+
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <ProductCreateForm />
+            <VariantCreateForm />
+          </div>
+
+          <div className="mt-8 grid gap-6 md:grid-cols-2">
+            <InventorySetForm />
           </div>
         </main>
       </div>

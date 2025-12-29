@@ -48,7 +48,7 @@
 ## Domain Boundaries (DDD-style)
 
 - Tenant (Shop)
-- Catalog
+- Product
 - Inventory
 - Pricing
 - Promotions

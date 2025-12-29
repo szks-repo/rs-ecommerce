@@ -9,7 +9,7 @@ use axum::{
 use crate::{
     AppState,
     pb::pb,
-    catalog, order, promotion,
+    product, order, promotion,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
 };
 
@@ -20,8 +20,7 @@ pub async fn list_products(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::ListProductsAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListProductsAdminRequest>(&headers, body)?;
-    let tenant_id = require_tenant_id(req.tenant)?;
-    let products = catalog::service::list_products_admin(&state, tenant_id).await?;
+    let products = product::service::list_products_admin(&state, req.tenant, req.store).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListProductsAdminResponse {
@@ -41,8 +40,7 @@ pub async fn create_product(
 ) -> Result<(StatusCode, Json<pb::CreateProductResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let tenant_id = require_tenant_id(req.tenant.clone())?;
-    let product = catalog::service::create_product(&state, tenant_id, req, actor).await?;
+    let product = product::service::create_product(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreateProductResponse { product: Some(product) })))
 }
 
@@ -54,8 +52,7 @@ pub async fn update_product(
 ) -> Result<(StatusCode, Json<pb::UpdateProductResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let tenant_id = require_tenant_id(req.tenant.clone())?;
-    let product = catalog::service::update_product(&state, tenant_id, req, actor).await?;
+    let product = product::service::update_product(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateProductResponse { product: Some(product) })))
 }
 
@@ -67,7 +64,7 @@ pub async fn create_variant(
 ) -> Result<(StatusCode, Json<pb::CreateVariantResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let variant = catalog::service::create_variant(&state, req, actor).await?;
+    let variant = product::service::create_variant(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::CreateVariantResponse { variant: Some(variant) })))
 }
 
@@ -79,7 +76,7 @@ pub async fn update_variant(
 ) -> Result<(StatusCode, Json<pb::UpdateVariantResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let variant = catalog::service::update_variant(&state, req, actor).await?;
+    let variant = product::service::update_variant(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::UpdateVariantResponse { variant: Some(variant) })))
 }
 
@@ -91,8 +88,7 @@ pub async fn set_inventory(
 ) -> Result<(StatusCode, Json<pb::SetInventoryResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::SetInventoryRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let tenant_id = require_tenant_id(req.tenant.clone())?;
-    let inventory = catalog::service::set_inventory(&state, tenant_id, req, actor).await?;
+    let inventory = product::service::set_inventory(&state, req, actor).await?;
     Ok((StatusCode::OK, Json(pb::SetInventoryResponse { inventory: Some(inventory) })))
 }
 

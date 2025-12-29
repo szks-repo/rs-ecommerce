@@ -6,7 +6,7 @@
 - Low write overhead and append-only semantics
 
 ## Scope
-- Backoffice operations (catalog/order/shipping/promotion/store_settings)
+- Backoffice operations (product/order/shipping/promotion/store_settings)
 - Setup/initialization events
 - Auth/admin role changes (future)
 
@@ -26,7 +26,7 @@ Append-only table with JSON payload:
 
 ## Write Path
 - Synchronous write for critical operations (store_settings, setup)
-- Async/eventual for high-volume actions (catalog updates)
+- Async/eventual for high-volume actions (product updates)
 
 ## Retention
 - Default: 2 years

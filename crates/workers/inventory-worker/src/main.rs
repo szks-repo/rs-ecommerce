@@ -25,6 +25,8 @@ async fn main() -> Result<()> {
         .connect(&db_url)
         .await?;
 
+    wait_for_schema(&pool).await?;
+
     let batch_size = env::env_usize("INVENTORY_WORKER_BATCH_SIZE", 50) as i64;
     let ttl_seconds = env::env_i64("INVENTORY_RESERVATION_TTL_SECONDS", 900);
     let sleep_ms = env::env_u64("INVENTORY_WORKER_SLEEP_MS", 500);
@@ -51,6 +53,29 @@ async fn main() -> Result<()> {
     }
 
     Ok(())
+}
+
+async fn wait_for_schema(pool: &PgPool) -> Result<()> {
+    let mut attempts = 0;
+    loop {
+        let row = sqlx::query(
+            "SELECT to_regclass('public.inventory_reservation_requests') as req_table",
+        )
+        .fetch_one(pool)
+        .await?;
+        let exists: Option<String> = row.get("req_table");
+        if exists.is_some() {
+            return Ok(());
+        }
+        attempts += 1;
+        if attempts % 10 == 0 {
+            info!(
+                attempts,
+                "waiting for migrations to create inventory reservation tables"
+            );
+        }
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
 }
 
 async fn process_queue_batch(

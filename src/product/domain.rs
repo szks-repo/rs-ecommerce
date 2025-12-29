@@ -1,4 +1,4 @@
-// Domain models for Catalog context (placeholder for richer invariants).
+// Domain models for Product context (placeholder for richer invariants).
 #[derive(Debug, Clone)]
 pub struct Product {
     pub id: String,

@@ -2,7 +2,7 @@ use axum::{routing::get, extract::State, Json, http::StatusCode};
 use rs_common::telemetry;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
-mod catalog;
+mod product;
 mod cart;
 mod audit;
 mod identity;

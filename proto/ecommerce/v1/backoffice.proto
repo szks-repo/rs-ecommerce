@@ -32,22 +32,25 @@ message ProductAdmin {
   string description = 4;
   string status = 5;
   google.protobuf.Timestamp updated_at = 6;
+  string store_id = 7;
 }
 
 message VariantAdmin {
   string id = 1;
   string product_id = 2;
   string sku = 3;
-  Money price = 4;
-  Money compare_at = 5;
-  string status = 6;
+  string fulfillment_type = 4; // physical | digital
+  Money price = 5;
+  Money compare_at = 6;
+  string status = 7;
 }
 
 message InventoryAdmin {
   string variant_id = 1;
-  int32 stock = 2;
-  int32 reserved = 3;
-  google.protobuf.Timestamp updated_at = 4;
+  string location_id = 2;
+  int32 stock = 3;
+  int32 reserved = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 
 message OrderAdmin {
@@ -82,6 +85,7 @@ message ListProductsAdminRequest {
   TenantContext tenant = 1;
   string vendor_id = 2; // optional for mall mode
   PageInfo page = 3;
+  StoreContext store = 10;
 }
 
 message ListProductsAdminResponse {
@@ -96,6 +100,7 @@ message CreateProductRequest {
   string description = 4;
   string status = 5;
   ActorContext actor = 6;
+  StoreContext store = 10;
 }
 
 message CreateProductResponse {
@@ -109,6 +114,7 @@ message UpdateProductRequest {
   string description = 4;
   string status = 5;
   ActorContext actor = 6;
+  StoreContext store = 10;
 }
 
 message UpdateProductResponse {
@@ -119,10 +125,11 @@ message CreateVariantRequest {
   TenantContext tenant = 1;
   string product_id = 2;
   string sku = 3;
-  Money price = 4;
-  Money compare_at = 5;
-  string status = 6;
-  ActorContext actor = 7;
+  string fulfillment_type = 4; // physical | digital
+  Money price = 5;
+  Money compare_at = 6;
+  string status = 7;
+  ActorContext actor = 8;
 }
 
 message CreateVariantResponse {
@@ -135,7 +142,8 @@ message UpdateVariantRequest {
   Money price = 3;
   Money compare_at = 4;
   string status = 5;
-  ActorContext actor = 6;
+  string fulfillment_type = 6; // optional
+  ActorContext actor = 7;
 }
 
 message UpdateVariantResponse {
@@ -145,9 +153,11 @@ message UpdateVariantResponse {
 message SetInventoryRequest {
   TenantContext tenant = 1;
   string variant_id = 2;
-  int32 stock = 3;
-  int32 reserved = 4;
-  ActorContext actor = 5;
+  string location_id = 3;
+  int32 stock = 4;
+  int32 reserved = 5;
+  ActorContext actor = 6;
+  StoreContext store = 10;
 }
 
 message SetInventoryResponse {

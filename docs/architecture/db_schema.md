@@ -62,7 +62,7 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - metadata (jsonb)
 - created_at, updated_at
 
-## Catalog (v2)
+## Product (v2)
 
 ### products
 - id (uuid, pk)

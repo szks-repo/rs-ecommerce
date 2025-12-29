@@ -42,15 +42,6 @@ CREATE TABLE IF NOT EXISTS carts (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS cart_items (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    cart_id uuid NOT NULL REFERENCES carts(id),
-    vendor_id uuid REFERENCES vendors(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
-    price_amount bigint NOT NULL,
-    price_currency text NOT NULL,
-    quantity int NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS orders (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -64,15 +55,6 @@ CREATE TABLE IF NOT EXISTS orders (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS order_items (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id uuid NOT NULL REFERENCES orders(id),
-    vendor_id uuid REFERENCES vendors(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
-    price_amount bigint NOT NULL,
-    price_currency text NOT NULL,
-    quantity int NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS shipments (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

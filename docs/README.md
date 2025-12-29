@@ -31,9 +31,9 @@
   - `docs/features/store_settings/api.md`
   - `docs/features/store_settings/schema.md`
   - `docs/features/store_settings/form_spec.md`
-- Catalog
-  - `docs/features/catalog/overview.md`
-  - `docs/features/catalog/api.md`
+- Product
+  - `docs/features/product/overview.md`
+  - `docs/features/product/api.md`
 - Order
   - `docs/features/order/overview.md`
   - `docs/features/order/api.md`

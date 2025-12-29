@@ -1,0 +1,144 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { createVariant } from "@/lib/product";
+
+export default function VariantCreateForm() {
+  const [productId, setProductId] = useState("");
+  const [sku, setSku] = useState("");
+  const [fulfillmentType, setFulfillmentType] = useState("physical");
+  const [priceAmount, setPriceAmount] = useState("0");
+  const [compareAtAmount, setCompareAtAmount] = useState("");
+  const [status, setStatus] = useState("active");
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setError(null);
+    setMessage(null);
+    setIsSubmitting(true);
+    try {
+      const storeId = sessionStorage.getItem("store_id");
+      if (!storeId) {
+        throw new Error("store_id is missing. Please sign in first.");
+      }
+      const price = Number(priceAmount);
+      if (!Number.isFinite(price)) {
+        throw new Error("price_amount must be a number.");
+      }
+      const compareAt = compareAtAmount.trim().length > 0 ? Number(compareAtAmount) : undefined;
+      if (typeof compareAt === "number" && !Number.isFinite(compareAt)) {
+        throw new Error("compare_at_amount must be a number.");
+      }
+      const data = await createVariant({
+        storeId,
+        productId,
+        sku,
+        fulfillmentType,
+        priceAmount: price,
+        compareAtAmount: compareAt,
+        currency: "JPY",
+        status,
+      });
+      setMessage(`Created variant: ${data.variant.id}`);
+      setProductId("");
+      setSku("");
+      setFulfillmentType("physical");
+      setPriceAmount("0");
+      setCompareAtAmount("");
+      setStatus("active");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unknown error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <Card className="border-neutral-800 bg-neutral-900 text-neutral-100">
+      <CardHeader>
+        <CardTitle>Create Variant</CardTitle>
+        <CardDescription className="text-neutral-400">
+          Register SKU and pricing.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {error && (
+          <Alert className="mb-4">
+            <AlertTitle>Create failed</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {message && (
+          <Alert className="mb-4">
+            <AlertTitle>Success</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+        <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="variantProductId">Product ID</Label>
+            <Input
+              id="variantProductId"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="variantSku">SKU</Label>
+            <Input id="variantSku" value={sku} onChange={(e) => setSku(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="variantFulfillment">Fulfillment Type</Label>
+            <Input
+              id="variantFulfillment"
+              value={fulfillmentType}
+              onChange={(e) => setFulfillmentType(e.target.value)}
+              placeholder="physical or digital"
+            />
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="variantPrice">Price Amount (JPY)</Label>
+              <Input
+                id="variantPrice"
+                value={priceAmount}
+                onChange={(e) => setPriceAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="variantCompareAt">Compare-at Amount (JPY)</Label>
+              <Input
+                id="variantCompareAt"
+                value={compareAtAmount}
+                onChange={(e) => setCompareAtAmount(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="variantStatus">Status</Label>
+            <Input
+              id="variantStatus"
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+            />
+          </div>
+          <div>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Creating..." : "Create Variant"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}

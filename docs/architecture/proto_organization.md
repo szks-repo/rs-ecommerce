@@ -8,7 +8,7 @@ Goal: keep context boundaries explicit and allow growth without cross-contaminat
 - `storefront.proto`
   - StorefrontService (read/search/cart/checkout)
 - `backoffice.proto`
-  - BackofficeService (catalog/order/fulfillment/admin ops)
+  - BackofficeService (product/order/fulfillment/admin ops)
 - `store_settings.proto`
   - StoreSettingsService (store configuration, shipping/tax/mall)
 - `setup.proto`
@@ -21,7 +21,7 @@ Goal: keep context boundaries explicit and allow growth without cross-contaminat
 - If a message is used by two contexts, extract to `common.proto` or duplicate explicitly.
 
 ## Future Split Candidates
-- `catalog.proto` (Catalog context)
+- `product.proto` (Product context)
 - `order.proto` (Order/Fulfillment context)
 - `customer.proto` (Customer context)
 - `search.proto` (Search/indexing context)

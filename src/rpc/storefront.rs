@@ -8,7 +8,7 @@ use axum::{
 use crate::{
     AppState,
     pb::pb,
-    catalog, cart,
+    product, cart,
     infrastructure::search::SearchProduct,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
 };
@@ -20,7 +20,7 @@ pub async fn list_products(
 ) -> Result<(StatusCode, Json<pb::ListProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListProductsRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    let products = catalog::service::list_products(&state, tenant_id).await?;
+    let products = product::service::list_products(&state, tenant_id).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListProductsResponse {
@@ -39,7 +39,7 @@ pub async fn get_product(
 ) -> Result<(StatusCode, Json<pb::GetProductResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::GetProductRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    let product = catalog::service::get_product(&state, tenant_id, req.product_id).await?;
+    let product = product::service::get_product(&state, tenant_id, req.product_id).await?;
     Ok((StatusCode::OK, Json(pb::GetProductResponse { product })))
 }
 

@@ -1,4 +1,4 @@
-# Feature: Catalog
+# Feature: Product
 
 ## Purpose
 - Manage products, variants, and inventory for storefront and backoffice.
@@ -7,7 +7,7 @@
 - Included:
   - Product CRUD (backoffice)
   - Variant CRUD (backoffice)
-  - Inventory set/update
+  - Inventory set/update (per location)
   - Search index sync (Meilisearch)
 - Excluded:
   - Advanced taxonomy (categories/collections) (future)
@@ -24,6 +24,7 @@
   - Inventory is per variant + location (physical only)
   - Product can be linked to one or more store locations
   - Digital variants do not require inventory rows
+  - Product is scoped to a store
 
 ## APIs
 - BackofficeService.CreateProduct / UpdateProduct
