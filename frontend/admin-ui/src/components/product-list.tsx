@@ -7,6 +7,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
+import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 
 export default function ProductList() {
@@ -68,12 +69,22 @@ export default function ProductList() {
                       id: {product.id} / status: {product.status}
                     </div>
                   </div>
-                  <Link
-                    className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
-                    href={`/admin/products/${product.id}`}
-                  >
-                    Details
-                  </Link>
+                  <div className="flex flex-col gap-2 text-xs">
+                    <Link
+                      className="rounded-md border border-neutral-200 px-3 py-1 text-center font-medium text-neutral-700 hover:bg-neutral-50"
+                      href={`/admin/products/${product.id}`}
+                    >
+                      Details
+                    </Link>
+                    <a
+                      className="rounded-md border border-neutral-200 px-3 py-1 text-center font-medium text-neutral-700 hover:bg-neutral-50"
+                      href={buildProductPreviewUrl(product.id)}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Preview
+                    </a>
+                  </div>
                 </div>
                 {product.description ? (
                   <div className="mt-2 text-sm text-neutral-600">

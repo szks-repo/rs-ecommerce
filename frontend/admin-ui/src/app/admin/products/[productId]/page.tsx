@@ -10,6 +10,7 @@ import ProductUpdateForm from "@/components/product-update-form";
 import VariantUpdateForm from "@/components/variant-update-form";
 import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
+import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin, VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 
 export default function ProductDetailPage() {
@@ -77,6 +78,14 @@ export default function ProductDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+            href={buildProductPreviewUrl(productId)}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Preview
+          </a>
           <Link
             className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
             href="/admin/products"
