@@ -117,6 +117,19 @@ pub async fn initialize_store(
     .await
     .map_err(db::error)?;
 
+    sqlx::query(
+        r#"
+        INSERT INTO store_sync_settings (store_id, tenant_id, customer_sync_enabled)
+        VALUES ($1, $2, true)
+        ON CONFLICT (store_id) DO NOTHING
+        "#,
+    )
+    .bind(store_id)
+    .bind(tenant_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
     let vendor_id = uuid::Uuid::new_v4();
     sqlx::query(
         r#"

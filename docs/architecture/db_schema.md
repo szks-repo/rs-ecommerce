@@ -181,6 +181,31 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - phone (text, nullable)
 - created_at, updated_at
 
+### store_sync_settings
+- store_id (uuid, pk, fk -> stores.id)
+- tenant_id (uuid, fk -> tenants.id)
+- customer_sync_enabled (bool)
+- created_at, updated_at
+
+### outbox_events
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id, nullable)
+- aggregate_type (text)
+- aggregate_id (text)
+- event_type (text)
+- payload_json (jsonb)
+- status (text) -- pending | processing | published | failed
+- idempotency_key (text)
+- created_at, published_at
+
+### processed_events
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id, nullable)
+- event_id (uuid, fk -> outbox_events.id)
+- processed_at (timestamptz)
+
 ## Cart / Checkout
 
 ### carts

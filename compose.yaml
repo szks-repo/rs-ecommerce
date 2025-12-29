@@ -45,6 +45,27 @@ services:
       - db
       - jaeger
 
+  customer-sync-worker:
+    build: .
+    command: ["cargo", "run", "-p", "customer-sync-worker"]
+    volumes:
+      - .:/app
+      - cargo-registry:/usr/local/cargo/registry
+      - cargo-git:/usr/local/cargo/git
+      - target:/app/target
+    environment:
+      RUST_LOG: info
+      LOG_FORMAT: json
+      ENABLE_OTEL: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4317
+      DATABASE_URL: postgres://rs:rs@db:5432/rs_ecommerce
+      CUSTOMER_SYNC_WORKER_ONESHOT: "false"
+      CUSTOMER_SYNC_BATCH_SIZE: "100"
+      CUSTOMER_SYNC_WORKER_SLEEP_MS: "1000"
+    depends_on:
+      - db
+      - jaeger
+
   db:
     image: postgres:16
     environment:

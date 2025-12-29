@@ -7,6 +7,7 @@ edition = "2024"
 members = [
     "crates/common",
     "crates/workers/inventory-worker",
+    "crates/workers/customer-sync-worker",
 ]
 
 [dependencies]

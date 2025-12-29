@@ -5,7 +5,7 @@ use sqlx::Row;
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::{db, audit},
+    infrastructure::{db, audit, outbox},
     rpc::json::ConnectError,
     shared::{
         ids::{parse_uuid, StoreId, TenantId},
@@ -403,6 +403,55 @@ pub async fn create_customer(
     )
     .await?;
 
+    let _ = outbox::enqueue(
+        state,
+        outbox::OutboxEventInput {
+            tenant_id: customer.tenant_id.clone(),
+            store_id: Some(store_id.clone()),
+            aggregate_type: "customer".to_string(),
+            aggregate_id: customer.id.clone(),
+            event_type: "customer.profile_upsert".to_string(),
+            payload_json: serde_json::json!({
+                "tenant_id": customer.tenant_id,
+                "source_store_id": store_id,
+                "customer_id": customer.id,
+                "profile": {
+                    "name": profile.name,
+                    "email": profile.email,
+                    "phone": profile.phone,
+                    "status": profile.status,
+                    "notes": profile.notes,
+                }
+            }),
+        },
+    )
+    .await?;
+
+    for identity in identity_inputs {
+        let _ = outbox::enqueue(
+            state,
+            outbox::OutboxEventInput {
+                tenant_id: customer.tenant_id.clone(),
+                store_id: Some(store_id.clone()),
+                aggregate_type: "customer".to_string(),
+                aggregate_id: customer.id.clone(),
+                event_type: "customer.identity_upsert".to_string(),
+                payload_json: serde_json::json!({
+                    "tenant_id": customer.tenant_id,
+                    "source_store_id": store_id,
+                    "customer_id": customer.id,
+                    "identity": {
+                        "identity_type": identity.identity_type,
+                        "identity_value": identity.identity_value,
+                        "verified": identity.verified,
+                        "source": "admin"
+                    }
+                }),
+            },
+        )
+        .await?;
+    }
+
     Ok((customer, profile, matched_existing))
 }
 
@@ -509,6 +558,30 @@ pub async fn update_customer(
     )
     .await?;
 
+    let _ = outbox::enqueue(
+        state,
+        outbox::OutboxEventInput {
+            tenant_id: customer.tenant_id.clone(),
+            store_id: Some(store_id.clone()),
+            aggregate_type: "customer".to_string(),
+            aggregate_id: customer.id.clone(),
+            event_type: "customer.profile_upsert".to_string(),
+            payload_json: serde_json::json!({
+                "tenant_id": customer.tenant_id,
+                "source_store_id": store_id,
+                "customer_id": customer.id,
+                "profile": {
+                    "name": profile.name,
+                    "email": profile.email,
+                    "phone": profile.phone,
+                    "status": profile.status,
+                    "notes": profile.notes,
+                }
+            }),
+        },
+    )
+    .await?;
+
     Ok((customer, profile))
 }
 
@@ -596,6 +669,29 @@ pub async fn upsert_customer_identity(
         )
         .await?;
 
+        let _ = outbox::enqueue(
+            state,
+            outbox::OutboxEventInput {
+                tenant_id: updated.tenant_id.clone(),
+                store_id: None,
+                aggregate_type: "customer".to_string(),
+                aggregate_id: updated.customer_id.clone(),
+                event_type: "customer.identity_upsert".to_string(),
+                payload_json: serde_json::json!({
+                    "tenant_id": updated.tenant_id,
+                    "source_store_id": null,
+                    "customer_id": updated.customer_id,
+                    "identity": {
+                        "identity_type": updated.identity_type,
+                        "identity_value": updated.identity_value,
+                        "verified": updated.verified,
+                        "source": updated.source,
+                    }
+                }),
+            },
+        )
+        .await?;
+
         return Ok(updated);
     }
 
@@ -645,6 +741,29 @@ pub async fn upsert_customer_identity(
             to_json_opt(Some(created.clone())),
             actor,
         ),
+    )
+    .await?;
+
+    let _ = outbox::enqueue(
+        state,
+        outbox::OutboxEventInput {
+            tenant_id: created.tenant_id.clone(),
+            store_id: None,
+            aggregate_type: "customer".to_string(),
+            aggregate_id: created.customer_id.clone(),
+            event_type: "customer.identity_upsert".to_string(),
+            payload_json: serde_json::json!({
+                "tenant_id": created.tenant_id,
+                "source_store_id": null,
+                "customer_id": created.customer_id,
+                "identity": {
+                    "identity_type": created.identity_type,
+                    "identity_value": created.identity_value,
+                    "verified": created.verified,
+                    "source": created.source,
+                }
+            }),
+        },
     )
     .await?;
 
@@ -745,7 +864,7 @@ pub async fn upsert_customer_address(
     let _ = audit::record(
         state,
         audit_input(
-            tenant_id,
+            tenant_id.clone(),
             CustomerAuditAction::AddressUpsert.into(),
             Some("customer_address"),
             Some(updated.id.clone()),
@@ -753,6 +872,22 @@ pub async fn upsert_customer_address(
             to_json_opt(Some(updated.clone())),
             actor,
         ),
+    )
+    .await?;
+
+    let _ = outbox::enqueue(
+        state,
+        outbox::OutboxEventInput {
+            tenant_id,
+            store_id: None,
+            aggregate_type: "customer".to_string(),
+            aggregate_id: updated.customer_id.clone(),
+            event_type: "customer.address_upsert".to_string(),
+            payload_json: serde_json::json!({
+                "customer_id": updated.customer_id,
+                "address_id": updated.id,
+            }),
+        },
     )
     .await?;
 
