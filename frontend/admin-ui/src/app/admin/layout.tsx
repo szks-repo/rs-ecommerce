@@ -16,6 +16,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
               Identity & Staff
             </a>
+            <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/audit">
+              Audit Logs
+            </a>
             <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/products">
               Products
             </a>

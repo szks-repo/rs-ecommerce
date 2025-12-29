@@ -63,3 +63,10 @@ export function getActiveAccessToken(): string | null {
   const tokens = readStoreTokens();
   return tokens[storeId]?.accessToken || window.sessionStorage.getItem("access_token");
 }
+
+export function getActiveTenantId(): string | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  return window.sessionStorage.getItem("tenant_id");
+}
