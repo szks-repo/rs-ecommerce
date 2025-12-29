@@ -243,6 +243,10 @@ pub fn router() -> Router<AppState> {
             post(identity::list_roles),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/ListStaff",
+            post(identity::list_staff),
+        )
+        .route(
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
             post(audit::list_audit_logs),
         )

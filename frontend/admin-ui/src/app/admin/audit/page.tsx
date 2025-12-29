@@ -14,12 +14,22 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { listAuditActions, listAuditLogs } from "@/lib/audit";
+import { identityListStaff } from "@/lib/identity";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
 
 type AuditActionItem = {
   key: string;
   label: string;
+};
+
+type StaffOption = {
+  staffId: string;
+  email: string;
+  loginId: string;
+  phone: string;
+  role: string;
+  status: string;
 };
 
 function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: number }) {
@@ -48,7 +58,7 @@ function formatJsonPreview(value?: string) {
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [action, setAction] = useState("__all__");
-  const [actorId, setActorId] = useState("");
+  const [actorId, setActorId] = useState("__all__");
   const [actorType, setActorType] = useState("");
   const [targetType, setTargetType] = useState("");
   const [targetId, setTargetId] = useState("");
@@ -56,18 +66,27 @@ export default function AuditLogsPage() {
   const [nextPageToken, setNextPageToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [actionOptions, setActionOptions] = useState<AuditActionItem[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const { push } = useToast();
 
   const hasFilter = useMemo(
     () =>
       (action !== "__all__" && action.trim()) ||
-      actorId.trim() ||
+      (actorId !== "__all__" && actorId.trim()) ||
       actorType.trim() ||
       targetType.trim() ||
       targetId.trim(),
     [action, actorId, actorType, targetType, targetId]
   );
+
+  const staffLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    staffOptions.forEach((staff) => {
+      map.set(staff.staffId, formatStaffLabel(staff));
+    });
+    return map;
+  }, [staffOptions]);
 
   async function loadLogs(options?: { resetPage?: boolean }) {
     if (!getActiveAccessToken()) {
@@ -84,7 +103,7 @@ export default function AuditLogsPage() {
     try {
       const data = await listAuditLogs({
         action: actionFilter,
-        actorId: actorId.trim() || undefined,
+        actorId: actorId === "__all__" ? undefined : actorId.trim() || undefined,
         actorType: actorType.trim() || undefined,
         targetType: targetType.trim() || undefined,
         targetId: targetId.trim() || undefined,
@@ -113,8 +132,30 @@ export default function AuditLogsPage() {
       .catch(() => {
         setActionOptions([]);
       });
+    identityListStaff()
+      .then((data) => {
+        setStaffOptions(
+          (data.staff ?? []).map((item) => ({
+            staffId: item.staffId,
+            email: item.email ?? "",
+            loginId: item.loginId ?? "",
+            phone: item.phone ?? "",
+            role: item.role ?? "",
+            status: item.status ?? "",
+          }))
+        );
+      })
+      .catch(() => {
+        setStaffOptions([]);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function formatStaffLabel(staff: StaffOption) {
+    const primary = staff.email || staff.loginId || staff.phone || staff.staffId;
+    const suffix = staff.role ? ` (${staff.role})` : "";
+    return `${primary}${suffix}`;
+  }
 
   return (
     <div className="space-y-6">
@@ -152,7 +193,19 @@ export default function AuditLogsPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="filterActorId">Actor ID</Label>
-            <Input id="filterActorId" value={actorId} onChange={(e) => setActorId(e.target.value)} />
+            <Select value={actorId} onValueChange={setActorId}>
+              <SelectTrigger id="filterActorId" className="bg-white">
+                <SelectValue placeholder="Select actor" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All actors</SelectItem>
+                {staffOptions.map((staff) => (
+                  <SelectItem key={staff.staffId} value={staff.staffId}>
+                    {formatStaffLabel(staff)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="filterActorType">Actor Type</Label>
@@ -176,7 +229,7 @@ export default function AuditLogsPage() {
                 variant="outline"
                 onClick={() => {
                   setAction("__all__");
-                  setActorId("");
+                  setActorId("__all__");
                   setActorType("");
                   setTargetType("");
                   setTargetId("");
@@ -209,7 +262,8 @@ export default function AuditLogsPage() {
                   <div className="text-xs text-neutral-500">{formatTimestamp(log.createdAt)}</div>
                 </div>
                 <div className="mt-1 text-xs text-neutral-500">
-                  actor: {log.actorType || "-"} {log.actorId || "-"}
+                  actor: {log.actorType || "-"}{" "}
+                  {log.actorId ? staffLabelMap.get(log.actorId) ?? log.actorId : "-"}
                 </div>
                 <div className="text-xs text-neutral-500">
                   target: {log.targetType || "-"} {log.targetId || "-"}

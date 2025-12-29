@@ -73,3 +73,13 @@ pub async fn list_roles(
     let resp = identity::service::list_roles(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
+
+pub async fn list_staff(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityListStaffResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::IdentityListStaffRequest>(&headers, body)?;
+    let resp = identity::service::list_staff(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}

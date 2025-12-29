@@ -87,6 +87,41 @@ pub async fn sign_in(
     })
 }
 
+pub async fn list_staff(
+    state: &AppState,
+    req: pb::IdentityListStaffRequest,
+) -> Result<pb::IdentityListStaffResponse, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+
+    let rows = sqlx::query(
+        r#"
+        SELECT id::text as staff_id, email, login_id, phone, role, status
+        FROM store_staff
+        WHERE store_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    let staff = rows
+        .into_iter()
+        .map(|row| pb::IdentityStaffSummary {
+            staff_id: row.get("staff_id"),
+            email: row.get::<Option<String>, _>("email").unwrap_or_default(),
+            login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
+            phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
+            role: row.get("role"),
+            status: row.get("status"),
+        })
+        .collect();
+
+    Ok(pb::IdentityListStaffResponse { staff })
+}
+
 pub async fn sign_out(
     state: &AppState,
     req: pb::IdentitySignOutRequest,
