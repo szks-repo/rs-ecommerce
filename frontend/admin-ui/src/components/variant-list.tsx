@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import { listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
@@ -11,8 +11,8 @@ import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 export default function VariantList() {
   const [productId, setProductId] = useState("");
   const [variants, setVariants] = useState<VariantAdmin[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { push } = useToast();
 
   useEffect(() => {
     const saved = sessionStorage.getItem("last_product_id");
@@ -23,21 +23,32 @@ export default function VariantList() {
 
   async function loadVariants() {
     if (!getActiveAccessToken()) {
-      setError("access_token is missing. Please sign in first.");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: "access_token is missing. Please sign in first.",
+      });
       return;
     }
     if (!productId) {
-      setError("product_id is required.");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: "product_id is required.",
+      });
       return;
     }
-    setError(null);
     setIsLoading(true);
     try {
       const data = await listVariantsAdmin({ productId });
       setVariants(data.variants ?? []);
       sessionStorage.setItem("last_product_id", productId);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load variants");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: err instanceof Error ? err.message : "Failed to load variants",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -57,12 +68,6 @@ export default function VariantList() {
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
-        {error && (
-          <Alert>
-            <AlertTitle>Load failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
         <div className="space-y-2">
           <label className="text-sm text-neutral-600" htmlFor="variantProductId">
             Product ID

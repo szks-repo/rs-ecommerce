@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { identitySignIn } from "@/lib/identity";
 
 export default function VendorLoginPage() {
@@ -14,8 +14,8 @@ export default function VendorLoginPage() {
   const [storeCode, setStoreCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
 
   useEffect(() => {
     const saved = sessionStorage.getItem("store_code");
@@ -26,7 +26,6 @@ export default function VendorLoginPage() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
     try {
       const data = await identitySignIn({
@@ -37,7 +36,11 @@ export default function VendorLoginPage() {
       sessionStorage.setItem("store_code", storeCode);
       router.push("/vendor");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Sign in failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -53,13 +56,6 @@ export default function VendorLoginPage() {
             Manage your store inside the mall.
           </p>
         </div>
-
-        {error && (
-          <Alert>
-            <AlertTitle>Sign in failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <Card>
           <CardHeader>

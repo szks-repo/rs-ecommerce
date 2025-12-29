@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { initializeStore } from "@/lib/setup";
 
 export default function InitPage() {
@@ -16,12 +16,11 @@ export default function InitPage() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [ownerLoginId, setOwnerLoginId] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
     setIsSubmitting(true);
     try {
       const data = await initializeStore({
@@ -36,7 +35,11 @@ export default function InitPage() {
       sessionStorage.setItem("store_code", data.storeCode);
       router.push("/login");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Init failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -52,13 +55,6 @@ export default function InitPage() {
             One-time setup to create tenant, store, and owner account. Settings can be configured later.
           </p>
         </div>
-
-        {error && (
-          <Alert>
-            <AlertTitle>Init failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <Card>

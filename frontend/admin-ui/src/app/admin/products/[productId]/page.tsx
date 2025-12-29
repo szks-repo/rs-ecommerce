@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import ProductUpdateForm from "@/components/product-update-form";
 import VariantUpdateForm from "@/components/variant-update-form";
@@ -25,19 +25,26 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductAdmin | null>(null);
   const [variants, setVariants] = useState<VariantAdmin[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<VariantAdmin | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { push } = useToast();
 
   async function loadData() {
     if (!getActiveAccessToken()) {
-      setError("access_token is missing. Please sign in first.");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: "access_token is missing. Please sign in first.",
+      });
       return;
     }
     if (!productId) {
-      setError("product_id is missing.");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: "product_id is missing.",
+      });
       return;
     }
-    setError(null);
     setIsLoading(true);
     try {
       const productResp = await listProductsAdmin();
@@ -54,7 +61,11 @@ export default function ProductDetailPage() {
         setSelectedVariant(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load product");
+      push({
+        variant: "error",
+        title: "Load failed",
+        description: err instanceof Error ? err.message : "Failed to load product",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -97,13 +108,6 @@ export default function ProductDetailPage() {
           </Button>
         </div>
       </div>
-
-      {error && (
-        <Alert>
-          <AlertTitle>Load failed</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
