@@ -24,6 +24,10 @@ pub enum AuditAction {
     ShipmentUpdateStatus,
     IdentitySignIn,
     IdentitySignOut,
+    IdentityStaffCreate,
+    IdentityStaffUpdate,
+    IdentityRoleCreate,
+    IdentityRoleAssign,
     CustomerCreate,
     CustomerUpdate,
     CustomerIdentityUpsert,
@@ -57,6 +61,10 @@ impl AuditAction {
             AuditAction::ShipmentUpdateStatus => "shipment.update_status",
             AuditAction::IdentitySignIn => "identity.sign_in",
             AuditAction::IdentitySignOut => "identity.sign_out",
+            AuditAction::IdentityStaffCreate => "identity.staff_create",
+            AuditAction::IdentityStaffUpdate => "identity.staff_update",
+            AuditAction::IdentityRoleCreate => "identity.role_create",
+            AuditAction::IdentityRoleAssign => "identity.role_assign",
             AuditAction::CustomerCreate => "customer.create",
             AuditAction::CustomerUpdate => "customer.update",
             AuditAction::CustomerIdentityUpsert => "customer.identity_upsert",
@@ -90,6 +98,10 @@ impl AuditAction {
             AuditAction::ShipmentUpdateStatus => "Shipment status updated",
             AuditAction::IdentitySignIn => "Signed in",
             AuditAction::IdentitySignOut => "Signed out",
+            AuditAction::IdentityStaffCreate => "Staff created",
+            AuditAction::IdentityStaffUpdate => "Staff updated",
+            AuditAction::IdentityRoleCreate => "Role created",
+            AuditAction::IdentityRoleAssign => "Role assigned",
             AuditAction::CustomerCreate => "Customer created",
             AuditAction::CustomerUpdate => "Customer updated",
             AuditAction::CustomerIdentityUpsert => "Customer identity saved",
@@ -123,6 +135,10 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::ShipmentUpdateStatus,
     AuditAction::IdentitySignIn,
     AuditAction::IdentitySignOut,
+    AuditAction::IdentityStaffCreate,
+    AuditAction::IdentityStaffUpdate,
+    AuditAction::IdentityRoleCreate,
+    AuditAction::IdentityRoleAssign,
     AuditAction::CustomerCreate,
     AuditAction::CustomerUpdate,
     AuditAction::CustomerIdentityUpsert,
@@ -203,6 +219,10 @@ pub enum ShipmentAuditAction {
 pub enum IdentityAuditAction {
     SignIn,
     SignOut,
+    StaffCreate,
+    StaffUpdate,
+    RoleCreate,
+    RoleAssign,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -324,6 +344,10 @@ impl From<IdentityAuditAction> for AuditAction {
         match action {
             IdentityAuditAction::SignIn => AuditAction::IdentitySignIn,
             IdentityAuditAction::SignOut => AuditAction::IdentitySignOut,
+            IdentityAuditAction::StaffCreate => AuditAction::IdentityStaffCreate,
+            IdentityAuditAction::StaffUpdate => AuditAction::IdentityStaffUpdate,
+            IdentityAuditAction::RoleCreate => AuditAction::IdentityRoleCreate,
+            IdentityAuditAction::RoleAssign => AuditAction::IdentityRoleAssign,
         }
     }
 }

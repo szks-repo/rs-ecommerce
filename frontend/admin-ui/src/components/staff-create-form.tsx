@@ -1,26 +1,69 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { identityCreateStaff } from "@/lib/identity";
+import { identityCreateStaff, identityListRoles } from "@/lib/identity";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function StaffCreateForm() {
   const [email, setEmail] = useState("");
   const [loginId, setLoginId] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("staff");
+  const [roles, setRoles] = useState<Array<{ id: string; key: string; name: string }>>([]);
+  const [role, setRole] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const { push } = useToast();
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsLoadingRoles(true);
+    identityListRoles()
+      .then((data) => {
+        if (cancelled) return;
+        const list = data.roles ?? [];
+        setRoles(list);
+        if (!role && list.length > 0) {
+          setRole(list[0].key || "");
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          push({
+            variant: "error",
+            title: "Load failed",
+            description: err instanceof Error ? err.message : "Failed to load roles",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsLoadingRoles(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      if (!role) {
+        throw new Error("role is required");
+      }
       const data = await identityCreateStaff({
         email,
         loginId,
@@ -37,7 +80,7 @@ export default function StaffCreateForm() {
       setLoginId("");
       setPhone("");
       setPassword("");
-      setRole("staff");
+      setRole(roles[0]?.key ?? "");
     } catch (err) {
       push({
         variant: "error",
@@ -77,7 +120,24 @@ export default function StaffCreateForm() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="role">Role</Label>
-            <Input id="role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="owner | admin | staff" />
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger id="role" className="bg-white">
+                <SelectValue placeholder={isLoadingRoles ? "Loading roles..." : "Select role"} />
+              </SelectTrigger>
+              <SelectContent>
+                {roles.length === 0 && !isLoadingRoles ? (
+                  <SelectItem value="__none__" disabled>
+                    No roles found
+                  </SelectItem>
+                ) : (
+                  roles.map((item) => (
+                    <SelectItem key={item.id} value={item.key}>
+                      {item.name} {item.key ? `(${item.key})` : ""}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
           </div>
           <div className="md:col-span-2">
             <Button type="submit" disabled={isSubmitting}>

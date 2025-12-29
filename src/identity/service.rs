@@ -122,6 +122,131 @@ pub async fn list_staff(
     Ok(pb::IdentityListStaffResponse { staff })
 }
 
+pub async fn update_staff(
+    state: &AppState,
+    req: pb::IdentityUpdateStaffRequest,
+) -> Result<pb::IdentityUpdateStaffResponse, (StatusCode, Json<ConnectError>)> {
+    if req.staff_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "staff_id is required".to_string(),
+            }),
+        ));
+    }
+    if req.role.is_empty() && req.status.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "role or status is required".to_string(),
+            }),
+        ));
+    }
+
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
+
+    let current = sqlx::query(
+        r#"
+        SELECT role
+        FROM store_staff
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(staff_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if let Some(row) = current {
+        let current_role: String = row.get("role");
+        if current_role == "owner" && !req.role.is_empty() && req.role != "owner" {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: "permission_denied",
+                    message: "owner role cannot be changed".to_string(),
+                }),
+            ));
+        }
+    }
+
+    let updated = sqlx::query(
+        r#"
+        UPDATE store_staff
+        SET role = COALESCE(NULLIF($1, ''), role),
+            status = COALESCE(NULLIF($2, ''), status),
+            updated_at = now()
+        WHERE id = $3 AND store_id = $4
+        RETURNING id::text as staff_id, email, login_id, phone, role, status
+        "#,
+    )
+    .bind(&req.role)
+    .bind(&req.status)
+    .bind(staff_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    let Some(row) = updated else {
+        return Ok(pb::IdentityUpdateStaffResponse {
+            updated: false,
+            staff: None,
+        });
+    };
+
+    let staff = pb::IdentityStaffSummary {
+        staff_id: row.get("staff_id"),
+        email: row.get::<Option<String>, _>("email").unwrap_or_default(),
+        login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
+        phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
+        role: row.get("role"),
+        status: row.get("status"),
+    };
+
+    let actor_id = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_type = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .unwrap_or_else(|| "staff".to_string());
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id,
+            actor_id,
+            actor_type,
+            action: IdentityAuditAction::StaffUpdate.into(),
+            target_type: Some("store_staff".to_string()),
+            target_id: Some(staff.staff_id.clone()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "staff_id": staff.staff_id,
+                "role": staff.role,
+                "status": staff.status,
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    Ok(pb::IdentityUpdateStaffResponse {
+        updated: true,
+        staff: Some(staff),
+    })
+}
+
 pub async fn sign_out(
     state: &AppState,
     req: pb::IdentitySignOutRequest,
@@ -161,15 +286,57 @@ pub async fn create_staff(
     state: &AppState,
     req: pb::IdentityCreateStaffRequest,
 ) -> Result<pb::IdentityCreateStaffResponse, (StatusCode, Json<ConnectError>)> {
+    let store = req.store.clone();
+    let tenant = req.tenant.clone();
+    let email = req.email.clone();
+    let login_id = req.login_id.clone();
+    let phone = req.phone.clone();
+    let role = req.role.clone();
+    let actor = req.actor.clone();
+
     let resp = create_staff_core(
         state,
-        req.store,
-        req.tenant,
-        req.email,
-        req.login_id,
-        req.phone,
+        store,
+        tenant,
+        email.clone(),
+        login_id.clone(),
+        phone.clone(),
         req.password,
-        req.role,
+        role.clone(),
+    )
+    .await?;
+
+    let actor_id = actor
+        .as_ref()
+        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_type = actor
+        .as_ref()
+        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .unwrap_or_else(|| "staff".to_string());
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id: resp.tenant_id.clone(),
+            actor_id,
+            actor_type,
+            action: IdentityAuditAction::StaffCreate.into(),
+            target_type: Some("store_staff".to_string()),
+            target_id: Some(resp.staff_id.clone()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "staff_id": resp.staff_id,
+                "store_id": resp.store_id,
+                "role": resp.role,
+                "email": email,
+                "login_id": login_id,
+                "phone": phone,
+            })),
+            metadata_json: None,
+        },
     )
     .await?;
 
@@ -186,16 +353,60 @@ pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
 ) -> Result<pb::IdentityCreateRoleResponse, (StatusCode, Json<ConnectError>)> {
+    let store = req.store.clone();
+    let tenant = req.tenant.clone();
+    let key = req.key.clone();
+    let name = req.name.clone();
+    let description = req.description.clone();
+    let permissions = req.permission_keys.clone();
+    let actor = req.actor.clone();
+
     let resp = create_role_core(
         state,
-        req.store,
-        req.tenant,
-        req.key,
-        req.name,
-        req.description,
-        req.permission_keys,
+        store,
+        tenant,
+        key.clone(),
+        name.clone(),
+        description.clone(),
+        permissions,
     )
     .await?;
+
+    if let Some(role) = resp.role.as_ref() {
+        let actor_id = actor
+            .as_ref()
+            .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+        let actor_type = actor
+            .as_ref()
+            .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+            .unwrap_or_else(|| "staff".to_string());
+        let tenant_id = resolve_store_context(state, req.store, req.tenant)
+            .await
+            .map(|(_, tenant_id)| tenant_id)?;
+
+        let _ = audit::record(
+            state,
+            audit::AuditInput {
+                tenant_id,
+                actor_id,
+                actor_type,
+                action: IdentityAuditAction::RoleCreate.into(),
+                target_type: Some("store_role".to_string()),
+                target_id: Some(role.id.clone()),
+                request_id: None,
+                ip_address: None,
+                user_agent: None,
+                before_json: None,
+                after_json: Some(serde_json::json!({
+                    "role_id": role.id,
+                    "key": role.key,
+                    "name": role.name,
+                })),
+                metadata_json: None,
+            },
+        )
+        .await?;
+    }
 
     Ok(pb::IdentityCreateRoleResponse {
         role: resp.role.map(|role| pb::IdentityRole {
@@ -212,14 +423,54 @@ pub async fn assign_role_to_staff(
     state: &AppState,
     req: pb::IdentityAssignRoleRequest,
 ) -> Result<pb::IdentityAssignRoleResponse, (StatusCode, Json<ConnectError>)> {
+    let store = req.store.clone();
+    let tenant = req.tenant.clone();
+    let staff_id = req.staff_id.clone();
+    let role_id = req.role_id.clone();
+    let actor = req.actor.clone();
+
     let resp = assign_role_to_staff_core(
         state,
-        req.store,
-        req.tenant,
-        req.staff_id,
-        req.role_id,
+        store,
+        tenant,
+        staff_id.clone(),
+        role_id.clone(),
     )
     .await?;
+
+    if resp.assigned {
+        let actor_id = actor
+            .as_ref()
+            .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+        let actor_type = actor
+            .as_ref()
+            .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+            .unwrap_or_else(|| "staff".to_string());
+        let tenant_id = resolve_store_context(state, req.store, req.tenant)
+            .await
+            .map(|(_, tenant_id)| tenant_id)?;
+
+        let _ = audit::record(
+            state,
+            audit::AuditInput {
+                tenant_id,
+                actor_id,
+                actor_type,
+                action: IdentityAuditAction::RoleAssign.into(),
+                target_type: Some("store_staff".to_string()),
+                target_id: Some(staff_id),
+                request_id: None,
+                ip_address: None,
+                user_agent: None,
+                before_json: None,
+                after_json: None,
+                metadata_json: Some(serde_json::json!({
+                    "role_id": role_id,
+                })),
+            },
+        )
+        .await?;
+    }
 
     Ok(pb::IdentityAssignRoleResponse { assigned: resp.assigned })
 }
@@ -452,6 +703,15 @@ async fn create_staff_core(
             }),
         ));
     }
+    if role == "owner" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "owner role cannot be assigned".to_string(),
+            }),
+        ));
+    }
     if email.is_empty() && login_id.is_empty() && phone.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -626,6 +886,7 @@ async fn assign_role_to_staff_core(
         ));
     }
 
+    let store_uuid = StoreId::parse(&store_id)?;
     let role_owner = sqlx::query("SELECT store_id::text as store_id FROM store_roles WHERE id = $1")
         .bind(parse_uuid(&role_id, "role_id")?)
         .fetch_one(&state.db)
@@ -640,6 +901,31 @@ async fn assign_role_to_staff_core(
                 message: "role does not belong to store".to_string(),
             }),
         ));
+    }
+
+    let staff_row = sqlx::query(
+        r#"
+        SELECT role
+        FROM store_staff
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(parse_uuid(&staff_id, "staff_id")?)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if let Some(row) = staff_row {
+        let current_role: String = row.get("role");
+        if current_role == "owner" {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: "permission_denied",
+                    message: "owner role cannot be assigned".to_string(),
+                }),
+            ));
+        }
     }
 
     sqlx::query(

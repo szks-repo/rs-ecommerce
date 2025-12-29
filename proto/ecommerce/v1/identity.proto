@@ -10,6 +10,7 @@ service IdentityService {
   rpc SignOut(IdentitySignOutRequest) returns (IdentitySignOutResponse);
   rpc CreateStaff(IdentityCreateStaffRequest) returns (IdentityCreateStaffResponse);
   rpc ListStaff(IdentityListStaffRequest) returns (IdentityListStaffResponse);
+  rpc UpdateStaff(IdentityUpdateStaffRequest) returns (IdentityUpdateStaffResponse);
   rpc CreateRole(IdentityCreateRoleRequest) returns (IdentityCreateRoleResponse);
   rpc AssignRoleToStaff(IdentityAssignRoleRequest) returns (IdentityAssignRoleResponse);
   rpc ListRoles(IdentityListRolesRequest) returns (IdentityListRolesResponse);
@@ -76,6 +77,20 @@ message IdentityListStaffRequest {
 
 message IdentityListStaffResponse {
   repeated IdentityStaffSummary staff = 1;
+}
+
+message IdentityUpdateStaffRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string staff_id = 3;
+  string role = 4;
+  string status = 5;
+  ActorContext actor = 6;
+}
+
+message IdentityUpdateStaffResponse {
+  bool updated = 1;
+  IdentityStaffSummary staff = 2;
 }
 
 message IdentityRole {

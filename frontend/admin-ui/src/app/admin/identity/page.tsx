@@ -1,6 +1,6 @@
 import StaffCreateForm from "@/components/staff-create-form";
+import StaffListForm from "@/components/staff-list-form";
 import RoleCreateForm from "@/components/role-create-form";
-import RoleAssignForm from "@/components/role-assign-form";
 
 export default function IdentityPage() {
   return (
@@ -10,11 +10,11 @@ export default function IdentityPage() {
 
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <StaffCreateForm />
+        <StaffListForm />
       </div>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2">
+      <div className="mt-8 grid gap-6">
         <RoleCreateForm />
-        <RoleAssignForm />
       </div>
     </div>
   );

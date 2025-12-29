@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/identity.proto.
  */
 export const file_ecommerce_v1_identity: GenFile = /*@__PURE__*/
-  fileDesc("ChtlY29tbWVyY2UvdjEvaWRlbnRpdHkucHJvdG8SDGVjb21tZXJjZS52MSKxAQoVSWRlbnRpdHlTaWduSW5SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBINCgVlbWFpbBgDIAEoCRIQCghsb2dpbl9pZBgEIAEoCRINCgVwaG9uZRgFIAEoCRIQCghwYXNzd29yZBgGIAEoCSKjAQoWSWRlbnRpdHlTaWduSW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSEAoIc3RvcmVfaWQYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEhAKCHN0YWZmX2lkGAQgASgJEgwKBHJvbGUYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAicAoWSWRlbnRpdHlTaWduT3V0UmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQiLQoXSWRlbnRpdHlTaWduT3V0UmVzcG9uc2USEgoKc2lnbmVkX291dBgBIAEoCCLvAQoaSWRlbnRpdHlDcmVhdGVTdGFmZlJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg0KBWVtYWlsGAMgASgJEhAKCGxvZ2luX2lkGAQgASgJEg0KBXBob25lGAUgASgJEhAKCHBhc3N3b3JkGAYgASgJEgwKBHJvbGUYByABKAkSKQoFYWN0b3IYCCABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0ImIKG0lkZW50aXR5Q3JlYXRlU3RhZmZSZXNwb25zZRIQCghzdGFmZl9pZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSDAoEcm9sZRgEIAEoCSJ2ChRJZGVudGl0eVN0YWZmU3VtbWFyeRIQCghzdGFmZl9pZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIQCghsb2dpbl9pZBgDIAEoCRINCgVwaG9uZRgEIAEoCRIMCgRyb2xlGAUgASgJEg4KBnN0YXR1cxgGIAEoCSJyChhJZGVudGl0eUxpc3RTdGFmZlJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Ik4KGUlkZW50aXR5TGlzdFN0YWZmUmVzcG9uc2USMQoFc3RhZmYYASADKAsyIi5lY29tbWVyY2UudjEuSWRlbnRpdHlTdGFmZlN1bW1hcnkiSgoMSWRlbnRpdHlSb2xlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJIucBChlJZGVudGl0eUNyZWF0ZVJvbGVSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBILCgNrZXkYAyABKAkSDAoEbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIXCg9wZXJtaXNzaW9uX2tleXMYBiADKAkSKQoFYWN0b3IYByABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkYKGklkZW50aXR5Q3JlYXRlUm9sZVJlc3BvbnNlEigKBHJvbGUYASABKAsyGi5lY29tbWVyY2UudjEuSWRlbnRpdHlSb2xlIsEBChlJZGVudGl0eUFzc2lnblJvbGVSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIQCghzdGFmZl9pZBgDIAEoCRIPCgdyb2xlX2lkGAQgASgJEikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCIuChpJZGVudGl0eUFzc2lnblJvbGVSZXNwb25zZRIQCghhc3NpZ25lZBgBIAEoCCJyChhJZGVudGl0eUxpc3RSb2xlc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0IkYKGUlkZW50aXR5TGlzdFJvbGVzUmVzcG9uc2USKQoFcm9sZXMYASADKAsyGi5lY29tbWVyY2UudjEuSWRlbnRpdHlSb2xlMqcFCg9JZGVudGl0eVNlcnZpY2USUwoGU2lnbkluEiMuZWNvbW1lcmNlLnYxLklkZW50aXR5U2lnbkluUmVxdWVzdBokLmVjb21tZXJjZS52MS5JZGVudGl0eVNpZ25JblJlc3BvbnNlElYKB1NpZ25PdXQSJC5lY29tbWVyY2UudjEuSWRlbnRpdHlTaWduT3V0UmVxdWVzdBolLmVjb21tZXJjZS52MS5JZGVudGl0eVNpZ25PdXRSZXNwb25zZRJiCgtDcmVhdGVTdGFmZhIoLmVjb21tZXJjZS52MS5JZGVudGl0eUNyZWF0ZVN0YWZmUmVxdWVzdBopLmVjb21tZXJjZS52MS5JZGVudGl0eUNyZWF0ZVN0YWZmUmVzcG9uc2USXAoJTGlzdFN0YWZmEiYuZWNvbW1lcmNlLnYxLklkZW50aXR5TGlzdFN0YWZmUmVxdWVzdBonLmVjb21tZXJjZS52MS5JZGVudGl0eUxpc3RTdGFmZlJlc3BvbnNlEl8KCkNyZWF0ZVJvbGUSJy5lY29tbWVyY2UudjEuSWRlbnRpdHlDcmVhdGVSb2xlUmVxdWVzdBooLmVjb21tZXJjZS52MS5JZGVudGl0eUNyZWF0ZVJvbGVSZXNwb25zZRJmChFBc3NpZ25Sb2xlVG9TdGFmZhInLmVjb21tZXJjZS52MS5JZGVudGl0eUFzc2lnblJvbGVSZXF1ZXN0GiguZWNvbW1lcmNlLnYxLklkZW50aXR5QXNzaWduUm9sZVJlc3BvbnNlElwKCUxpc3RSb2xlcxImLmVjb21tZXJjZS52MS5JZGVudGl0eUxpc3RSb2xlc1JlcXVlc3QaJy5lY29tbWVyY2UudjEuSWRlbnRpdHlMaXN0Um9sZXNSZXNwb25zZWIGcHJvdG8z", [file_ecommerce_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChtlY29tbWVyY2UvdjEvaWRlbnRpdHkucHJvdG8SDGVjb21tZXJjZS52MSKxAQoVSWRlbnRpdHlTaWduSW5SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBINCgVlbWFpbBgDIAEoCRIQCghsb2dpbl9pZBgEIAEoCRINCgVwaG9uZRgFIAEoCRIQCghwYXNzd29yZBgGIAEoCSKjAQoWSWRlbnRpdHlTaWduSW5SZXNwb25zZRIUCgxhY2Nlc3NfdG9rZW4YASABKAkSEAoIc3RvcmVfaWQYAiABKAkSEQoJdGVuYW50X2lkGAMgASgJEhAKCHN0YWZmX2lkGAQgASgJEgwKBHJvbGUYBSABKAkSLgoKZXhwaXJlc19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAicAoWSWRlbnRpdHlTaWduT3V0UmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQiLQoXSWRlbnRpdHlTaWduT3V0UmVzcG9uc2USEgoKc2lnbmVkX291dBgBIAEoCCLvAQoaSWRlbnRpdHlDcmVhdGVTdGFmZlJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg0KBWVtYWlsGAMgASgJEhAKCGxvZ2luX2lkGAQgASgJEg0KBXBob25lGAUgASgJEhAKCHBhc3N3b3JkGAYgASgJEgwKBHJvbGUYByABKAkSKQoFYWN0b3IYCCABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0ImIKG0lkZW50aXR5Q3JlYXRlU3RhZmZSZXNwb25zZRIQCghzdGFmZl9pZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSDAoEcm9sZRgEIAEoCSJ2ChRJZGVudGl0eVN0YWZmU3VtbWFyeRIQCghzdGFmZl9pZBgBIAEoCRINCgVlbWFpbBgCIAEoCRIQCghsb2dpbl9pZBgDIAEoCRINCgVwaG9uZRgEIAEoCRIMCgRyb2xlGAUgASgJEg4KBnN0YXR1cxgGIAEoCSJyChhJZGVudGl0eUxpc3RTdGFmZlJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Ik4KGUlkZW50aXR5TGlzdFN0YWZmUmVzcG9uc2USMQoFc3RhZmYYASADKAsyIi5lY29tbWVyY2UudjEuSWRlbnRpdHlTdGFmZlN1bW1hcnkizwEKGklkZW50aXR5VXBkYXRlU3RhZmZSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIQCghzdGFmZl9pZBgDIAEoCRIMCgRyb2xlGAQgASgJEg4KBnN0YXR1cxgFIAEoCRIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiYQobSWRlbnRpdHlVcGRhdGVTdGFmZlJlc3BvbnNlEg8KB3VwZGF0ZWQYASABKAgSMQoFc3RhZmYYAiABKAsyIi5lY29tbWVyY2UudjEuSWRlbnRpdHlTdGFmZlN1bW1hcnkiSgoMSWRlbnRpdHlSb2xlEgoKAmlkGAEgASgJEgsKA2tleRgCIAEoCRIMCgRuYW1lGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJIucBChlJZGVudGl0eUNyZWF0ZVJvbGVSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBILCgNrZXkYAyABKAkSDAoEbmFtZRgEIAEoCRITCgtkZXNjcmlwdGlvbhgFIAEoCRIXCg9wZXJtaXNzaW9uX2tleXMYBiADKAkSKQoFYWN0b3IYByABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkYKGklkZW50aXR5Q3JlYXRlUm9sZVJlc3BvbnNlEigKBHJvbGUYASABKAsyGi5lY29tbWVyY2UudjEuSWRlbnRpdHlSb2xlIsEBChlJZGVudGl0eUFzc2lnblJvbGVSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIQCghzdGFmZl9pZBgDIAEoCRIPCgdyb2xlX2lkGAQgASgJEikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCIuChpJZGVudGl0eUFzc2lnblJvbGVSZXNwb25zZRIQCghhc3NpZ25lZBgBIAEoCCJyChhJZGVudGl0eUxpc3RSb2xlc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0IkYKGUlkZW50aXR5TGlzdFJvbGVzUmVzcG9uc2USKQoFcm9sZXMYASADKAsyGi5lY29tbWVyY2UudjEuSWRlbnRpdHlSb2xlMosGCg9JZGVudGl0eVNlcnZpY2USUwoGU2lnbkluEiMuZWNvbW1lcmNlLnYxLklkZW50aXR5U2lnbkluUmVxdWVzdBokLmVjb21tZXJjZS52MS5JZGVudGl0eVNpZ25JblJlc3BvbnNlElYKB1NpZ25PdXQSJC5lY29tbWVyY2UudjEuSWRlbnRpdHlTaWduT3V0UmVxdWVzdBolLmVjb21tZXJjZS52MS5JZGVudGl0eVNpZ25PdXRSZXNwb25zZRJiCgtDcmVhdGVTdGFmZhIoLmVjb21tZXJjZS52MS5JZGVudGl0eUNyZWF0ZVN0YWZmUmVxdWVzdBopLmVjb21tZXJjZS52MS5JZGVudGl0eUNyZWF0ZVN0YWZmUmVzcG9uc2USXAoJTGlzdFN0YWZmEiYuZWNvbW1lcmNlLnYxLklkZW50aXR5TGlzdFN0YWZmUmVxdWVzdBonLmVjb21tZXJjZS52MS5JZGVudGl0eUxpc3RTdGFmZlJlc3BvbnNlEmIKC1VwZGF0ZVN0YWZmEiguZWNvbW1lcmNlLnYxLklkZW50aXR5VXBkYXRlU3RhZmZSZXF1ZXN0GikuZWNvbW1lcmNlLnYxLklkZW50aXR5VXBkYXRlU3RhZmZSZXNwb25zZRJfCgpDcmVhdGVSb2xlEicuZWNvbW1lcmNlLnYxLklkZW50aXR5Q3JlYXRlUm9sZVJlcXVlc3QaKC5lY29tbWVyY2UudjEuSWRlbnRpdHlDcmVhdGVSb2xlUmVzcG9uc2USZgoRQXNzaWduUm9sZVRvU3RhZmYSJy5lY29tbWVyY2UudjEuSWRlbnRpdHlBc3NpZ25Sb2xlUmVxdWVzdBooLmVjb21tZXJjZS52MS5JZGVudGl0eUFzc2lnblJvbGVSZXNwb25zZRJcCglMaXN0Um9sZXMSJi5lY29tbWVyY2UudjEuSWRlbnRpdHlMaXN0Um9sZXNSZXF1ZXN0GicuZWNvbW1lcmNlLnYxLklkZW50aXR5TGlzdFJvbGVzUmVzcG9uc2ViBnByb3RvMw", [file_ecommerce_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message ecommerce.v1.IdentitySignInRequest
@@ -305,6 +305,70 @@ export const IdentityListStaffResponseSchema: GenMessage<IdentityListStaffRespon
   messageDesc(file_ecommerce_v1_identity, 8);
 
 /**
+ * @generated from message ecommerce.v1.IdentityUpdateStaffRequest
+ */
+export type IdentityUpdateStaffRequest = Message<"ecommerce.v1.IdentityUpdateStaffRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string staff_id = 3;
+   */
+  staffId: string;
+
+  /**
+   * @generated from field: string role = 4;
+   */
+  role: string;
+
+  /**
+   * @generated from field: string status = 5;
+   */
+  status: string;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 6;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.IdentityUpdateStaffRequest.
+ * Use `create(IdentityUpdateStaffRequestSchema)` to create a new message.
+ */
+export const IdentityUpdateStaffRequestSchema: GenMessage<IdentityUpdateStaffRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_identity, 9);
+
+/**
+ * @generated from message ecommerce.v1.IdentityUpdateStaffResponse
+ */
+export type IdentityUpdateStaffResponse = Message<"ecommerce.v1.IdentityUpdateStaffResponse"> & {
+  /**
+   * @generated from field: bool updated = 1;
+   */
+  updated: boolean;
+
+  /**
+   * @generated from field: ecommerce.v1.IdentityStaffSummary staff = 2;
+   */
+  staff?: IdentityStaffSummary;
+};
+
+/**
+ * Describes the message ecommerce.v1.IdentityUpdateStaffResponse.
+ * Use `create(IdentityUpdateStaffResponseSchema)` to create a new message.
+ */
+export const IdentityUpdateStaffResponseSchema: GenMessage<IdentityUpdateStaffResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_identity, 10);
+
+/**
  * @generated from message ecommerce.v1.IdentityRole
  */
 export type IdentityRole = Message<"ecommerce.v1.IdentityRole"> & {
@@ -334,7 +398,7 @@ export type IdentityRole = Message<"ecommerce.v1.IdentityRole"> & {
  * Use `create(IdentityRoleSchema)` to create a new message.
  */
 export const IdentityRoleSchema: GenMessage<IdentityRole> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 9);
+  messageDesc(file_ecommerce_v1_identity, 11);
 
 /**
  * @generated from message ecommerce.v1.IdentityCreateRoleRequest
@@ -381,7 +445,7 @@ export type IdentityCreateRoleRequest = Message<"ecommerce.v1.IdentityCreateRole
  * Use `create(IdentityCreateRoleRequestSchema)` to create a new message.
  */
 export const IdentityCreateRoleRequestSchema: GenMessage<IdentityCreateRoleRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 10);
+  messageDesc(file_ecommerce_v1_identity, 12);
 
 /**
  * @generated from message ecommerce.v1.IdentityCreateRoleResponse
@@ -398,7 +462,7 @@ export type IdentityCreateRoleResponse = Message<"ecommerce.v1.IdentityCreateRol
  * Use `create(IdentityCreateRoleResponseSchema)` to create a new message.
  */
 export const IdentityCreateRoleResponseSchema: GenMessage<IdentityCreateRoleResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 11);
+  messageDesc(file_ecommerce_v1_identity, 13);
 
 /**
  * @generated from message ecommerce.v1.IdentityAssignRoleRequest
@@ -435,7 +499,7 @@ export type IdentityAssignRoleRequest = Message<"ecommerce.v1.IdentityAssignRole
  * Use `create(IdentityAssignRoleRequestSchema)` to create a new message.
  */
 export const IdentityAssignRoleRequestSchema: GenMessage<IdentityAssignRoleRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 12);
+  messageDesc(file_ecommerce_v1_identity, 14);
 
 /**
  * @generated from message ecommerce.v1.IdentityAssignRoleResponse
@@ -452,7 +516,7 @@ export type IdentityAssignRoleResponse = Message<"ecommerce.v1.IdentityAssignRol
  * Use `create(IdentityAssignRoleResponseSchema)` to create a new message.
  */
 export const IdentityAssignRoleResponseSchema: GenMessage<IdentityAssignRoleResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 13);
+  messageDesc(file_ecommerce_v1_identity, 15);
 
 /**
  * @generated from message ecommerce.v1.IdentityListRolesRequest
@@ -474,7 +538,7 @@ export type IdentityListRolesRequest = Message<"ecommerce.v1.IdentityListRolesRe
  * Use `create(IdentityListRolesRequestSchema)` to create a new message.
  */
 export const IdentityListRolesRequestSchema: GenMessage<IdentityListRolesRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 14);
+  messageDesc(file_ecommerce_v1_identity, 16);
 
 /**
  * @generated from message ecommerce.v1.IdentityListRolesResponse
@@ -491,7 +555,7 @@ export type IdentityListRolesResponse = Message<"ecommerce.v1.IdentityListRolesR
  * Use `create(IdentityListRolesResponseSchema)` to create a new message.
  */
 export const IdentityListRolesResponseSchema: GenMessage<IdentityListRolesResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_identity, 15);
+  messageDesc(file_ecommerce_v1_identity, 17);
 
 /**
  * @generated from service ecommerce.v1.IdentityService
@@ -528,6 +592,14 @@ export const IdentityService: GenService<{
     methodKind: "unary";
     input: typeof IdentityListStaffRequestSchema;
     output: typeof IdentityListStaffResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.IdentityService.UpdateStaff
+   */
+  updateStaff: {
+    methodKind: "unary";
+    input: typeof IdentityUpdateStaffRequestSchema;
+    output: typeof IdentityUpdateStaffResponseSchema;
   },
   /**
    * @generated from rpc ecommerce.v1.IdentityService.CreateRole

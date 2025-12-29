@@ -36,30 +36,42 @@ pub async fn sign_out(
 
 pub async fn create_staff(
     State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityCreateStaffResponse>), (StatusCode, Json<ConnectError>)> {
-    let req = parse_request::<pb::IdentityCreateStaffRequest>(&headers, body)?;
+    let mut req = parse_request::<pb::IdentityCreateStaffRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
     let resp = identity::service::create_staff(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
 pub async fn create_role(
     State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityCreateRoleResponse>), (StatusCode, Json<ConnectError>)> {
-    let req = parse_request::<pb::IdentityCreateRoleRequest>(&headers, body)?;
+    let mut req = parse_request::<pb::IdentityCreateRoleRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
     let resp = identity::service::create_role(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
 pub async fn assign_role_to_staff(
     State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityAssignRoleResponse>), (StatusCode, Json<ConnectError>)> {
-    let req = parse_request::<pb::IdentityAssignRoleRequest>(&headers, body)?;
+    let mut req = parse_request::<pb::IdentityAssignRoleRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
     let resp = identity::service::assign_role_to_staff(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
@@ -81,5 +93,19 @@ pub async fn list_staff(
 ) -> Result<(StatusCode, Json<pb::IdentityListStaffResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListStaffRequest>(&headers, body)?;
     let resp = identity::service::list_staff(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn update_staff(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityUpdateStaffResponse>), (StatusCode, Json<ConnectError>)> {
+    let mut req = parse_request::<pb::IdentityUpdateStaffRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
+    let resp = identity::service::update_staff(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }

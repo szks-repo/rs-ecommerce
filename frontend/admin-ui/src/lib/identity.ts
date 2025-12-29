@@ -7,6 +7,7 @@ import {
   IdentitySignOutRequestSchema,
   IdentityCreateStaffRequestSchema,
   IdentityListStaffRequestSchema,
+  IdentityUpdateStaffRequestSchema,
   IdentityListRolesRequestSchema,
   IdentityCreateRoleRequestSchema,
   IdentityAssignRoleRequestSchema,
@@ -69,6 +70,20 @@ export async function identityCreateStaff(params: {
 export async function identityListStaff() {
   return client.listStaff(
     create(IdentityListStaffRequestSchema, {})
+  );
+}
+
+export async function identityUpdateStaff(params: {
+  staffId: string;
+  role?: string;
+  status?: string;
+}) {
+  return client.updateStaff(
+    create(IdentityUpdateStaffRequestSchema, {
+      staffId: params.staffId,
+      role: params.role || "",
+      status: params.status || "",
+    })
   );
 }
 
