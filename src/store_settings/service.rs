@@ -11,6 +11,7 @@ use crate::{
         money::{money_from_parts, money_to_parts},
     },
 };
+use serde_json::Value;
 
 pub async fn get_store_settings(
     state: &AppState,
@@ -279,6 +280,146 @@ pub async fn get_mall_settings(
         commission_rate: row.get::<f64, _>("commission_rate"),
         vendor_approval_required: row.get("vendor_approval_required"),
     })
+}
+
+pub async fn list_store_locations(
+    state: &AppState,
+    store_id: String,
+) -> Result<Vec<pb::StoreLocation>, (StatusCode, Json<ConnectError>)> {
+    let rows = sqlx::query(
+        r#"
+        SELECT id::text as id, code, name, status, metadata
+        FROM store_locations
+        WHERE store_id = $1
+        ORDER BY code ASC
+        "#,
+    )
+    .bind(parse_uuid(&store_id, "store_id")?)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| pb::StoreLocation {
+            id: row.get("id"),
+            code: row.get("code"),
+            name: row.get("name"),
+            status: row.get("status"),
+            metadata_json: row
+                .get::<serde_json::Value, _>("metadata")
+                .to_string(),
+        })
+        .collect())
+}
+
+pub async fn upsert_store_location(
+    state: &AppState,
+    store_id: String,
+    tenant_id: String,
+    location: pb::StoreLocation,
+    actor: Option<pb::ActorContext>,
+) -> Result<pb::StoreLocation, (StatusCode, Json<ConnectError>)> {
+    validate_store_location(&location)?;
+    let location_id = if location.id.is_empty() {
+        uuid::Uuid::new_v4()
+    } else {
+        parse_uuid(&location.id, "location_id")?
+    };
+
+    let metadata = parse_metadata_json(&location.metadata_json)?;
+
+    if location.id.is_empty() {
+        sqlx::query(
+            r#"
+            INSERT INTO store_locations (id, tenant_id, store_id, code, name, status, metadata)
+            VALUES ($1,$2,$3,$4,$5,$6,$7)
+            "#,
+        )
+        .bind(location_id)
+        .bind(parse_uuid(&tenant_id, "tenant_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(&location.code)
+        .bind(&location.name)
+        .bind(&location.status)
+        .bind(metadata)
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    } else {
+        sqlx::query(
+            r#"
+            UPDATE store_locations
+            SET code = $1, name = $2, status = $3, metadata = $4, updated_at = now()
+            WHERE id = $5 AND store_id = $6
+            "#,
+        )
+        .bind(&location.code)
+        .bind(&location.name)
+        .bind(&location.status)
+        .bind(metadata)
+        .bind(location_id)
+        .bind(parse_uuid(&store_id, "store_id")?)
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    }
+
+    let updated = pb::StoreLocation {
+        id: location_id.to_string(),
+        code: location.code,
+        name: location.name,
+        status: location.status,
+        metadata_json: location.metadata_json,
+    };
+
+    let _ = audit::record(
+        state,
+        audit_input(
+            tenant_id.clone(),
+            "store_location.upsert",
+            Some("store_location"),
+            Some(updated.id.clone()),
+            None,
+            to_json_opt(Some(updated.clone())),
+            actor.clone(),
+        ),
+    )
+    .await?;
+
+    Ok(updated)
+}
+
+pub async fn delete_store_location(
+    state: &AppState,
+    store_id: String,
+    tenant_id: String,
+    location_id: String,
+    actor: Option<pb::ActorContext>,
+) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let res = sqlx::query("DELETE FROM store_locations WHERE id = $1 AND store_id = $2")
+        .bind(parse_uuid(&location_id, "location_id")?)
+        .bind(parse_uuid(&store_id, "store_id")?)
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    let deleted = res.rows_affected() > 0;
+    if deleted {
+        let _ = audit::record(
+            state,
+            audit_input(
+                tenant_id.clone(),
+                "store_location.delete",
+                Some("store_location"),
+                Some(location_id),
+                None,
+                None,
+                actor.clone(),
+            ),
+        )
+        .await?;
+    }
+    Ok(deleted)
 }
 
 pub async fn update_mall_settings(
@@ -898,6 +1039,38 @@ pub fn validate_store_settings(
         ));
     }
     Ok(())
+}
+
+fn validate_store_location(
+    location: &pb::StoreLocation,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    if location.code.is_empty() || location.name.is_empty() || location.status.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "location code/name/status are required".to_string(),
+            }),
+        ));
+    }
+    Ok(())
+}
+
+fn parse_metadata_json(
+    raw: &str,
+) -> Result<serde_json::Value, (StatusCode, Json<ConnectError>)> {
+    if raw.trim().is_empty() {
+        return Ok(serde_json::json!({}));
+    }
+    serde_json::from_str::<Value>(raw).map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "metadata_json must be valid JSON".to_string(),
+            }),
+        )
+    })
 }
 
 pub fn validate_mall_settings(

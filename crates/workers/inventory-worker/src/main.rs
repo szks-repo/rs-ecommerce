@@ -59,7 +59,7 @@ async fn wait_for_schema(pool: &PgPool) -> Result<()> {
     let mut attempts = 0;
     loop {
         let row = sqlx::query(
-            "SELECT to_regclass('public.inventory_reservation_requests') as req_table",
+            "SELECT to_regclass('public.inventory_reservation_requests')::text as req_table",
         )
         .fetch_one(pool)
         .await?;

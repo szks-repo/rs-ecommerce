@@ -135,6 +135,18 @@ pub fn router() -> Router<AppState> {
             post(store_settings::update_mall_settings),
         )
         .route(
+            "/rpc/ecommerce.v1.StoreSettingsService/ListStoreLocations",
+            post(store_settings::list_store_locations),
+        )
+        .route(
+            "/rpc/ecommerce.v1.StoreSettingsService/UpsertStoreLocation",
+            post(store_settings::upsert_store_location),
+        )
+        .route(
+            "/rpc/ecommerce.v1.StoreSettingsService/DeleteStoreLocation",
+            post(store_settings::delete_store_location),
+        )
+        .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListShippingZones",
             post(store_settings::list_shipping_zones),
         )

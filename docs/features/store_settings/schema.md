@@ -38,6 +38,16 @@ This schema adds store settings for tenant operations, Japan-focused shipping, a
 - favicon_url (text, nullable)
 - created_at, updated_at
 
+### store_locations
+- id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
+- store_id (uuid, fk -> stores.id)
+- code (text, unique per store)
+- name (text)
+- status (text)
+- metadata (jsonb)
+- created_at, updated_at
+
 ## Shipping (Japan)
 
 ### shipping_zones

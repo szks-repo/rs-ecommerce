@@ -21,6 +21,17 @@ ConnectRPC JSON-only endpoints under `/rpc/ecommerce.v1.StoreSettingsService/*`.
   - input: store (preferred), tenant (fallback), mall
   - output: mall
 
+## Store Locations (Inventory)
+- ListStoreLocations
+  - input: store (preferred), tenant (fallback)
+  - output: locations[]
+- UpsertStoreLocation
+  - input: store (preferred), tenant (fallback), location
+  - output: location
+- DeleteStoreLocation
+  - input: store (preferred), tenant (fallback), location_id
+  - output: deleted
+
 ## Shipping Zones
 - ListShippingZones
   - input: store (preferred), tenant (fallback)

@@ -33,6 +33,10 @@ Domain data such as customers/orders/products are **not** part of settings.
 - Free shipping thresholds (optional)
   - Validation: min/max subtotal must be consistent, fee must be >= 0
 
+### 4.5) Inventory Locations
+- Store locations (warehouses / fulfillment nodes)
+- Location status and metadata
+
 ### 5) Payment (Initial)
 - Bank transfer account details
 - COD enable/disable + fee

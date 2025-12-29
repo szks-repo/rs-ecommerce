@@ -139,15 +139,30 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - idempotency_key (text)
 - created_at, updated_at
 
-## Customers
+## Customers (Cross-Store Identity)
 
-### customers
+### customers (canonical)
 - id (uuid, pk)
 - tenant_id (uuid, fk -> tenants.id)
-- email (text)
-- name (text)
-- phone (text, nullable)
+- status (text)
 - created_at, updated_at
+
+### customer_profiles (store-level)
+- id (uuid, pk)
+- customer_id (uuid, fk -> customers.id)
+- store_id (uuid, fk -> stores.id)
+- status (text)
+- preferences (jsonb)
+- created_at, updated_at
+
+### customer_identities (identity map)
+- id (uuid, pk)
+- customer_id (uuid, fk -> customers.id)
+- identity_type (text) -- email | phone | external
+- identity_value (text, normalized)
+- verified (bool)
+- source (text) -- signup | import | merge
+- created_at
 
 ### customer_addresses
 - id (uuid, pk)
@@ -264,6 +279,24 @@ Search index is external (Meilisearch). Track update cursors if needed:
 - id (uuid, pk)
 - tenant_id (uuid, fk -> tenants.id)
 - last_product_sync_at (timestamp)
+
+## Multi-Store DB Routing (Optional)
+
+### store_db_routing
+- store_id (uuid, pk, fk -> stores.id)
+- db_key (text)
+- created_at, updated_at
+
+### db_connections
+- db_key (text, pk)
+- kind (text) -- shared | dedicated
+- host (text)
+- port (int)
+- database_name (text)
+- username (text)
+- password_secret_ref (text)
+- status (text)
+- created_at, updated_at
 
 ## Indices (Initial)
 - products(store_id, status)

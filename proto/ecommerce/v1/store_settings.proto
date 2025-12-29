@@ -12,6 +12,10 @@ service StoreSettingsService {
   rpc GetMallSettings(GetMallSettingsRequest) returns (GetMallSettingsResponse);
   rpc UpdateMallSettings(UpdateMallSettingsRequest) returns (UpdateMallSettingsResponse);
 
+  rpc ListStoreLocations(ListStoreLocationsRequest) returns (ListStoreLocationsResponse);
+  rpc UpsertStoreLocation(UpsertStoreLocationRequest) returns (UpsertStoreLocationResponse);
+  rpc DeleteStoreLocation(DeleteStoreLocationRequest) returns (DeleteStoreLocationResponse);
+
   rpc ListShippingZones(ListShippingZonesRequest) returns (ListShippingZonesResponse);
   rpc UpsertShippingZone(UpsertShippingZoneRequest) returns (UpsertShippingZoneResponse);
   rpc DeleteShippingZone(DeleteShippingZoneRequest) returns (DeleteShippingZoneResponse);
@@ -60,6 +64,14 @@ message MallSettings {
   bool enabled = 1;
   double commission_rate = 2;
   bool vendor_approval_required = 3;
+}
+
+message StoreLocation {
+  string id = 1;
+  string code = 2;
+  string name = 3;
+  string status = 4;
+  string metadata_json = 5;
 }
 
 message ShippingZone {
@@ -141,6 +153,37 @@ message UpdateMallSettingsRequest {
 
 message UpdateMallSettingsResponse {
   MallSettings mall = 1;
+}
+
+message ListStoreLocationsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message ListStoreLocationsResponse {
+  repeated StoreLocation locations = 1;
+}
+
+message UpsertStoreLocationRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  StoreLocation location = 3;
+  ActorContext actor = 4;
+}
+
+message UpsertStoreLocationResponse {
+  StoreLocation location = 1;
+}
+
+message DeleteStoreLocationRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string location_id = 3;
+  ActorContext actor = 4;
+}
+
+message DeleteStoreLocationResponse {
+  bool deleted = 1;
 }
 
 message ListShippingZonesRequest {

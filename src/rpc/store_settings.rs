@@ -125,6 +125,58 @@ pub async fn update_mall_settings(
     Ok((StatusCode::OK, Json(pb::UpdateMallSettingsResponse { mall: Some(mall) })))
 }
 
+pub async fn list_store_locations(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListStoreLocationsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListStoreLocationsRequest>(&headers, body)?;
+    let (store_id, _tenant_id) =
+        store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
+    let locations = store_settings::service::list_store_locations(&state, store_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListStoreLocationsResponse { locations })))
+}
+
+pub async fn upsert_store_location(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpsertStoreLocationResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::UpsertStoreLocationRequest>(&headers, body)?;
+    let (store_id, tenant_id) =
+        store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
+    let actor = req.actor.or(actor_ctx);
+    let location = req.location.ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "location is required".to_string(),
+            }),
+        )
+    })?;
+    let location =
+        store_settings::service::upsert_store_location(&state, store_id, tenant_id, location, actor).await?;
+    Ok((StatusCode::OK, Json(pb::UpsertStoreLocationResponse { location: Some(location) })))
+}
+
+pub async fn delete_store_location(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::DeleteStoreLocationResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::DeleteStoreLocationRequest>(&headers, body)?;
+    let (store_id, tenant_id) =
+        store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
+    let actor = req.actor.or(actor_ctx);
+    let deleted =
+        store_settings::service::delete_store_location(&state, store_id, tenant_id, req.location_id, actor).await?;
+    Ok((StatusCode::OK, Json(pb::DeleteStoreLocationResponse { deleted })))
+}
+
 pub async fn list_shipping_zones(
     State(state): State<AppState>,
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
