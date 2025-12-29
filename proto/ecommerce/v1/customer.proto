@@ -1,0 +1,184 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "ecommerce/v1/common.proto";
+import "google/protobuf/timestamp.proto";
+
+service CustomerService {
+  rpc ListCustomers(ListCustomersRequest) returns (ListCustomersResponse);
+  rpc GetCustomer(GetCustomerRequest) returns (GetCustomerResponse);
+  rpc CreateCustomer(CreateCustomerRequest) returns (CreateCustomerResponse);
+  rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
+  rpc UpsertCustomerIdentity(UpsertCustomerIdentityRequest) returns (UpsertCustomerIdentityResponse);
+  rpc UpsertCustomerAddress(UpsertCustomerAddressRequest) returns (UpsertCustomerAddressResponse);
+}
+
+message Customer {
+  string id = 1;
+  string tenant_id = 2;
+  string status = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message CustomerProfile {
+  string id = 1;
+  string customer_id = 2;
+  string store_id = 3;
+  string name = 4;
+  string email = 5;
+  string phone = 6;
+  string status = 7;
+  string notes = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message CustomerIdentity {
+  string id = 1;
+  string customer_id = 2;
+  string tenant_id = 3;
+  string identity_type = 4; // email | phone | external
+  string identity_value = 5;
+  bool verified = 6;
+  string source = 7; // signup | import | merge | admin
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message CustomerAddress {
+  string id = 1;
+  string customer_id = 2;
+  string type = 3; // shipping | billing
+  string name = 4;
+  string postal_code = 5;
+  string prefecture = 6;
+  string city = 7;
+  string line1 = 8;
+  string line2 = 9;
+  string phone = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message CustomerSummary {
+  string customer_id = 1;
+  string profile_id = 2;
+  string store_id = 3;
+  string name = 4;
+  string email = 5;
+  string phone = 6;
+  string status = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message CustomerProfileInput {
+  string name = 1;
+  string email = 2;
+  string phone = 3;
+  string status = 4;
+  string notes = 5;
+}
+
+message CustomerIdentityInput {
+  string identity_type = 1;
+  string identity_value = 2;
+  bool verified = 3;
+}
+
+message CustomerIdentityUpsert {
+  string id = 1;
+  string identity_type = 2;
+  string identity_value = 3;
+  bool verified = 4;
+  string source = 5;
+}
+
+message CustomerAddressInput {
+  string id = 1;
+  string type = 2;
+  string name = 3;
+  string postal_code = 4;
+  string prefecture = 5;
+  string city = 6;
+  string line1 = 7;
+  string line2 = 8;
+  string phone = 9;
+}
+
+message ListCustomersRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string query = 3;
+  PageInfo page = 4;
+}
+
+message ListCustomersResponse {
+  repeated CustomerSummary customers = 1;
+  PageResult page = 2;
+}
+
+message GetCustomerRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+}
+
+message GetCustomerResponse {
+  Customer customer = 1;
+  CustomerProfile profile = 2;
+  repeated CustomerIdentity identities = 3;
+  repeated CustomerAddress addresses = 4;
+}
+
+message CreateCustomerRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  CustomerProfileInput profile = 3;
+  repeated CustomerIdentityInput identities = 4;
+  ActorContext actor = 5;
+}
+
+message CreateCustomerResponse {
+  Customer customer = 1;
+  CustomerProfile profile = 2;
+  bool matched_existing = 3;
+}
+
+message UpdateCustomerRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+  CustomerProfileInput profile = 4;
+  string customer_status = 5;
+  ActorContext actor = 6;
+}
+
+message UpdateCustomerResponse {
+  Customer customer = 1;
+  CustomerProfile profile = 2;
+}
+
+message UpsertCustomerIdentityRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+  CustomerIdentityUpsert identity = 4;
+  ActorContext actor = 5;
+}
+
+message UpsertCustomerIdentityResponse {
+  CustomerIdentity identity = 1;
+}
+
+message UpsertCustomerAddressRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+  CustomerAddressInput address = 4;
+  ActorContext actor = 5;
+}
+
+message UpsertCustomerAddressResponse {
+  CustomerAddress address = 1;
+}

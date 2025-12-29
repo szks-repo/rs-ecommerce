@@ -150,12 +150,17 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - id (uuid, pk)
 - customer_id (uuid, fk -> customers.id)
 - store_id (uuid, fk -> stores.id)
+- name (text)
+- email (text, nullable)
+- phone (text, nullable)
 - status (text)
+- notes (text, nullable)
 - preferences (jsonb)
 - created_at, updated_at
 
 ### customer_identities (identity map)
 - id (uuid, pk)
+- tenant_id (uuid, fk -> tenants.id)
 - customer_id (uuid, fk -> customers.id)
 - identity_type (text) -- email | phone | external
 - identity_value (text, normalized)

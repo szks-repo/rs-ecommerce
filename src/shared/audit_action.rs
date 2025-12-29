@@ -24,6 +24,10 @@ pub enum AuditAction {
     ShipmentUpdateStatus,
     IdentitySignIn,
     IdentitySignOut,
+    CustomerCreate,
+    CustomerUpdate,
+    CustomerIdentityUpsert,
+    CustomerAddressUpsert,
 }
 
 impl AuditAction {
@@ -53,6 +57,10 @@ impl AuditAction {
             AuditAction::ShipmentUpdateStatus => "shipment.update_status",
             AuditAction::IdentitySignIn => "identity.sign_in",
             AuditAction::IdentitySignOut => "identity.sign_out",
+            AuditAction::CustomerCreate => "customer.create",
+            AuditAction::CustomerUpdate => "customer.update",
+            AuditAction::CustomerIdentityUpsert => "customer.identity_upsert",
+            AuditAction::CustomerAddressUpsert => "customer.address_upsert",
         }
     }
 
@@ -82,6 +90,10 @@ impl AuditAction {
             AuditAction::ShipmentUpdateStatus => "Shipment status updated",
             AuditAction::IdentitySignIn => "Signed in",
             AuditAction::IdentitySignOut => "Signed out",
+            AuditAction::CustomerCreate => "Customer created",
+            AuditAction::CustomerUpdate => "Customer updated",
+            AuditAction::CustomerIdentityUpsert => "Customer identity saved",
+            AuditAction::CustomerAddressUpsert => "Customer address saved",
         }
     }
 }
@@ -111,6 +123,10 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::ShipmentUpdateStatus,
     AuditAction::IdentitySignIn,
     AuditAction::IdentitySignOut,
+    AuditAction::CustomerCreate,
+    AuditAction::CustomerUpdate,
+    AuditAction::CustomerIdentityUpsert,
+    AuditAction::CustomerAddressUpsert,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -187,6 +203,14 @@ pub enum ShipmentAuditAction {
 pub enum IdentityAuditAction {
     SignIn,
     SignOut,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CustomerAuditAction {
+    Create,
+    Update,
+    IdentityUpsert,
+    AddressUpsert,
 }
 
 impl From<ProductAuditAction> for AuditAction {
@@ -300,6 +324,17 @@ impl From<IdentityAuditAction> for AuditAction {
         match action {
             IdentityAuditAction::SignIn => AuditAction::IdentitySignIn,
             IdentityAuditAction::SignOut => AuditAction::IdentitySignOut,
+        }
+    }
+}
+
+impl From<CustomerAuditAction> for AuditAction {
+    fn from(action: CustomerAuditAction) -> Self {
+        match action {
+            CustomerAuditAction::Create => AuditAction::CustomerCreate,
+            CustomerAuditAction::Update => AuditAction::CustomerUpdate,
+            CustomerAuditAction::IdentityUpsert => AuditAction::CustomerIdentityUpsert,
+            CustomerAuditAction::AddressUpsert => AuditAction::CustomerAddressUpsert,
         }
     }
 }

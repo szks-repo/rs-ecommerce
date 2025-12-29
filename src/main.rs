@@ -8,6 +8,7 @@ mod audit;
 mod identity;
 mod order;
 mod promotion;
+mod customer;
 mod infrastructure;
 mod pb;
 mod rpc;

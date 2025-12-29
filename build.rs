@@ -23,6 +23,7 @@ fn main() {
         "proto/ecommerce/v1/store_staff.proto",
         "proto/ecommerce/v1/permissions.proto",
         "proto/ecommerce/v1/identity.proto",
+        "proto/ecommerce/v1/customer.proto",
     ];
     let includes = &["proto"];
 

@@ -16,12 +16,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <a className="block rounded-lg bg-neutral-100 px-3 py-2 text-neutral-900" href="/admin">
                 Overview
               </a>
-              <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
-                Identity & Staff
-              </a>
-              <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/audit">
-                Audit Logs
-              </a>
+            <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
+              Identity & Staff
+            </a>
+            <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/customers">
+              Customers
+            </a>
+            <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/audit">
+              Audit Logs
+            </a>
               <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/products">
                 Products
               </a>

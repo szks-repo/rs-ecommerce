@@ -13,6 +13,7 @@ mod setup;
 mod audit;
 pub mod request_context;
 mod identity;
+mod customer;
 
 pub fn router() -> Router<AppState> {
     let cors = CorsLayer::new()
@@ -119,6 +120,30 @@ pub fn router() -> Router<AppState> {
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdatePromotion",
             post(backoffice::update_promotion),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/ListCustomers",
+            post(customer::list_customers),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/GetCustomer",
+            post(customer::get_customer),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/CreateCustomer",
+            post(customer::create_customer),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/UpdateCustomer",
+            post(customer::update_customer),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/UpsertCustomerIdentity",
+            post(customer::upsert_customer_identity),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/UpsertCustomerAddress",
+            post(customer::upsert_customer_address),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetStoreSettings",

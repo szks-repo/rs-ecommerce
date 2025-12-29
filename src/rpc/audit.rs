@@ -69,5 +69,13 @@ fn audit_action_type(action: &AuditAction) -> i32 {
         AuditAction::ShipmentUpdateStatus => pb::AuditActionType::AuditActionShipmentUpdateStatus as i32,
         AuditAction::IdentitySignIn => pb::AuditActionType::AuditActionIdentitySignIn as i32,
         AuditAction::IdentitySignOut => pb::AuditActionType::AuditActionIdentitySignOut as i32,
+        AuditAction::CustomerCreate => pb::AuditActionType::AuditActionCustomerCreate as i32,
+        AuditAction::CustomerUpdate => pb::AuditActionType::AuditActionCustomerUpdate as i32,
+        AuditAction::CustomerIdentityUpsert => {
+            pb::AuditActionType::AuditActionCustomerIdentityUpsert as i32
+        }
+        AuditAction::CustomerAddressUpsert => {
+            pb::AuditActionType::AuditActionCustomerAddressUpsert as i32
+        }
     }
 }
