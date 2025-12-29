@@ -1,13 +1,13 @@
 use axum::{Json, http::StatusCode};
 use serde_json::Value;
 
-use crate::{AppState, rpc::{json::ConnectError, request_context}};
+use crate::{AppState, rpc::{json::ConnectError, request_context}, shared::audit_action::AuditAction};
 
 pub struct AuditInput {
     pub tenant_id: String,
     pub actor_id: Option<String>,
     pub actor_type: String,
-    pub action: String,
+    pub action: AuditAction,
     pub target_type: Option<String>,
     pub target_id: Option<String>,
     pub request_id: Option<String>,
@@ -49,7 +49,7 @@ pub async fn record(
     .bind(uuid::Uuid::parse_str(&input.tenant_id).ok())
     .bind(input.actor_id)
     .bind(input.actor_type)
-    .bind(input.action)
+    .bind(input.action.as_str())
     .bind(input.target_type)
     .bind(input.target_id)
     .bind(request_id)

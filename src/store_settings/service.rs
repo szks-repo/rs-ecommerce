@@ -7,6 +7,15 @@ use crate::{
     infrastructure::{db, audit},
     rpc::json::ConnectError,
     shared::{
+        audit_action::{
+            AuditAction,
+            StoreSettingsAuditAction,
+            MallSettingsAuditAction,
+            StoreLocationAuditAction,
+            ShippingZoneAuditAction,
+            ShippingRateAuditAction,
+            TaxRuleAuditAction,
+        },
         ids::{parse_uuid, StoreId, TenantId},
         money::{money_from_parts, money_to_parts},
     },
@@ -135,7 +144,7 @@ pub async fn update_store_settings(
         state,
         audit_input(
             tenant_id.clone(),
-            "store_settings.update",
+            StoreSettingsAuditAction::Update.into(),
             Some("store_settings"),
             Some(store_id.clone()),
             to_json_opt(before),
@@ -218,7 +227,7 @@ pub async fn initialize_store_settings(
         state,
         audit_input(
             tenant_id.clone(),
-            "store_settings.initialize",
+            StoreSettingsAuditAction::Initialize.into(),
             Some("store_settings"),
             Some(store_id.clone()),
             None,
@@ -251,7 +260,7 @@ pub async fn initialize_store_settings(
         state,
         audit_input(
             tenant_id.clone(),
-            "mall_settings.initialize",
+            MallSettingsAuditAction::Initialize.into(),
             Some("mall_settings"),
             Some(store_id.clone()),
             None,
@@ -378,7 +387,7 @@ pub async fn upsert_store_location(
         state,
         audit_input(
             tenant_id.clone(),
-            "store_location.upsert",
+            StoreLocationAuditAction::Upsert.into(),
             Some("store_location"),
             Some(updated.id.clone()),
             None,
@@ -412,7 +421,7 @@ pub async fn delete_store_location(
             state,
             audit_input(
                 tenant_id.clone(),
-                "store_location.delete",
+                StoreLocationAuditAction::Delete.into(),
                 Some("store_location"),
                 Some(location_id),
                 None,
@@ -455,7 +464,7 @@ pub async fn update_mall_settings(
         state,
         audit_input(
             tenant_id.clone(),
-            "mall_settings.update",
+            MallSettingsAuditAction::Update.into(),
             Some("mall_settings"),
             Some(store_id.clone()),
             to_json_opt(before),
@@ -601,7 +610,7 @@ pub async fn upsert_shipping_zone(
         state,
         audit_input(
             tenant_id.clone(),
-            "shipping_zone.upsert",
+            ShippingZoneAuditAction::Upsert.into(),
             Some("shipping_zone"),
             Some(updated.id.clone()),
             None,
@@ -643,7 +652,7 @@ pub async fn delete_shipping_zone(
             state,
             audit_input(
                 tenant_id.clone(),
-                "shipping_zone.delete",
+                ShippingZoneAuditAction::Delete.into(),
                 Some("shipping_zone"),
                 Some(zone_id),
                 None,
@@ -770,7 +779,7 @@ pub async fn upsert_shipping_rate(
         state,
         audit_input(
             tenant_id.clone(),
-            "shipping_rate.upsert",
+            ShippingRateAuditAction::Upsert.into(),
             Some("shipping_rate"),
             Some(updated.id.clone()),
             None,
@@ -810,7 +819,7 @@ pub async fn delete_shipping_rate(
             state,
             audit_input(
                 tenant_id.clone(),
-                "shipping_rate.delete",
+                ShippingRateAuditAction::Delete.into(),
                 Some("shipping_rate"),
                 Some(rate_id),
                 None,
@@ -912,7 +921,7 @@ pub async fn upsert_tax_rule(
         state,
         audit_input(
             tenant_id.clone(),
-            "tax_rule.upsert",
+            TaxRuleAuditAction::Upsert.into(),
             Some("tax_rule"),
             Some(updated.id.clone()),
             None,
@@ -946,7 +955,7 @@ pub async fn delete_tax_rule(
             state,
             audit_input(
                 tenant_id.clone(),
-                "tax_rule.delete",
+                TaxRuleAuditAction::Delete.into(),
                 Some("tax_rule"),
                 Some(rule_id),
                 None,
@@ -961,7 +970,7 @@ pub async fn delete_tax_rule(
 
 fn audit_input(
     tenant_id: String,
-    action: &str,
+    action: AuditAction,
     target_type: Option<&str>,
     target_id: Option<String>,
     before_json: Option<serde_json::Value>,
@@ -973,7 +982,7 @@ fn audit_input(
         tenant_id,
         actor_id,
         actor_type,
-        action: action.to_string(),
+        action,
         target_type: target_type.map(|v| v.to_string()),
         target_id,
         request_id: None,

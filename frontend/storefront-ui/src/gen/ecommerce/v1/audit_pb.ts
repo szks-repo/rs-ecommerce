@@ -2,8 +2,8 @@
 // @generated from file ecommerce/v1/audit.proto (package ecommerce.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { PageInfo, PageResult, TenantContext } from "./common_pb";
@@ -14,7 +14,64 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/audit.proto.
  */
 export const file_ecommerce_v1_audit: GenFile = /*@__PURE__*/
-  fileDesc("ChhlY29tbWVyY2UvdjEvYXVkaXQucHJvdG8SDGVjb21tZXJjZS52MSKgAgoIQXVkaXRMb2cSCgoCaWQYASABKAkSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfdHlwZRgDIAEoCRIOCgZhY3Rpb24YBCABKAkSEwoLdGFyZ2V0X3R5cGUYBSABKAkSEQoJdGFyZ2V0X2lkGAYgASgJEhIKCnJlcXVlc3RfaWQYByABKAkSEgoKaXBfYWRkcmVzcxgIIAEoCRISCgp1c2VyX2FnZW50GAkgASgJEhMKC2JlZm9yZV9qc29uGAogASgJEhIKCmFmdGVyX2pzb24YCyABKAkSFQoNbWV0YWRhdGFfanNvbhgMIAEoCRIuCgpjcmVhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLfAgoUTGlzdEF1ZGl0TG9nc1JlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfdHlwZRgDIAEoCRIOCgZhY3Rpb24YBCABKAkSEwoLdGFyZ2V0X3R5cGUYBSABKAkSEQoJdGFyZ2V0X2lkGAYgASgJEi0KCWZyb21fdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHdG9fdGltZRgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKcmVxdWVzdF9pZBgJIAEoCRISCgppcF9hZGRyZXNzGAogASgJEhIKCnVzZXJfYWdlbnQYCyABKAkSJAoEcGFnZRgMIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJlChVMaXN0QXVkaXRMb2dzUmVzcG9uc2USJAoEbG9ncxgBIAMoCzIWLmVjb21tZXJjZS52MS5BdWRpdExvZxImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQyaAoMQXVkaXRTZXJ2aWNlElgKDUxpc3RBdWRpdExvZ3MSIi5lY29tbWVyY2UudjEuTGlzdEF1ZGl0TG9nc1JlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdEF1ZGl0TG9nc1Jlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
+  fileDesc("ChhlY29tbWVyY2UvdjEvYXVkaXQucHJvdG8SDGVjb21tZXJjZS52MSJaCg9BdWRpdEFjdGlvbkl0ZW0SKwoEdHlwZRgBIAEoDjIdLmVjb21tZXJjZS52MS5BdWRpdEFjdGlvblR5cGUSCwoDa2V5GAIgASgJEg0KBWxhYmVsGAMgASgJIhkKF0xpc3RBdWRpdEFjdGlvbnNSZXF1ZXN0IkoKGExpc3RBdWRpdEFjdGlvbnNSZXNwb25zZRIuCgdhY3Rpb25zGAEgAygLMh0uZWNvbW1lcmNlLnYxLkF1ZGl0QWN0aW9uSXRlbSKgAgoIQXVkaXRMb2cSCgoCaWQYASABKAkSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfdHlwZRgDIAEoCRIOCgZhY3Rpb24YBCABKAkSEwoLdGFyZ2V0X3R5cGUYBSABKAkSEQoJdGFyZ2V0X2lkGAYgASgJEhIKCnJlcXVlc3RfaWQYByABKAkSEgoKaXBfYWRkcmVzcxgIIAEoCRISCgp1c2VyX2FnZW50GAkgASgJEhMKC2JlZm9yZV9qc29uGAogASgJEhIKCmFmdGVyX2pzb24YCyABKAkSFQoNbWV0YWRhdGFfanNvbhgMIAEoCRIuCgpjcmVhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLfAgoUTGlzdEF1ZGl0TG9nc1JlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEAoIYWN0b3JfaWQYAiABKAkSEgoKYWN0b3JfdHlwZRgDIAEoCRIOCgZhY3Rpb24YBCABKAkSEwoLdGFyZ2V0X3R5cGUYBSABKAkSEQoJdGFyZ2V0X2lkGAYgASgJEi0KCWZyb21fdGltZRgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHdG9fdGltZRgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKcmVxdWVzdF9pZBgJIAEoCRISCgppcF9hZGRyZXNzGAogASgJEhIKCnVzZXJfYWdlbnQYCyABKAkSJAoEcGFnZRgMIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJlChVMaXN0QXVkaXRMb2dzUmVzcG9uc2USJAoEbG9ncxgBIAMoCzIWLmVjb21tZXJjZS52MS5BdWRpdExvZxImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQq5QYKD0F1ZGl0QWN0aW9uVHlwZRIhCh1BVURJVF9BQ1RJT05fVFlQRV9VTlNQRUNJRklFRBAAEh8KG0FVRElUX0FDVElPTl9QUk9EVUNUX0NSRUFURRABEh8KG0FVRElUX0FDVElPTl9QUk9EVUNUX1VQREFURRACEh8KG0FVRElUX0FDVElPTl9WQVJJQU5UX0NSRUFURRADEh8KG0FVRElUX0FDVElPTl9WQVJJQU5UX1VQREFURRAEEh4KGkFVRElUX0FDVElPTl9JTlZFTlRPUllfU0VUEAUSJgoiQVVESVRfQUNUSU9OX1NUT1JFX1NFVFRJTkdTX1VQREFURRAGEioKJkFVRElUX0FDVElPTl9TVE9SRV9TRVRUSU5HU19JTklUSUFMSVpFEAcSKQolQVVESVRfQUNUSU9OX01BTExfU0VUVElOR1NfSU5JVElBTElaRRAIEiUKIUFVRElUX0FDVElPTl9NQUxMX1NFVFRJTkdTX1VQREFURRAJEiYKIkFVRElUX0FDVElPTl9TVE9SRV9MT0NBVElPTl9VUFNFUlQQChImCiJBVURJVF9BQ1RJT05fU1RPUkVfTE9DQVRJT05fREVMRVRFEAsSJQohQVVESVRfQUNUSU9OX1NISVBQSU5HX1pPTkVfVVBTRVJUEAwSJQohQVVESVRfQUNUSU9OX1NISVBQSU5HX1pPTkVfREVMRVRFEA0SJQohQVVESVRfQUNUSU9OX1NISVBQSU5HX1JBVEVfVVBTRVJUEA4SJQohQVVESVRfQUNUSU9OX1NISVBQSU5HX1JBVEVfREVMRVRFEA8SIAocQVVESVRfQUNUSU9OX1RBWF9SVUxFX1VQU0VSVBAQEiAKHEFVRElUX0FDVElPTl9UQVhfUlVMRV9ERUxFVEUQERIhCh1BVURJVF9BQ1RJT05fUFJPTU9USU9OX0NSRUFURRASEiEKHUFVRElUX0FDVElPTl9QUk9NT1RJT05fVVBEQVRFEBMSJAogQVVESVRfQUNUSU9OX09SREVSX1VQREFURV9TVEFUVVMQFBIgChxBVURJVF9BQ1RJT05fU0hJUE1FTlRfQ1JFQVRFEBUSJwojQVVESVRfQUNUSU9OX1NISVBNRU5UX1VQREFURV9TVEFUVVMQFjLLAQoMQXVkaXRTZXJ2aWNlElgKDUxpc3RBdWRpdExvZ3MSIi5lY29tbWVyY2UudjEuTGlzdEF1ZGl0TG9nc1JlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdEF1ZGl0TG9nc1Jlc3BvbnNlEmEKEExpc3RBdWRpdEFjdGlvbnMSJS5lY29tbWVyY2UudjEuTGlzdEF1ZGl0QWN0aW9uc1JlcXVlc3QaJi5lY29tbWVyY2UudjEuTGlzdEF1ZGl0QWN0aW9uc1Jlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
+
+/**
+ * @generated from message ecommerce.v1.AuditActionItem
+ */
+export type AuditActionItem = Message<"ecommerce.v1.AuditActionItem"> & {
+  /**
+   * @generated from field: ecommerce.v1.AuditActionType type = 1;
+   */
+  type: AuditActionType;
+
+  /**
+   * @generated from field: string key = 2;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string label = 3;
+   */
+  label: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.AuditActionItem.
+ * Use `create(AuditActionItemSchema)` to create a new message.
+ */
+export const AuditActionItemSchema: GenMessage<AuditActionItem> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_audit, 0);
+
+/**
+ * @generated from message ecommerce.v1.ListAuditActionsRequest
+ */
+export type ListAuditActionsRequest = Message<"ecommerce.v1.ListAuditActionsRequest"> & {
+};
+
+/**
+ * Describes the message ecommerce.v1.ListAuditActionsRequest.
+ * Use `create(ListAuditActionsRequestSchema)` to create a new message.
+ */
+export const ListAuditActionsRequestSchema: GenMessage<ListAuditActionsRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_audit, 1);
+
+/**
+ * @generated from message ecommerce.v1.ListAuditActionsResponse
+ */
+export type ListAuditActionsResponse = Message<"ecommerce.v1.ListAuditActionsResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.AuditActionItem actions = 1;
+   */
+  actions: AuditActionItem[];
+};
+
+/**
+ * Describes the message ecommerce.v1.ListAuditActionsResponse.
+ * Use `create(ListAuditActionsResponseSchema)` to create a new message.
+ */
+export const ListAuditActionsResponseSchema: GenMessage<ListAuditActionsResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_audit, 2);
 
 /**
  * @generated from message ecommerce.v1.AuditLog
@@ -91,7 +148,7 @@ export type AuditLog = Message<"ecommerce.v1.AuditLog"> & {
  * Use `create(AuditLogSchema)` to create a new message.
  */
 export const AuditLogSchema: GenMessage<AuditLog> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_audit, 0);
+  messageDesc(file_ecommerce_v1_audit, 3);
 
 /**
  * @generated from message ecommerce.v1.ListAuditLogsRequest
@@ -163,7 +220,7 @@ export type ListAuditLogsRequest = Message<"ecommerce.v1.ListAuditLogsRequest"> 
  * Use `create(ListAuditLogsRequestSchema)` to create a new message.
  */
 export const ListAuditLogsRequestSchema: GenMessage<ListAuditLogsRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_audit, 1);
+  messageDesc(file_ecommerce_v1_audit, 4);
 
 /**
  * @generated from message ecommerce.v1.ListAuditLogsResponse
@@ -185,7 +242,133 @@ export type ListAuditLogsResponse = Message<"ecommerce.v1.ListAuditLogsResponse"
  * Use `create(ListAuditLogsResponseSchema)` to create a new message.
  */
 export const ListAuditLogsResponseSchema: GenMessage<ListAuditLogsResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_audit, 2);
+  messageDesc(file_ecommerce_v1_audit, 5);
+
+/**
+ * @generated from enum ecommerce.v1.AuditActionType
+ */
+export enum AuditActionType {
+  /**
+   * @generated from enum value: AUDIT_ACTION_TYPE_UNSPECIFIED = 0;
+   */
+  AUDIT_ACTION_TYPE_UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_PRODUCT_CREATE = 1;
+   */
+  AUDIT_ACTION_PRODUCT_CREATE = 1,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_PRODUCT_UPDATE = 2;
+   */
+  AUDIT_ACTION_PRODUCT_UPDATE = 2,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_VARIANT_CREATE = 3;
+   */
+  AUDIT_ACTION_VARIANT_CREATE = 3,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_VARIANT_UPDATE = 4;
+   */
+  AUDIT_ACTION_VARIANT_UPDATE = 4,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_INVENTORY_SET = 5;
+   */
+  AUDIT_ACTION_INVENTORY_SET = 5,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_STORE_SETTINGS_UPDATE = 6;
+   */
+  AUDIT_ACTION_STORE_SETTINGS_UPDATE = 6,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_STORE_SETTINGS_INITIALIZE = 7;
+   */
+  AUDIT_ACTION_STORE_SETTINGS_INITIALIZE = 7,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_MALL_SETTINGS_INITIALIZE = 8;
+   */
+  AUDIT_ACTION_MALL_SETTINGS_INITIALIZE = 8,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_MALL_SETTINGS_UPDATE = 9;
+   */
+  AUDIT_ACTION_MALL_SETTINGS_UPDATE = 9,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_STORE_LOCATION_UPSERT = 10;
+   */
+  AUDIT_ACTION_STORE_LOCATION_UPSERT = 10,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_STORE_LOCATION_DELETE = 11;
+   */
+  AUDIT_ACTION_STORE_LOCATION_DELETE = 11,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPPING_ZONE_UPSERT = 12;
+   */
+  AUDIT_ACTION_SHIPPING_ZONE_UPSERT = 12,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPPING_ZONE_DELETE = 13;
+   */
+  AUDIT_ACTION_SHIPPING_ZONE_DELETE = 13,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPPING_RATE_UPSERT = 14;
+   */
+  AUDIT_ACTION_SHIPPING_RATE_UPSERT = 14,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPPING_RATE_DELETE = 15;
+   */
+  AUDIT_ACTION_SHIPPING_RATE_DELETE = 15,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_TAX_RULE_UPSERT = 16;
+   */
+  AUDIT_ACTION_TAX_RULE_UPSERT = 16,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_TAX_RULE_DELETE = 17;
+   */
+  AUDIT_ACTION_TAX_RULE_DELETE = 17,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_PROMOTION_CREATE = 18;
+   */
+  AUDIT_ACTION_PROMOTION_CREATE = 18,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_PROMOTION_UPDATE = 19;
+   */
+  AUDIT_ACTION_PROMOTION_UPDATE = 19,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_ORDER_UPDATE_STATUS = 20;
+   */
+  AUDIT_ACTION_ORDER_UPDATE_STATUS = 20,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPMENT_CREATE = 21;
+   */
+  AUDIT_ACTION_SHIPMENT_CREATE = 21,
+
+  /**
+   * @generated from enum value: AUDIT_ACTION_SHIPMENT_UPDATE_STATUS = 22;
+   */
+  AUDIT_ACTION_SHIPMENT_UPDATE_STATUS = 22,
+}
+
+/**
+ * Describes the enum ecommerce.v1.AuditActionType.
+ */
+export const AuditActionTypeSchema: GenEnum<AuditActionType> = /*@__PURE__*/
+  enumDesc(file_ecommerce_v1_audit, 0);
 
 /**
  * @generated from service ecommerce.v1.AuditService
@@ -198,6 +381,14 @@ export const AuditService: GenService<{
     methodKind: "unary";
     input: typeof ListAuditLogsRequestSchema;
     output: typeof ListAuditLogsResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.AuditService.ListAuditActions
+   */
+  listAuditActions: {
+    methodKind: "unary";
+    input: typeof ListAuditActionsRequestSchema;
+    output: typeof ListAuditActionsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ecommerce_v1_audit, 0);

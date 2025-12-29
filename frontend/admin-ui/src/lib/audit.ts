@@ -1,6 +1,10 @@
 import { create } from "@bufbuild/protobuf";
 import { createServiceClient } from "@/lib/connect";
-import { AuditService, ListAuditLogsRequestSchema } from "@/gen/ecommerce/v1/audit_pb";
+import {
+  AuditService,
+  ListAuditLogsRequestSchema,
+  ListAuditActionsRequestSchema,
+} from "@/gen/ecommerce/v1/audit_pb";
 import { getActiveTenantId } from "@/lib/auth";
 
 const client = createServiceClient(AuditService);
@@ -32,4 +36,8 @@ export async function listAuditLogs(params?: {
       },
     })
   );
+}
+
+export async function listAuditActions() {
+  return client.listAuditActions(create(ListAuditActionsRequestSchema, {}));
 }

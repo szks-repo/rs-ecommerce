@@ -7,7 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
-    shared::{money::money_to_parts, time::timestamp_to_chrono},
+    shared::{audit_action::{AuditAction, PromotionAuditAction}, money::money_to_parts, time::timestamp_to_chrono},
 };
 
 pub async fn create_promotion(
@@ -53,7 +53,7 @@ pub async fn create_promotion(
         state,
         audit_input(
             tenant_id.clone(),
-            "promotion.create",
+            PromotionAuditAction::Create.into(),
             Some("promotion"),
             Some(promotion.id.clone()),
             None,
@@ -109,7 +109,7 @@ pub async fn update_promotion(
         state,
         audit_input(
             tenant_id.clone(),
-            "promotion.update",
+            PromotionAuditAction::Update.into(),
             Some("promotion"),
             Some(promotion.id.clone()),
             to_json_opt(before),
@@ -124,7 +124,7 @@ pub async fn update_promotion(
 
 fn audit_input(
     tenant_id: String,
-    action: &str,
+    action: AuditAction,
     target_type: Option<&str>,
     target_id: Option<String>,
     before_json: Option<Value>,
@@ -136,7 +136,7 @@ fn audit_input(
         tenant_id,
         actor_id,
         actor_type,
-        action: action.to_string(),
+        action,
         target_type: target_type.map(|v| v.to_string()),
         target_id,
         request_id: None,

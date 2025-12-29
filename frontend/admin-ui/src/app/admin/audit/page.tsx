@@ -5,10 +5,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { listAuditLogs } from "@/lib/audit";
+import { listAuditActions, listAuditLogs } from "@/lib/audit";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
+
+type AuditActionItem = {
+  key: string;
+  label: string;
+};
 
 function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: number }) {
   if (!ts || ts.seconds == null) {
@@ -24,7 +36,7 @@ function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: numb
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [action, setAction] = useState("");
+  const [action, setAction] = useState("__all__");
   const [actorId, setActorId] = useState("");
   const [actorType, setActorType] = useState("");
   const [targetType, setTargetType] = useState("");
@@ -32,11 +44,12 @@ export default function AuditLogsPage() {
   const [pageToken, setPageToken] = useState("");
   const [nextPageToken, setNextPageToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [actionOptions, setActionOptions] = useState<AuditActionItem[]>([]);
   const { push } = useToast();
 
   const hasFilter = useMemo(
     () =>
-      action.trim() ||
+      (action !== "__all__" && action.trim()) ||
       actorId.trim() ||
       actorType.trim() ||
       targetType.trim() ||
@@ -54,10 +67,11 @@ export default function AuditLogsPage() {
       return;
     }
     const nextToken = options?.resetPage ? "" : pageToken;
+    const actionFilter = action === "__all__" ? undefined : action.trim() || undefined;
     setIsLoading(true);
     try {
       const data = await listAuditLogs({
-        action: action.trim() || undefined,
+        action: actionFilter,
         actorId: actorId.trim() || undefined,
         actorType: actorType.trim() || undefined,
         targetType: targetType.trim() || undefined,
@@ -80,6 +94,13 @@ export default function AuditLogsPage() {
 
   useEffect(() => {
     void loadLogs({ resetPage: true });
+    listAuditActions()
+      .then((data) => {
+        setActionOptions((data.actions ?? []).map((item) => ({ key: item.key, label: item.label })));
+      })
+      .catch(() => {
+        setActionOptions([]);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -103,7 +124,19 @@ export default function AuditLogsPage() {
         <CardContent className="grid gap-4 md:grid-cols-3">
           <div className="space-y-2">
             <Label htmlFor="filterAction">Action</Label>
-            <Input id="filterAction" value={action} onChange={(e) => setAction(e.target.value)} />
+            <Select value={action} onValueChange={setAction}>
+              <SelectTrigger id="filterAction" className="bg-white">
+                <SelectValue placeholder="Select action" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">All actions</SelectItem>
+                {actionOptions.map((option) => (
+                  <SelectItem key={option.key} value={option.key}>
+                    {option.label || option.key}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="filterActorId">Actor ID</Label>
@@ -130,7 +163,7 @@ export default function AuditLogsPage() {
                 type="button"
                 variant="outline"
                 onClick={() => {
-                  setAction("");
+                  setAction("__all__");
                   setActorId("");
                   setActorType("");
                   setTargetType("");

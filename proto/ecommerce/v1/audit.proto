@@ -7,6 +7,45 @@ import "ecommerce/v1/common.proto";
 
 service AuditService {
   rpc ListAuditLogs(ListAuditLogsRequest) returns (ListAuditLogsResponse);
+  rpc ListAuditActions(ListAuditActionsRequest) returns (ListAuditActionsResponse);
+}
+
+enum AuditActionType {
+  AUDIT_ACTION_TYPE_UNSPECIFIED = 0;
+  AUDIT_ACTION_PRODUCT_CREATE = 1;
+  AUDIT_ACTION_PRODUCT_UPDATE = 2;
+  AUDIT_ACTION_VARIANT_CREATE = 3;
+  AUDIT_ACTION_VARIANT_UPDATE = 4;
+  AUDIT_ACTION_INVENTORY_SET = 5;
+  AUDIT_ACTION_STORE_SETTINGS_UPDATE = 6;
+  AUDIT_ACTION_STORE_SETTINGS_INITIALIZE = 7;
+  AUDIT_ACTION_MALL_SETTINGS_INITIALIZE = 8;
+  AUDIT_ACTION_MALL_SETTINGS_UPDATE = 9;
+  AUDIT_ACTION_STORE_LOCATION_UPSERT = 10;
+  AUDIT_ACTION_STORE_LOCATION_DELETE = 11;
+  AUDIT_ACTION_SHIPPING_ZONE_UPSERT = 12;
+  AUDIT_ACTION_SHIPPING_ZONE_DELETE = 13;
+  AUDIT_ACTION_SHIPPING_RATE_UPSERT = 14;
+  AUDIT_ACTION_SHIPPING_RATE_DELETE = 15;
+  AUDIT_ACTION_TAX_RULE_UPSERT = 16;
+  AUDIT_ACTION_TAX_RULE_DELETE = 17;
+  AUDIT_ACTION_PROMOTION_CREATE = 18;
+  AUDIT_ACTION_PROMOTION_UPDATE = 19;
+  AUDIT_ACTION_ORDER_UPDATE_STATUS = 20;
+  AUDIT_ACTION_SHIPMENT_CREATE = 21;
+  AUDIT_ACTION_SHIPMENT_UPDATE_STATUS = 22;
+}
+
+message AuditActionItem {
+  AuditActionType type = 1;
+  string key = 2;
+  string label = 3;
+}
+
+message ListAuditActionsRequest {}
+
+message ListAuditActionsResponse {
+  repeated AuditActionItem actions = 1;
 }
 
 message AuditLog {

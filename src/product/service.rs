@@ -8,6 +8,7 @@ use crate::{
     infrastructure::{db, audit},
     rpc::json::ConnectError,
     shared::{
+        audit_action::{AuditAction, ProductAuditAction, VariantAuditAction, InventoryAuditAction},
         ids::{parse_uuid, nullable_uuid, TenantId, StoreId, ProductId},
         money::{money_from_parts, money_to_parts, money_to_parts_opt},
         status::{ProductStatus, VariantStatus, FulfillmentType},
@@ -335,7 +336,7 @@ pub async fn create_product(
         state,
         audit_input(
             tenant_id.clone(),
-            "product.create",
+            ProductAuditAction::Create.into(),
             Some("product"),
             Some(product.id.clone()),
             None,
@@ -430,7 +431,7 @@ pub async fn update_product(
         state,
         audit_input(
             tenant_id.clone(),
-            "product.update",
+            ProductAuditAction::Update.into(),
             Some("product"),
             Some(product.id.clone()),
             to_json_opt(before),
@@ -502,7 +503,7 @@ pub async fn create_variant(
         state,
         audit_input(
             tenant_id,
-            "variant.create",
+            VariantAuditAction::Create.into(),
             Some("variant"),
             Some(variant.id.clone()),
             None,
@@ -587,7 +588,7 @@ pub async fn update_variant(
         state,
         audit_input(
             tenant_id,
-            "variant.update",
+            VariantAuditAction::Update.into(),
             Some("variant"),
             Some(variant.id.clone()),
             None,
@@ -665,7 +666,7 @@ pub async fn set_inventory(
         state,
         audit_input(
             tenant_id.clone(),
-            "inventory.set",
+            InventoryAuditAction::Set.into(),
             Some("inventory"),
             Some(inventory.variant_id.clone()),
             None,
@@ -680,7 +681,7 @@ pub async fn set_inventory(
 
 fn audit_input(
     tenant_id: String,
-    action: &str,
+    action: AuditAction,
     target_type: Option<&str>,
     target_id: Option<String>,
     before_json: Option<Value>,
@@ -692,7 +693,7 @@ fn audit_input(
         tenant_id,
         actor_id,
         actor_type,
-        action: action.to_string(),
+        action,
         target_type: target_type.map(|v| v.to_string()),
         target_id,
         request_id: None,

@@ -8,6 +8,7 @@ use crate::{
     infrastructure::{db, audit},
     rpc::json::ConnectError,
     shared::{
+        audit_action::{AuditAction, OrderAuditAction, ShipmentAuditAction},
         ids::{parse_uuid, nullable_uuid},
         status::{order_status_from_string, order_status_to_string, payment_method_from_string, shipment_status_to_string},
     },
@@ -118,7 +119,7 @@ pub async fn update_order_status(
         state,
         audit_input(
             tenant_id.clone(),
-            "order.update_status",
+            OrderAuditAction::UpdateStatus.into(),
             Some("order"),
             Some(order.id.clone()),
             before_json,
@@ -167,7 +168,7 @@ pub async fn create_shipment(
         state,
         audit_input(
             tenant_id,
-            "shipment.create",
+            ShipmentAuditAction::Create.into(),
             Some("shipment"),
             Some(shipment.id.clone()),
             None,
@@ -222,7 +223,7 @@ pub async fn update_shipment_status(
         state,
         audit_input(
             tenant_id,
-            "shipment.update_status",
+            ShipmentAuditAction::UpdateStatus.into(),
             Some("shipment"),
             Some(shipment.id.clone()),
             before_json,
@@ -237,7 +238,7 @@ pub async fn update_shipment_status(
 
 fn audit_input(
     tenant_id: String,
-    action: &str,
+    action: AuditAction,
     target_type: Option<&str>,
     target_id: Option<String>,
     before_json: Option<Value>,
@@ -249,7 +250,7 @@ fn audit_input(
         tenant_id,
         actor_id,
         actor_type,
-        action: action.to_string(),
+        action,
         target_type: target_type.map(|v| v.to_string()),
         target_id,
         request_id: None,
