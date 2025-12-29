@@ -12,16 +12,16 @@ import { identitySignIn } from "@/lib/identity";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [storeId, setStoreId] = useState("");
+  const [storeCode, setStoreCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("store_id");
+    const saved = sessionStorage.getItem("store_code");
     if (saved) {
-      setStoreId(saved);
+      setStoreCode(saved);
     }
   }, []);
 
@@ -31,10 +31,11 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       const data = await identitySignIn({
-        storeId,
+        storeCode,
         email,
         password,
       });
+      sessionStorage.setItem("store_code", storeCode);
       router.push("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -81,11 +82,11 @@ export default function LoginPage() {
                 )}
                 <LoginForm
                   roleLabel="Admin"
-                  storeId={storeId}
+                  storeCode={storeCode}
                   email={email}
                   password={password}
                   isSubmitting={isSubmitting}
-                  onStoreIdChange={setStoreId}
+                  onStoreCodeChange={setStoreCode}
                   onEmailChange={setEmail}
                   onPasswordChange={setPassword}
                   onSubmit={handleSubmit}
@@ -100,11 +101,11 @@ export default function LoginPage() {
                 )}
                 <LoginForm
                   roleLabel="Staff"
-                  storeId={storeId}
+                  storeCode={storeCode}
                   email={email}
                   password={password}
                   isSubmitting={isSubmitting}
-                  onStoreIdChange={setStoreId}
+                  onStoreCodeChange={setStoreCode}
                   onEmailChange={setEmail}
                   onPasswordChange={setPassword}
                   onSubmit={handleSubmit}
@@ -123,21 +124,21 @@ export default function LoginPage() {
 
 function LoginForm({
   roleLabel,
-  storeId,
+  storeCode,
   email,
   password,
   isSubmitting,
-  onStoreIdChange,
+  onStoreCodeChange,
   onEmailChange,
   onPasswordChange,
   onSubmit,
 }: {
   roleLabel: string;
-  storeId: string;
+  storeCode: string;
   email: string;
   password: string;
   isSubmitting: boolean;
-  onStoreIdChange: (value: string) => void;
+  onStoreCodeChange: (value: string) => void;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -145,13 +146,13 @@ function LoginForm({
   return (
     <form className="space-y-4" onSubmit={onSubmit}>
       <div className="space-y-2">
-        <Label htmlFor="storeId">Store ID</Label>
+        <Label htmlFor="storeCode">Store Code</Label>
         <Input
-          id="storeId"
-          placeholder="uuid (from Init response)"
+          id="storeCode"
+          placeholder="example-store"
           autoComplete="organization"
-          value={storeId}
-          onChange={(e) => onStoreIdChange(e.target.value)}
+          value={storeCode}
+          onChange={(e) => onStoreCodeChange(e.target.value)}
           required
         />
       </div>

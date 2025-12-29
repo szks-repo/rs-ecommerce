@@ -13,7 +13,7 @@ import {
 const client = createServiceClient(IdentityService);
 
 export async function identitySignIn(params: {
-  storeId: string;
+  storeCode: string;
   email?: string;
   loginId?: string;
   phone?: string;
@@ -21,7 +21,7 @@ export async function identitySignIn(params: {
 }) {
   const resp = await client.signIn(
     create(IdentitySignInRequestSchema, {
-      store: { storeId: params.storeId },
+      store: { storeCode: params.storeCode },
       email: params.email || "",
       loginId: params.loginId || "",
       phone: params.phone || "",

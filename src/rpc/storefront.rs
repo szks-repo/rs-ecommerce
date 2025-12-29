@@ -73,6 +73,7 @@ fn hits_to_products(hits: Vec<SearchProduct>, tenant_id: String) -> Vec<pb::Prod
             status: hit.status,
             variants: Vec::new(),
             updated_at: None,
+            tax_rule_id: String::new(),
         })
         .filter(|p| !tenant_id.is_empty() && !p.id.is_empty())
         .collect()

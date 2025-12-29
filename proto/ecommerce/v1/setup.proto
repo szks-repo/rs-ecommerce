@@ -14,7 +14,8 @@ message InitializeStoreRequest {
   string owner_email = 2;
   string owner_password = 3;
   string owner_login_id = 4; // optional (future use)
-  ActorContext actor = 5;
+  string store_code = 5;
+  ActorContext actor = 6;
 }
 
 message InitializeStoreResponse {
@@ -22,4 +23,5 @@ message InitializeStoreResponse {
   string store_id = 2;
   string owner_staff_id = 3;
   string vendor_id = 4;
+  string store_code = 5;
 }

@@ -43,6 +43,15 @@ pub async fn initialize_store(
             }),
         ));
     }
+    if req.store_code.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "store_code is required".to_string(),
+            }),
+        ));
+    }
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
 
@@ -57,6 +66,21 @@ pub async fn initialize_store(
             Json(ConnectError {
                 code: "already_exists",
                 message: "store already exists".to_string(),
+            }),
+        ));
+    }
+
+    let existing_code = sqlx::query("SELECT 1 FROM stores WHERE code = $1 LIMIT 1")
+        .bind(&req.store_code)
+        .fetch_optional(&mut *tx)
+        .await
+        .map_err(db::error)?;
+    if existing_code.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ConnectError {
+                code: "already_exists",
+                message: "store_code already exists".to_string(),
             }),
         ));
     }
@@ -80,14 +104,15 @@ pub async fn initialize_store(
     let store_id = uuid::Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO stores (id, tenant_id, name, status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO stores (id, tenant_id, name, status, code)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
     )
     .bind(store_id)
     .bind(tenant_id)
     .bind(&req.store_name)
     .bind("active")
+    .bind(&req.store_code)
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -138,6 +163,7 @@ pub async fn initialize_store(
         store_id: store_id.to_string(),
         owner_staff_id: owner_staff_id.to_string(),
         vendor_id: vendor_id.to_string(),
+        store_code: req.store_code,
     })
 }
 

@@ -6,6 +6,7 @@ const client = createServiceClient(SetupService);
 
 export async function initializeStore(params: {
   storeName: string;
+  storeCode: string;
   ownerEmail: string;
   ownerPassword: string;
   ownerLoginId?: string;
@@ -13,6 +14,7 @@ export async function initializeStore(params: {
   return client.initializeStore(
     create(InitializeStoreRequestSchema, {
       storeName: params.storeName,
+      storeCode: params.storeCode,
       ownerEmail: params.ownerEmail,
       ownerPassword: params.ownerPassword,
       ownerLoginId: params.ownerLoginId || "",

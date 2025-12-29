@@ -12,6 +12,7 @@ import { initializeStore } from "@/lib/setup";
 export default function InitPage() {
   const router = useRouter();
   const [storeName, setStoreName] = useState("");
+  const [storeCode, setStoreCode] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [ownerLoginId, setOwnerLoginId] = useState("");
@@ -25,12 +26,14 @@ export default function InitPage() {
     try {
       const data = await initializeStore({
         storeName,
+        storeCode,
         ownerEmail,
         ownerPassword,
         ownerLoginId: ownerLoginId || undefined,
       });
       sessionStorage.setItem("store_id", data.storeId);
       sessionStorage.setItem("tenant_id", data.tenantId);
+      sessionStorage.setItem("store_code", data.storeCode);
       router.push("/login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -64,15 +67,27 @@ export default function InitPage() {
               <CardDescription>Required information to create the store.</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-2">
-                <Label htmlFor="storeName">Store Name</Label>
-                <Input
-                  id="storeName"
-                  placeholder="Example Store"
-                  value={storeName}
-                  onChange={(e) => setStoreName(e.target.value)}
-                  required
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="storeName">Store Name</Label>
+                  <Input
+                    id="storeName"
+                    placeholder="Example Store"
+                    value={storeName}
+                    onChange={(e) => setStoreName(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="storeCode">Store Code</Label>
+                  <Input
+                    id="storeCode"
+                    placeholder="example-store"
+                    value={storeCode}
+                    onChange={(e) => setStoreCode(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
             </CardContent>
           </Card>

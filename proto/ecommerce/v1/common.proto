@@ -10,6 +10,7 @@ message TenantContext {
 
 message StoreContext {
   string store_id = 1;
+  string store_code = 2;
 }
 
 message ActorContext {

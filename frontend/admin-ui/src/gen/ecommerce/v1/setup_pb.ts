@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/setup.proto.
  */
 export const file_ecommerce_v1_setup: GenFile = /*@__PURE__*/
-  fileDesc("ChhlY29tbWVyY2UvdjEvc2V0dXAucHJvdG8SDGVjb21tZXJjZS52MSKcAQoWSW5pdGlhbGl6ZVN0b3JlUmVxdWVzdBISCgpzdG9yZV9uYW1lGAEgASgJEhMKC293bmVyX2VtYWlsGAIgASgJEhYKDm93bmVyX3Bhc3N3b3JkGAMgASgJEhYKDm93bmVyX2xvZ2luX2lkGAQgASgJEikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJpChdJbml0aWFsaXplU3RvcmVSZXNwb25zZRIRCgl0ZW5hbnRfaWQYASABKAkSEAoIc3RvcmVfaWQYAiABKAkSFgoOb3duZXJfc3RhZmZfaWQYAyABKAkSEQoJdmVuZG9yX2lkGAQgASgJMm4KDFNldHVwU2VydmljZRJeCg9Jbml0aWFsaXplU3RvcmUSJC5lY29tbWVyY2UudjEuSW5pdGlhbGl6ZVN0b3JlUmVxdWVzdBolLmVjb21tZXJjZS52MS5Jbml0aWFsaXplU3RvcmVSZXNwb25zZWIGcHJvdG8z", [file_ecommerce_v1_common]);
+  fileDesc("ChhlY29tbWVyY2UvdjEvc2V0dXAucHJvdG8SDGVjb21tZXJjZS52MSKwAQoWSW5pdGlhbGl6ZVN0b3JlUmVxdWVzdBISCgpzdG9yZV9uYW1lGAEgASgJEhMKC293bmVyX2VtYWlsGAIgASgJEhYKDm93bmVyX3Bhc3N3b3JkGAMgASgJEhYKDm93bmVyX2xvZ2luX2lkGAQgASgJEhIKCnN0b3JlX2NvZGUYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0In0KF0luaXRpYWxpemVTdG9yZVJlc3BvbnNlEhEKCXRlbmFudF9pZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRIWCg5vd25lcl9zdGFmZl9pZBgDIAEoCRIRCgl2ZW5kb3JfaWQYBCABKAkSEgoKc3RvcmVfY29kZRgFIAEoCTJuCgxTZXR1cFNlcnZpY2USXgoPSW5pdGlhbGl6ZVN0b3JlEiQuZWNvbW1lcmNlLnYxLkluaXRpYWxpemVTdG9yZVJlcXVlc3QaJS5lY29tbWVyY2UudjEuSW5pdGlhbGl6ZVN0b3JlUmVzcG9uc2ViBnByb3RvMw", [file_ecommerce_v1_common]);
 
 /**
  * @generated from message ecommerce.v1.InitializeStoreRequest
@@ -41,7 +41,12 @@ export type InitializeStoreRequest = Message<"ecommerce.v1.InitializeStoreReques
   ownerLoginId: string;
 
   /**
-   * @generated from field: ecommerce.v1.ActorContext actor = 5;
+   * @generated from field: string store_code = 5;
+   */
+  storeCode: string;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 6;
    */
   actor?: ActorContext;
 };
@@ -76,6 +81,11 @@ export type InitializeStoreResponse = Message<"ecommerce.v1.InitializeStoreRespo
    * @generated from field: string vendor_id = 4;
    */
   vendorId: string;
+
+  /**
+   * @generated from field: string store_code = 5;
+   */
+  storeCode: string;
 };
 
 /**

@@ -11,16 +11,16 @@ import { identitySignIn } from "@/lib/identity";
 
 export default function VendorLoginPage() {
   const router = useRouter();
-  const [storeId, setStoreId] = useState("");
+  const [storeCode, setStoreCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("store_id");
+    const saved = sessionStorage.getItem("store_code");
     if (saved) {
-      setStoreId(saved);
+      setStoreCode(saved);
     }
   }, []);
 
@@ -30,10 +30,11 @@ export default function VendorLoginPage() {
     setIsSubmitting(true);
     try {
       const data = await identitySignIn({
-        storeId,
+        storeCode,
         email,
         password,
       });
+      sessionStorage.setItem("store_code", storeCode);
       router.push("/vendor");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -68,13 +69,13 @@ export default function VendorLoginPage() {
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="storeId">Store ID</Label>
+                <Label htmlFor="storeCode">Store Code</Label>
                 <Input
-                  id="storeId"
-                  placeholder="uuid (from Init response)"
+                  id="storeCode"
+                  placeholder="example-store"
                   autoComplete="organization"
-                  value={storeId}
-                  onChange={(e) => setStoreId(e.target.value)}
+                  value={storeCode}
+                  onChange={(e) => setStoreCode(e.target.value)}
                   required
                 />
               </div>
