@@ -31,16 +31,89 @@ export async function createProduct(params: {
   description: string;
   status: string;
   taxRuleId?: string;
+  variantAxes?: { name: string; position?: number }[];
+  defaultVariant?: {
+    sku: string;
+    fulfillmentType: string;
+    priceAmount: number;
+    compareAtAmount?: number;
+    currency: string;
+    status: string;
+  };
 }) {
-  return client.createProduct(
-    create(CreateProductRequestSchema, {
-      vendorId: params.vendorId || "",
-      title: params.title,
-      description: params.description,
-      status: params.status,
-      taxRuleId: params.taxRuleId || "",
-    })
-  );
+  const variantAxes = params.variantAxes ?? [];
+  if (params.defaultVariant) {
+    const price = params.defaultVariant.priceAmount;
+    if (price === undefined || price === null) {
+      throw new Error("default_variant.priceAmount is required.");
+    }
+    if (!Number.isFinite(price)) {
+      throw new Error("default_variant.priceAmount must be a number.");
+    }
+    if (params.defaultVariant.compareAtAmount !== undefined) {
+      if (!Number.isFinite(params.defaultVariant.compareAtAmount)) {
+        throw new Error("default_variant.compareAtAmount must be a number.");
+      }
+    }
+    if (!params.defaultVariant.currency) {
+      throw new Error("default_variant.currency is required.");
+    }
+    if (!params.defaultVariant.sku.trim()) {
+      throw new Error("default_variant.sku is required.");
+    }
+    if (!params.defaultVariant.fulfillmentType.trim()) {
+      throw new Error("default_variant.fulfillmentType is required.");
+    }
+    if (!params.defaultVariant.status.trim()) {
+      throw new Error("default_variant.status is required.");
+    }
+  }
+  const payload: {
+    vendorId: string;
+    title: string;
+    description: string;
+    status: string;
+    taxRuleId: string;
+    variantAxes: { name: string; position: number }[];
+    defaultVariant?: {
+      sku: string;
+      fulfillmentType: string;
+      price: { amount: bigint; currency: string };
+      compareAt?: { amount: bigint; currency: string };
+      status: string;
+    };
+  } = {
+    vendorId: params.vendorId || "",
+    title: params.title,
+    description: params.description,
+    status: params.status,
+    taxRuleId: params.taxRuleId || "",
+    variantAxes: variantAxes.map((axis, index) => ({
+      name: axis.name,
+      position: axis.position ?? index + 1,
+    })),
+  };
+
+  if (params.defaultVariant) {
+    payload.defaultVariant = {
+      sku: params.defaultVariant.sku,
+      fulfillmentType: params.defaultVariant.fulfillmentType,
+      price: {
+        amount: BigInt(params.defaultVariant.priceAmount),
+        currency: params.defaultVariant.currency || "JPY",
+      },
+      compareAt:
+        typeof params.defaultVariant.compareAtAmount === "number"
+          ? {
+              amount: BigInt(params.defaultVariant.compareAtAmount),
+              currency: params.defaultVariant.currency || "JPY",
+            }
+          : undefined,
+      status: params.defaultVariant.status,
+    };
+  }
+
+  return client.createProduct(create(CreateProductRequestSchema, payload));
 }
 
 export async function updateProduct(params: {
@@ -75,10 +148,10 @@ export async function createVariant(params: {
       productId: params.productId,
       sku: params.sku,
       fulfillmentType: params.fulfillmentType,
-      price: { amount: params.priceAmount, currency: params.currency },
+      price: { amount: BigInt(params.priceAmount), currency: params.currency },
       compareAt:
         typeof params.compareAtAmount === "number"
-          ? { amount: params.compareAtAmount, currency: params.currency }
+          ? { amount: BigInt(params.compareAtAmount), currency: params.currency }
           : undefined,
       status: params.status,
     })
@@ -96,10 +169,10 @@ export async function updateVariant(params: {
   return client.updateVariant(
     create(UpdateVariantRequestSchema, {
       variantId: params.variantId,
-      price: { amount: params.priceAmount, currency: params.currency },
+      price: { amount: BigInt(params.priceAmount), currency: params.currency },
       compareAt:
         typeof params.compareAtAmount === "number"
-          ? { amount: params.compareAtAmount, currency: params.currency }
+          ? { amount: BigInt(params.compareAtAmount), currency: params.currency }
           : undefined,
       status: params.status,
       fulfillmentType: params.fulfillmentType || "",

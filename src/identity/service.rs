@@ -16,7 +16,8 @@ use crate::{
     infrastructure::db,
     rpc::json::ConnectError,
     shared::time::chrono_to_timestamp,
-    identity::context::{parse_uuid, resolve_store_context},
+    identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
+    shared::ids::{StoreId, TenantId},
 };
 
 pub async fn sign_in(
@@ -161,7 +162,9 @@ async fn sign_in_core(
         ));
     }
 
-    let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let (store_id, tenant_id) = resolve_store_context_without_token_guard(state, store, tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
     let row = if !email.is_empty() {
         sqlx::query(
@@ -172,7 +175,7 @@ async fn sign_in_core(
             LIMIT 1
             "#,
         )
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .bind(&email)
         .fetch_optional(&state.db)
         .await
@@ -186,7 +189,7 @@ async fn sign_in_core(
             LIMIT 1
             "#,
         )
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .bind(&login_id)
         .fetch_optional(&state.db)
         .await
@@ -200,7 +203,7 @@ async fn sign_in_core(
             LIMIT 1
             "#,
         )
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .bind(&phone)
         .fetch_optional(&state.db)
         .await
@@ -326,6 +329,8 @@ async fn create_staff_core(
     role: String,
 ) -> Result<CreateStaffCoreResult, (StatusCode, Json<ConnectError>)> {
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
     if role.is_empty() {
         return Err((
@@ -365,7 +370,7 @@ async fn create_staff_core(
         "#,
     )
     .bind(staff_id)
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .bind(if email.is_empty() { None } else { Some(email) })
     .bind(if login_id.is_empty() { None } else { Some(login_id) })
     .bind(if phone.is_empty() { None } else { Some(phone) })
@@ -421,6 +426,7 @@ async fn create_role_core(
     permission_keys: Vec<String>,
 ) -> Result<pb::CreateRoleResponse, (StatusCode, Json<ConnectError>)> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
 
     if key.is_empty() || name.is_empty() {
         return Err((
@@ -441,7 +447,7 @@ async fn create_role_core(
         "#,
     )
     .bind(role_id)
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .bind(&key)
     .bind(&name)
     .bind(&description)
@@ -547,6 +553,7 @@ async fn list_roles_core(
     tenant: Option<pb::TenantContext>,
 ) -> Result<pb::ListRolesResponse, (StatusCode, Json<ConnectError>)> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
     let rows = sqlx::query(
         r#"
         SELECT id::text as id, key, name, description
@@ -555,7 +562,7 @@ async fn list_roles_core(
         ORDER BY created_at ASC
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;

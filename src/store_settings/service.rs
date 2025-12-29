@@ -7,7 +7,7 @@ use crate::{
     infrastructure::{db, audit},
     rpc::json::ConnectError,
     shared::{
-        ids::parse_uuid,
+        ids::{parse_uuid, StoreId, TenantId},
         money::{money_from_parts, money_to_parts},
     },
 };
@@ -17,6 +17,7 @@ pub async fn get_store_settings(
     state: &AppState,
     store_id: String,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let row = sqlx::query(
         r#"
         SELECT store_name, legal_name, contact_email, contact_phone,
@@ -30,7 +31,7 @@ pub async fn get_store_settings(
         WHERE store_id = $1
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
     .map_err(db::error)?;
@@ -79,6 +80,8 @@ pub async fn update_store_settings(
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     validate_store_settings(&settings)?;
     let before = get_store_settings(state, store_id.clone()).await.ok();
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     sqlx::query(
         r#"
@@ -123,7 +126,7 @@ pub async fn update_store_settings(
     .bind(&settings.brand_color)
     .bind(&settings.logo_url)
     .bind(&settings.favicon_url)
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -155,6 +158,8 @@ pub async fn initialize_store_settings(
 ) -> Result<(pb::StoreSettings, pb::MallSettings), (StatusCode, Json<ConnectError>)> {
     validate_store_settings(&settings)?;
     validate_mall_settings(&mall)?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     sqlx::query(
         r#"
@@ -174,8 +179,8 @@ pub async fn initialize_store_settings(
         ON CONFLICT (tenant_id) DO NOTHING
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(store_uuid.as_uuid())
+    .bind(tenant_uuid.as_uuid())
     .bind(&settings.store_name)
     .bind(&settings.legal_name)
     .bind(&settings.contact_email)
@@ -233,8 +238,8 @@ pub async fn initialize_store_settings(
                       vendor_approval_required = EXCLUDED.vendor_approval_required
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
-    .bind(parse_uuid(&tenant_id, "tenant_id")?)
+    .bind(store_uuid.as_uuid())
+    .bind(tenant_uuid.as_uuid())
     .bind(mall.enabled)
     .bind(mall.commission_rate)
     .bind(mall.vendor_approval_required)
@@ -263,6 +268,7 @@ pub async fn get_mall_settings(
     state: &AppState,
     store_id: String,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let row = sqlx::query(
         r#"
         SELECT enabled, commission_rate, vendor_approval_required
@@ -270,7 +276,7 @@ pub async fn get_mall_settings(
         WHERE store_id = $1
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
     .map_err(db::error)?;
@@ -286,6 +292,7 @@ pub async fn list_store_locations(
     state: &AppState,
     store_id: String,
 ) -> Result<Vec<pb::StoreLocation>, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let rows = sqlx::query(
         r#"
         SELECT id::text as id, code, name, status
@@ -294,7 +301,7 @@ pub async fn list_store_locations(
         ORDER BY code ASC
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -318,6 +325,8 @@ pub async fn upsert_store_location(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::StoreLocation, (StatusCode, Json<ConnectError>)> {
     validate_store_location(&location)?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     let location_id = if location.id.is_empty() {
         uuid::Uuid::new_v4()
     } else {
@@ -329,15 +338,15 @@ pub async fn upsert_store_location(
             r#"
             INSERT INTO store_locations (id, tenant_id, store_id, code, name, status)
             VALUES ($1,$2,$3,$4,$5,$6)
-            "#,
-        )
-        .bind(location_id)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .bind(&location.code)
-        .bind(&location.name)
-        .bind(&location.status)
-        .execute(&state.db)
+        "#,
+    )
+    .bind(location_id)
+    .bind(tenant_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
+    .bind(&location.code)
+    .bind(&location.name)
+    .bind(&location.status)
+    .execute(&state.db)
         .await
         .map_err(db::error)?;
     } else {
@@ -346,16 +355,16 @@ pub async fn upsert_store_location(
             UPDATE store_locations
             SET code = $1, name = $2, status = $3, updated_at = now()
             WHERE id = $4 AND store_id = $5
-            "#,
-        )
-        .bind(&location.code)
-        .bind(&location.name)
-        .bind(&location.status)
-        .bind(location_id)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .execute(&state.db)
-        .await
-        .map_err(db::error)?;
+        "#,
+    )
+    .bind(&location.code)
+    .bind(&location.name)
+    .bind(&location.status)
+    .bind(location_id)
+    .bind(store_uuid.as_uuid())
+    .execute(&state.db)
+    .await
+    .map_err(db::error)?;
     }
 
     let updated = pb::StoreLocation {
@@ -389,9 +398,11 @@ pub async fn delete_store_location(
     location_id: String,
     actor: Option<pb::ActorContext>,
 ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let res = sqlx::query("DELETE FROM store_locations WHERE id = $1 AND store_id = $2")
         .bind(parse_uuid(&location_id, "location_id")?)
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .execute(&state.db)
         .await
         .map_err(db::error)?;
@@ -423,6 +434,8 @@ pub async fn update_mall_settings(
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     validate_mall_settings(&mall)?;
     let before = get_mall_settings(state, store_id.clone()).await.ok();
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     sqlx::query(
         r#"
         UPDATE mall_settings
@@ -433,7 +446,7 @@ pub async fn update_mall_settings(
     .bind(mall.enabled)
     .bind(mall.commission_rate)
     .bind(mall.vendor_approval_required)
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -459,6 +472,7 @@ pub async fn list_shipping_zones(
     state: &AppState,
     store_id: String,
 ) -> Result<Vec<pb::ShippingZone>, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let zones = sqlx::query(
         r#"
         SELECT id::text as id, name, domestic_only
@@ -467,7 +481,7 @@ pub async fn list_shipping_zones(
         ORDER BY created_at ASC
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -513,6 +527,8 @@ pub async fn upsert_shipping_zone(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::ShippingZone, (StatusCode, Json<ConnectError>)> {
     validate_shipping_zone(&zone)?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     let zone_id = if zone.id.is_empty() {
         uuid::Uuid::new_v4()
     } else {
@@ -525,14 +541,14 @@ pub async fn upsert_shipping_zone(
             r#"
             INSERT INTO shipping_zones (id, store_id, tenant_id, name, domestic_only)
             VALUES ($1,$2,$3,$4,$5)
-            "#,
-        )
-        .bind(zone_id)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
-        .bind(&zone.name)
-        .bind(zone.domestic_only)
-        .execute(&mut *tx)
+        "#,
+    )
+    .bind(zone_id)
+    .bind(store_uuid.as_uuid())
+    .bind(tenant_uuid.as_uuid())
+    .bind(&zone.name)
+    .bind(zone.domestic_only)
+    .execute(&mut *tx)
         .await
         .map_err(db::error)?;
     } else {
@@ -541,15 +557,15 @@ pub async fn upsert_shipping_zone(
             UPDATE shipping_zones
             SET name = $1, domestic_only = $2, updated_at = now()
             WHERE id = $3 AND store_id = $4
-            "#,
-        )
-        .bind(&zone.name)
-        .bind(zone.domestic_only)
-        .bind(zone_id)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .execute(&mut *tx)
-        .await
-        .map_err(db::error)?;
+        "#,
+    )
+    .bind(&zone.name)
+    .bind(zone.domestic_only)
+    .bind(zone_id)
+    .bind(store_uuid.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
         sqlx::query("DELETE FROM shipping_zone_prefectures WHERE zone_id = $1")
             .bind(zone_id)
             .execute(&mut *tx)
@@ -606,6 +622,8 @@ pub async fn delete_shipping_zone(
     actor: Option<pb::ActorContext>,
 ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
     let zone_uuid = parse_uuid(&zone_id, "zone_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query("DELETE FROM shipping_zone_prefectures WHERE zone_id = $1")
         .bind(zone_uuid)
@@ -614,7 +632,7 @@ pub async fn delete_shipping_zone(
         .map_err(db::error)?;
     let res = sqlx::query("DELETE FROM shipping_zones WHERE id = $1 AND store_id = $2")
         .bind(zone_uuid)
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -643,6 +661,7 @@ pub async fn list_shipping_rates(
     store_id: String,
     zone_id: String,
 ) -> Result<Vec<pb::ShippingRate>, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let rows = sqlx::query(
         r#"
         SELECT r.id::text as id, r.zone_id::text as zone_id, r.name,
@@ -654,7 +673,7 @@ pub async fn list_shipping_rates(
         ORDER BY r.created_at ASC
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .bind(parse_uuid(&zone_id, "zone_id")?)
     .fetch_all(&state.db)
     .await
@@ -771,6 +790,8 @@ pub async fn delete_shipping_rate(
     rate_id: String,
     actor: Option<pb::ActorContext>,
 ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let res = sqlx::query(
         r#"
         DELETE FROM shipping_rates r
@@ -778,7 +799,7 @@ pub async fn delete_shipping_rate(
         WHERE r.zone_id = z.id AND z.store_id = $1 AND r.id = $2
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .bind(parse_uuid(&rate_id, "rate_id")?)
     .execute(&state.db)
     .await
@@ -806,6 +827,7 @@ pub async fn list_tax_rules(
     state: &AppState,
     store_id: String,
 ) -> Result<Vec<pb::TaxRule>, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
     let rows = sqlx::query(
         r#"
         SELECT id::text as id, name, rate, applies_to
@@ -814,7 +836,7 @@ pub async fn list_tax_rules(
         ORDER BY created_at ASC
         "#,
     )
-    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -838,6 +860,8 @@ pub async fn upsert_tax_rule(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::TaxRule, (StatusCode, Json<ConnectError>)> {
     validate_tax_rule(&rule)?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     let rule_id = if rule.id.is_empty() {
         uuid::Uuid::new_v4()
     } else {
@@ -848,15 +872,15 @@ pub async fn upsert_tax_rule(
             r#"
             INSERT INTO tax_rules (id, store_id, tenant_id, name, rate, applies_to)
             VALUES ($1,$2,$3,$4,$5,$6)
-            "#,
-        )
-        .bind(rule_id)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .bind(parse_uuid(&tenant_id, "tenant_id")?)
-        .bind(&rule.name)
-        .bind(rule.rate)
-        .bind(&rule.applies_to)
-        .execute(&state.db)
+        "#,
+    )
+    .bind(rule_id)
+    .bind(store_uuid.as_uuid())
+    .bind(tenant_uuid.as_uuid())
+    .bind(&rule.name)
+    .bind(rule.rate)
+    .bind(&rule.applies_to)
+    .execute(&state.db)
         .await
         .map_err(db::error)?;
     } else {
@@ -865,16 +889,16 @@ pub async fn upsert_tax_rule(
             UPDATE tax_rules
             SET name = $1, rate = $2, applies_to = $3, updated_at = now()
             WHERE id = $4 AND store_id = $5
-            "#,
-        )
-        .bind(&rule.name)
-        .bind(rule.rate)
-        .bind(&rule.applies_to)
-        .bind(rule_id)
-        .bind(parse_uuid(&store_id, "store_id")?)
-        .execute(&state.db)
-        .await
-        .map_err(db::error)?;
+        "#,
+    )
+    .bind(&rule.name)
+    .bind(rule.rate)
+    .bind(&rule.applies_to)
+    .bind(rule_id)
+    .bind(store_uuid.as_uuid())
+    .execute(&state.db)
+    .await
+    .map_err(db::error)?;
     }
 
     let updated = pb::TaxRule {
@@ -908,9 +932,11 @@ pub async fn delete_tax_rule(
     rule_id: String,
     actor: Option<pb::ActorContext>,
 ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND store_id = $2")
         .bind(parse_uuid(&rule_id, "rule_id")?)
-        .bind(parse_uuid(&store_id, "store_id")?)
+        .bind(store_uuid.as_uuid())
         .execute(&state.db)
         .await
         .map_err(db::error)?;
@@ -1012,8 +1038,9 @@ pub async fn resolve_store_context(
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.as_str()) }) {
+        let store_uuid = StoreId::parse(store_id)?;
         let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
-            .bind(parse_uuid(store_id, "store_id")?)
+            .bind(store_uuid.as_uuid())
             .fetch_optional(&state.db)
             .await
             .map_err(db::error)?;
@@ -1062,8 +1089,9 @@ pub async fn resolve_store_context(
         return Ok((store_id, tenant_id));
     }
     if let Some(tenant_id) = tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
+        let tenant_uuid = TenantId::parse(&tenant_id)?;
         let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
-            .bind(parse_uuid(&tenant_id, "tenant_id")?)
+            .bind(tenant_uuid.as_uuid())
             .fetch_optional(&state.db)
             .await
             .map_err(db::error)?;
@@ -1081,8 +1109,9 @@ pub async fn resolve_store_context(
     }
     if let Some(ctx) = request_context::current() {
         if let Some(store_id) = ctx.store_id {
+            let store_uuid = StoreId::parse(&store_id)?;
             let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
-                .bind(parse_uuid(&store_id, "store_id")?)
+                .bind(store_uuid.as_uuid())
                 .fetch_optional(&state.db)
                 .await
                 .map_err(db::error)?;
@@ -1092,8 +1121,9 @@ pub async fn resolve_store_context(
             }
         }
         if let Some(tenant_id) = ctx.tenant_id {
+            let tenant_uuid = TenantId::parse(&tenant_id)?;
             let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
-                .bind(parse_uuid(&tenant_id, "tenant_id")?)
+                .bind(tenant_uuid.as_uuid())
                 .fetch_optional(&state.db)
                 .await
                 .map_err(db::error)?;

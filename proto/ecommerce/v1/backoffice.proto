@@ -37,6 +37,19 @@ message ProductAdmin {
   string tax_rule_id = 8;
 }
 
+message VariantAxis {
+  string name = 1;
+  uint32 position = 2;
+}
+
+message DefaultVariantInput {
+  string sku = 1;
+  string fulfillment_type = 2; // physical | digital
+  Money price = 3;
+  Money compare_at = 4;
+  string status = 5;
+}
+
 message VariantAdmin {
   string id = 1;
   string product_id = 2;
@@ -115,6 +128,8 @@ message CreateProductRequest {
   string status = 5;
   ActorContext actor = 6;
   string tax_rule_id = 7;
+  repeated VariantAxis variant_axes = 8;
+  DefaultVariantInput default_variant = 9;
   StoreContext store = 10;
 }
 

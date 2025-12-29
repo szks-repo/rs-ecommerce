@@ -56,3 +56,11 @@
 ## Open Questions
 - Category/collection model
 - Product media storage
+
+## Decisions (Draft)
+- Product can be created in two modes:
+  - Single-SKU product: auto-create a default Variant (SKU) on product creation.
+  - Multi-variant product: define variant axes (e.g. size/color) first, then create variants.
+- Jan code is optional and belongs to Variant (SKU).
+- Product can hold listing/sale windows and product-level sale pricing.
+- Cross-product campaigns remain in Promotion (later).
