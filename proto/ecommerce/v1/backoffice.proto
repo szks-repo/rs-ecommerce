@@ -10,6 +10,7 @@ service BackofficeService {
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
 
+  rpc ListVariants(ListVariantsAdminRequest) returns (ListVariantsAdminResponse);
   rpc CreateVariant(CreateVariantRequest) returns (CreateVariantResponse);
   rpc UpdateVariant(UpdateVariantRequest) returns (UpdateVariantResponse);
 
@@ -90,6 +91,18 @@ message ListProductsAdminRequest {
 
 message ListProductsAdminResponse {
   repeated ProductAdmin products = 1;
+  PageResult page = 2;
+}
+
+message ListVariantsAdminRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string product_id = 3;
+  PageInfo page = 4;
+}
+
+message ListVariantsAdminResponse {
+  repeated VariantAdmin variants = 1;
   PageResult page = 2;
 }
 

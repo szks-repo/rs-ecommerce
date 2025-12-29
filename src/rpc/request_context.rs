@@ -14,6 +14,8 @@ pub struct RequestContext {
     pub request_id: Option<String>,
     pub ip_address: Option<String>,
     pub user_agent: Option<String>,
+    pub store_id: Option<String>,
+    pub tenant_id: Option<String>,
 }
 
 tokio::task_local! {
@@ -21,10 +23,13 @@ tokio::task_local! {
 }
 
 pub async fn inject_request_context(req: Request<Body>, next: Next) -> Response {
+    let auth_ctx = req.extensions().get::<Option<crate::rpc::actor::AuthContext>>().and_then(|v| v.clone());
     let ctx = RequestContext {
         request_id: extract_request_id(req.headers()),
         ip_address: extract_ip_address(req.headers()),
         user_agent: extract_user_agent(req.headers()),
+        store_id: auth_ctx.as_ref().and_then(|ctx| ctx.store_id.clone()),
+        tenant_id: auth_ctx.as_ref().and_then(|ctx| ctx.tenant_id.clone()),
     };
     let method = req.method().clone();
     let path = req.uri().path().to_string();

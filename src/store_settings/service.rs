@@ -11,6 +11,7 @@ use crate::{
         money::{money_from_parts, money_to_parts},
     },
 };
+use crate::rpc::request_context;
 
 pub async fn get_store_settings(
     state: &AppState,
@@ -977,6 +978,39 @@ pub async fn resolve_store_context(
     store: Option<pb::StoreContext>,
     tenant: Option<pb::TenantContext>,
 ) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
+    if let Some(ctx) = request_context::current() {
+        if let Some(auth_store) = ctx.store_id.as_deref() {
+            if let Some(store_id) =
+                store.as_ref().and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.as_str()) })
+            {
+                if store_id != auth_store {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        Json(ConnectError {
+                            code: "permission_denied",
+                            message: "store_id does not match token".to_string(),
+                        }),
+                    ));
+                }
+            }
+        }
+        if let Some(auth_tenant) = ctx.tenant_id.as_deref() {
+            if let Some(tenant_id) =
+                tenant.as_ref().and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id.as_str()) })
+            {
+                if tenant_id != auth_tenant {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        Json(ConnectError {
+                            code: "permission_denied",
+                            message: "tenant_id does not match token".to_string(),
+                        }),
+                    ));
+                }
+            }
+        }
+    }
+
     if let Some(store) = store.and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id) }) {
         let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
             .bind(parse_uuid(&store, "store_id")?)
@@ -1012,6 +1046,30 @@ pub async fn resolve_store_context(
         };
         let store_id: String = row.get("id");
         return Ok((store_id, tenant_id));
+    }
+    if let Some(ctx) = request_context::current() {
+        if let Some(store_id) = ctx.store_id {
+            let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
+                .bind(parse_uuid(&store_id, "store_id")?)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(db::error)?;
+            if let Some(row) = row {
+                let tenant_id: String = row.get("tenant_id");
+                return Ok((store_id, tenant_id));
+            }
+        }
+        if let Some(tenant_id) = ctx.tenant_id {
+            let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
+                .bind(parse_uuid(&tenant_id, "tenant_id")?)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(db::error)?;
+            if let Some(row) = row {
+                let store_id: String = row.get("id");
+                return Ok((store_id, tenant_id));
+            }
+        }
     }
     Err((
         StatusCode::BAD_REQUEST,

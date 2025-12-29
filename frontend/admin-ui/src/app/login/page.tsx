@@ -35,9 +35,6 @@ export default function LoginPage() {
         email,
         password,
       });
-      sessionStorage.setItem("access_token", data.accessToken);
-      sessionStorage.setItem("store_id", data.storeId);
-      sessionStorage.setItem("tenant_id", data.tenantId);
       router.push("/admin");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");

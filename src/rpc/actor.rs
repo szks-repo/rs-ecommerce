@@ -12,20 +12,33 @@ use tokio::sync::RwLock;
 
 use crate::pb::pb;
 
+#[derive(Debug, Clone)]
+pub struct AuthContext {
+    pub actor_id: String,
+    pub actor_type: String,
+    pub store_id: Option<String>,
+    pub tenant_id: Option<String>,
+}
+
 pub async fn inject_actor(mut req: Request<Body>, next: Next) -> Response {
-    let actor = actor_from_headers(req.headers()).await;
+    let auth_ctx = auth_from_headers(req.headers()).await;
+    let actor = auth_ctx.as_ref().map(|ctx| pb::ActorContext {
+        actor_id: ctx.actor_id.clone(),
+        actor_type: ctx.actor_type.clone(),
+    });
+    req.extensions_mut().insert(auth_ctx);
     req.extensions_mut().insert(actor);
     next.run(req).await
 }
 
-async fn actor_from_headers(headers: &HeaderMap) -> Option<pb::ActorContext> {
-    if let Some(actor) = actor_from_bearer(headers).await {
+async fn auth_from_headers(headers: &HeaderMap) -> Option<AuthContext> {
+    if let Some(actor) = auth_from_bearer(headers).await {
         return Some(actor);
     }
-    actor_from_override(headers)
+    auth_from_override(headers)
 }
 
-async fn actor_from_bearer(headers: &HeaderMap) -> Option<pb::ActorContext> {
+async fn auth_from_bearer(headers: &HeaderMap) -> Option<AuthContext> {
     let value = headers.get(axum::http::header::AUTHORIZATION)?;
     let value = value.to_str().ok()?;
     let token = value.strip_prefix("Bearer ")?;
@@ -40,15 +53,17 @@ async fn actor_from_bearer(headers: &HeaderMap) -> Option<pb::ActorContext> {
     }
     // Fallback: treat bearer token as actor_id in dev (when AUTH_JWT_SECRET is not set).
     if std::env::var("AUTH_JWT_SECRET").is_err() {
-        return Some(pb::ActorContext {
+        return Some(AuthContext {
             actor_id: token.to_string(),
             actor_type: "api".to_string(),
+            store_id: None,
+            tenant_id: None,
         });
     }
     None
 }
 
-fn actor_from_override(headers: &HeaderMap) -> Option<pb::ActorContext> {
+fn auth_from_override(headers: &HeaderMap) -> Option<AuthContext> {
     let actor_id = headers.get("x-actor-id")?.to_str().ok()?.to_string();
     if actor_id.is_empty() {
         return None;
@@ -58,7 +73,12 @@ fn actor_from_override(headers: &HeaderMap) -> Option<pb::ActorContext> {
         .and_then(|v| v.to_str().ok())
         .unwrap_or("admin")
         .to_string();
-    Some(pb::ActorContext { actor_id, actor_type })
+    Some(AuthContext {
+        actor_id,
+        actor_type,
+        store_id: None,
+        tenant_id: None,
+    })
 }
 
 #[derive(Debug, Deserialize)]
@@ -67,6 +87,8 @@ struct JwtClaims {
     #[allow(dead_code)]
     exp: usize,
     actor_type: Option<String>,
+    store_id: Option<String>,
+    tenant_id: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -93,7 +115,7 @@ static JWKS_CACHE: Lazy<RwLock<JwksCache>> = Lazy::new(|| RwLock::new(JwksCache:
 const JWKS_TTL: Duration = Duration::from_secs(300);
 const JWKS_TIMEOUT: Duration = Duration::from_secs(5);
 
-async fn verify_jwt_rs256(token: &str) -> Option<pb::ActorContext> {
+async fn verify_jwt_rs256(token: &str) -> Option<AuthContext> {
     let jwks_url = std::env::var("AUTH_JWKS_URL").ok()?;
     let header = decode_header(token).ok()?;
     let kid = header.kid;
@@ -116,13 +138,15 @@ async fn verify_jwt_rs256(token: &str) -> Option<pb::ActorContext> {
         validation.set_audience(&[aud]);
     }
     let data = decode::<JwtClaims>(token, &decoding_key, &validation).ok()?;
-    Some(pb::ActorContext {
+    Some(AuthContext {
         actor_id: data.claims.sub,
         actor_type: data.claims.actor_type.unwrap_or_else(|| "api".to_string()),
+        store_id: data.claims.store_id,
+        tenant_id: data.claims.tenant_id,
     })
 }
 
-fn verify_jwt_hs256(token: &str) -> Option<pb::ActorContext> {
+fn verify_jwt_hs256(token: &str) -> Option<AuthContext> {
     let secret = std::env::var("AUTH_JWT_SECRET").ok()?;
     let mut validation = Validation::new(Algorithm::HS256);
     if let Ok(issuer) = std::env::var("AUTH_JWT_ISSUER") {
@@ -137,9 +161,11 @@ fn verify_jwt_hs256(token: &str) -> Option<pb::ActorContext> {
         &validation,
     )
     .ok()?;
-    Some(pb::ActorContext {
+    Some(AuthContext {
         actor_id: data.claims.sub,
         actor_type: data.claims.actor_type.unwrap_or_else(|| "api".to_string()),
+        store_id: data.claims.store_id,
+        tenant_id: data.claims.tenant_id,
     })
 }
 

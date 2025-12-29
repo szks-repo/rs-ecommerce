@@ -7,12 +7,12 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Textarea } from "@/components/ui/textarea";
-import { createProduct } from "@/lib/product";
+import { updateProduct } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 
-export default function ProductCreateForm() {
+export default function ProductUpdateForm() {
+  const [productId, setProductId] = useState("");
   const [title, setTitle] = useState("");
-  const [vendorId, setVendorId] = useState("");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("active");
   const [message, setMessage] = useState<string | null>(null);
@@ -28,17 +28,13 @@ export default function ProductCreateForm() {
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
-      const data = await createProduct({
-        vendorId: vendorId.trim() || undefined,
+      const data = await updateProduct({
+        productId,
         title,
         description,
         status,
       });
-      setMessage(`Created product: ${data.product.id}`);
-      setTitle("");
-      setVendorId("");
-      setDescription("");
-      setStatus("active");
+      setMessage(`Updated product: ${data.product.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -49,15 +45,15 @@ export default function ProductCreateForm() {
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
-        <CardTitle>Create Product</CardTitle>
+        <CardTitle>Update Product</CardTitle>
         <CardDescription className="text-neutral-500">
-          Register product master data.
+          Update title, description, or status.
         </CardDescription>
       </CardHeader>
       <CardContent>
         {error && (
           <Alert className="mb-4">
-            <AlertTitle>Create failed</AlertTitle>
+            <AlertTitle>Update failed</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -69,26 +65,27 @@ export default function ProductCreateForm() {
         )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="productTitle">Title</Label>
+            <Label htmlFor="updateProductId">Product ID</Label>
             <Input
-              id="productTitle"
+              id="updateProductId"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+              required
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="updateProductTitle">Title</Label>
+            <Input
+              id="updateProductTitle"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="productVendor">Vendor ID (optional)</Label>
-            <Input
-              id="productVendor"
-              value={vendorId}
-              onChange={(e) => setVendorId(e.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="productDescription">Description</Label>
+            <Label htmlFor="updateProductDescription">Description</Label>
             <Textarea
-              id="productDescription"
+              id="updateProductDescription"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
@@ -96,16 +93,16 @@ export default function ProductCreateForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="productStatus">Status</Label>
+            <Label htmlFor="updateProductStatus">Status</Label>
             <Input
-              id="productStatus"
+              id="updateProductStatus"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             />
           </div>
           <div>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Product"}
+              {isSubmitting ? "Updating..." : "Update Product"}
             </Button>
           </div>
         </form>

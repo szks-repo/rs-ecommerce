@@ -1,4 +1,5 @@
 import { rpcFetch } from "@/lib/api";
+import { saveStoreSession, setActiveStore } from "@/lib/auth";
 
 type IdentitySignInResponse = {
   accessToken: string;
@@ -28,13 +29,20 @@ export async function identitySignIn(params: {
   phone?: string;
   password: string;
 }) {
-  return rpcFetch<IdentitySignInResponse>("/rpc/ecommerce.v1.IdentityService/SignIn", {
+  const resp = await rpcFetch<IdentitySignInResponse>("/rpc/ecommerce.v1.IdentityService/SignIn", {
     store: { storeId: params.storeId },
     email: params.email || "",
     loginId: params.loginId || "",
     phone: params.phone || "",
     password: params.password,
   });
+  saveStoreSession({
+    storeId: resp.storeId,
+    tenantId: resp.tenantId,
+    accessToken: resp.accessToken,
+  });
+  setActiveStore(resp.storeId, resp.tenantId, resp.accessToken);
+  return resp;
 }
 
 export async function identityCreateStaff(params: {

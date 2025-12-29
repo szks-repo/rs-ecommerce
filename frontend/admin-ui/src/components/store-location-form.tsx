@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { rpcFetch } from "@/lib/api";
+import { getActiveAccessToken } from "@/lib/auth";
 
 type StoreLocation = {
   id: string;
@@ -25,13 +26,12 @@ export default function StoreLocationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function loadLocations() {
-    const storeId = sessionStorage.getItem("store_id");
-    if (!storeId) {
+    if (!getActiveAccessToken()) {
       return;
     }
     const data = await rpcFetch<{ locations: StoreLocation[] }>(
       "/rpc/ecommerce.v1.StoreSettingsService/ListStoreLocations",
-      { store: { storeId } }
+      {}
     );
     setLocations(data.locations || []);
   }
@@ -46,14 +46,12 @@ export default function StoreLocationForm() {
     setMessage(null);
     setIsSubmitting(true);
     try {
-      const storeId = sessionStorage.getItem("store_id");
-      if (!storeId) {
-        throw new Error("store_id is missing. Please sign in first.");
+      if (!getActiveAccessToken()) {
+        throw new Error("access_token is missing. Please sign in first.");
       }
       await rpcFetch<{ location: StoreLocation }>(
         "/rpc/ecommerce.v1.StoreSettingsService/UpsertStoreLocation",
         {
-          store: { storeId },
           location: {
             code,
             name,

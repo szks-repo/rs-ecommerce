@@ -1,5 +1,9 @@
 import ProductCreateForm from "@/components/product-create-form";
 import VariantCreateForm from "@/components/variant-create-form";
+import ProductList from "@/components/product-list";
+import VariantList from "@/components/variant-list";
+import ProductUpdateForm from "@/components/product-update-form";
+import VariantUpdateForm from "@/components/variant-update-form";
 
 export default function ProductsPage() {
   return (
@@ -10,6 +14,19 @@ export default function ProductsPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <ProductCreateForm />
         <VariantCreateForm />
+      </div>
+
+      <div className="mt-8 grid gap-6 md:grid-cols-2">
+        <ProductUpdateForm />
+        <VariantUpdateForm />
+      </div>
+
+      <div className="mt-8 grid gap-6">
+        <ProductList />
+      </div>
+
+      <div className="mt-8 grid gap-6">
+        <VariantList />
       </div>
     </div>
   );

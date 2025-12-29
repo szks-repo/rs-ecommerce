@@ -1,3 +1,5 @@
+import { getActiveAccessToken } from "@/lib/auth";
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 export type ApiError = {
@@ -6,7 +8,7 @@ export type ApiError = {
 };
 
 export async function rpcFetch<T>(path: string, body: unknown): Promise<T> {
-  const token = typeof window !== "undefined" ? sessionStorage.getItem("access_token") : null;
+  const token = typeof window !== "undefined" ? getActiveAccessToken() : null;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
   };

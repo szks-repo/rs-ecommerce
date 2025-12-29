@@ -5,7 +5,7 @@ use tracing::info_span;
 use crate::AppState;
 
 pub mod json;
-mod actor;
+pub(crate) mod actor;
 mod storefront;
 mod backoffice;
 mod store_settings;
@@ -77,6 +77,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateProduct",
             post(backoffice::update_product),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListVariants",
+            post(backoffice::list_variants),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateVariant",

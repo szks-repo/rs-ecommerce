@@ -7,8 +7,9 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
-    shared::{ids::parse_uuid, money::{money_to_parts, money_to_parts_opt}},
+    shared::{ids::parse_uuid, money::{money_from_parts, money_to_parts, money_to_parts_opt}},
 };
+use crate::rpc::request_context;
 
 pub async fn list_products(
     state: &AppState,
@@ -106,6 +107,59 @@ pub async fn list_products_admin(
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
+        })
+        .collect())
+}
+
+pub async fn list_variants_admin(
+    state: &AppState,
+    tenant: Option<pb::TenantContext>,
+    store: Option<pb::StoreContext>,
+    product_id: String,
+) -> Result<Vec<pb::VariantAdmin>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let rows = sqlx::query(
+        r#"
+        SELECT v.id::text as id,
+               v.product_id::text as product_id,
+               v.sku,
+               v.fulfillment_type,
+               v.price_amount,
+               v.price_currency,
+               v.compare_at_amount,
+               v.compare_at_currency,
+               v.status
+        FROM variants v
+        JOIN products p ON p.id = v.product_id
+        WHERE p.store_id = $1 AND v.product_id = $2
+        ORDER BY v.created_at DESC
+        "#,
+    )
+    .bind(parse_uuid(&store_id, "store_id")?)
+    .bind(parse_uuid(&product_id, "product_id")?)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| pb::VariantAdmin {
+            id: row.get("id"),
+            product_id: row.get("product_id"),
+            sku: row.get("sku"),
+            fulfillment_type: row.get("fulfillment_type"),
+            price: Some(money_from_parts(
+                row.get::<i64, _>("price_amount"),
+                row.get::<String, _>("price_currency"),
+            )),
+            compare_at: match row.get::<Option<i64>, _>("compare_at_amount") {
+                Some(amount) => Some(money_from_parts(
+                    amount,
+                    row.get::<Option<String>, _>("compare_at_currency").unwrap_or_default(),
+                )),
+                None => None,
+            },
+            status: row.get("status"),
         })
         .collect())
 }
@@ -431,6 +485,7 @@ pub async fn set_inventory(
     }
     let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     ensure_variant_belongs_to_store(state, &req.variant_id, &store_id).await?;
+    ensure_location_belongs_to_store(state, &req.location_id, &store_id).await?;
     sqlx::query(
         r#"
         INSERT INTO inventory_stocks (tenant_id, store_id, location_id, variant_id, stock, reserved)
@@ -609,6 +664,39 @@ async fn resolve_store_context(
     store: Option<pb::StoreContext>,
     tenant: Option<pb::TenantContext>,
 ) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
+    if let Some(ctx) = request_context::current() {
+        if let Some(auth_store) = ctx.store_id.as_deref() {
+            if let Some(store_id) =
+                store.as_ref().and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.as_str()) })
+            {
+                if store_id != auth_store {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        Json(ConnectError {
+                            code: "permission_denied",
+                            message: "store_id does not match token".to_string(),
+                        }),
+                    ));
+                }
+            }
+        }
+        if let Some(auth_tenant) = ctx.tenant_id.as_deref() {
+            if let Some(tenant_id) =
+                tenant.as_ref().and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id.as_str()) })
+            {
+                if tenant_id != auth_tenant {
+                    return Err((
+                        StatusCode::FORBIDDEN,
+                        Json(ConnectError {
+                            code: "permission_denied",
+                            message: "tenant_id does not match token".to_string(),
+                        }),
+                    ));
+                }
+            }
+        }
+    }
+
     if let Some(store_id) = store.and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id) }) {
         let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
             .bind(parse_uuid(&store_id, "store_id")?)
@@ -621,6 +709,23 @@ async fn resolve_store_context(
     if let Some(tenant_id) = tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
         let store_id = store_id_for_tenant(state, &tenant_id).await?;
         return Ok((store_id, tenant_id));
+    }
+    if let Some(ctx) = request_context::current() {
+        if let Some(store_id) = ctx.store_id {
+            let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM stores WHERE id = $1")
+                .bind(parse_uuid(&store_id, "store_id")?)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(db::error)?;
+            if let Some(row) = row {
+                let tenant_id: String = row.get("tenant_id");
+                return Ok((store_id, tenant_id));
+            }
+        }
+        if let Some(tenant_id) = ctx.tenant_id {
+            let store_id = store_id_for_tenant(state, &tenant_id).await?;
+            return Ok((store_id, tenant_id));
+        }
     }
     Err((
         StatusCode::BAD_REQUEST,
@@ -655,6 +760,29 @@ async fn ensure_variant_belongs_to_store(
             Json(ConnectError {
                 code: "invalid_argument",
                 message: "variant does not belong to store".to_string(),
+            }),
+        ));
+    }
+    Ok(())
+}
+
+async fn ensure_location_belongs_to_store(
+    state: &AppState,
+    location_id: &str,
+    store_id: &str,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    let row = sqlx::query("SELECT store_id::text as store_id FROM store_locations WHERE id = $1")
+        .bind(parse_uuid(location_id, "location_id")?)
+        .fetch_one(&state.db)
+        .await
+        .map_err(db::error)?;
+    let owner_store_id: String = row.get("store_id");
+    if owner_store_id != store_id {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: "invalid_argument",
+                message: "location does not belong to store".to_string(),
             }),
         ));
     }
