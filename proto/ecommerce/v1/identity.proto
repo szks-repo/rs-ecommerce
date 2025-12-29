@@ -7,6 +7,7 @@ import "google/protobuf/timestamp.proto";
 
 service IdentityService {
   rpc SignIn(IdentitySignInRequest) returns (IdentitySignInResponse);
+  rpc SignOut(IdentitySignOutRequest) returns (IdentitySignOutResponse);
   rpc CreateStaff(IdentityCreateStaffRequest) returns (IdentityCreateStaffResponse);
   rpc CreateRole(IdentityCreateRoleRequest) returns (IdentityCreateRoleResponse);
   rpc AssignRoleToStaff(IdentityAssignRoleRequest) returns (IdentityAssignRoleResponse);
@@ -29,6 +30,15 @@ message IdentitySignInResponse {
   string staff_id = 4;
   string role = 5;
   google.protobuf.Timestamp expires_at = 6;
+}
+
+message IdentitySignOutRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message IdentitySignOutResponse {
+  bool signed_out = 1;
 }
 
 message IdentityCreateStaffRequest {

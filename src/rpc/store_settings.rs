@@ -22,7 +22,7 @@ pub async fn get_store_settings(
     let req = parse_request::<pb::GetStoreSettingsRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    let settings = store_settings::service::get_store_settings(&state, store_id).await?;
+    let settings = store_settings::service::get_store_settings(&state, store_id, _tenant_id).await?;
     Ok((StatusCode::OK, Json(pb::GetStoreSettingsResponse { settings: Some(settings) })))
 }
 
@@ -102,7 +102,7 @@ pub async fn get_mall_settings(
     let req = parse_request::<pb::GetMallSettingsRequest>(&headers, body)?;
     let (store_id, _tenant_id) =
         store_settings::service::resolve_store_context(&state, req.store, req.tenant).await?;
-    let mall = store_settings::service::get_mall_settings(&state, store_id).await?;
+    let mall = store_settings::service::get_mall_settings(&state, store_id, _tenant_id).await?;
     Ok((StatusCode::OK, Json(pb::GetMallSettingsResponse { mall: Some(mall) })))
 }
 

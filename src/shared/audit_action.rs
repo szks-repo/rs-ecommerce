@@ -22,6 +22,8 @@ pub enum AuditAction {
     OrderUpdateStatus,
     ShipmentCreate,
     ShipmentUpdateStatus,
+    IdentitySignIn,
+    IdentitySignOut,
 }
 
 impl AuditAction {
@@ -49,6 +51,8 @@ impl AuditAction {
             AuditAction::OrderUpdateStatus => "order.update_status",
             AuditAction::ShipmentCreate => "shipment.create",
             AuditAction::ShipmentUpdateStatus => "shipment.update_status",
+            AuditAction::IdentitySignIn => "identity.sign_in",
+            AuditAction::IdentitySignOut => "identity.sign_out",
         }
     }
 
@@ -76,6 +80,8 @@ impl AuditAction {
             AuditAction::OrderUpdateStatus => "Order status updated",
             AuditAction::ShipmentCreate => "Shipment created",
             AuditAction::ShipmentUpdateStatus => "Shipment status updated",
+            AuditAction::IdentitySignIn => "Signed in",
+            AuditAction::IdentitySignOut => "Signed out",
         }
     }
 }
@@ -103,6 +109,8 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::OrderUpdateStatus,
     AuditAction::ShipmentCreate,
     AuditAction::ShipmentUpdateStatus,
+    AuditAction::IdentitySignIn,
+    AuditAction::IdentitySignOut,
 ];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -173,6 +181,12 @@ pub enum OrderAuditAction {
 pub enum ShipmentAuditAction {
     Create,
     UpdateStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IdentityAuditAction {
+    SignIn,
+    SignOut,
 }
 
 impl From<ProductAuditAction> for AuditAction {
@@ -277,6 +291,15 @@ impl From<ShipmentAuditAction> for AuditAction {
         match action {
             ShipmentAuditAction::Create => AuditAction::ShipmentCreate,
             ShipmentAuditAction::UpdateStatus => AuditAction::ShipmentUpdateStatus,
+        }
+    }
+}
+
+impl From<IdentityAuditAction> for AuditAction {
+    fn from(action: IdentityAuditAction) -> Self {
+        match action {
+            IdentityAuditAction::SignIn => AuditAction::IdentitySignIn,
+            IdentityAuditAction::SignOut => AuditAction::IdentitySignOut,
         }
     }
 }

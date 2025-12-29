@@ -25,6 +25,7 @@ use crate::rpc::request_context;
 pub async fn get_store_settings(
     state: &AppState,
     store_id: String,
+    tenant_id: String,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let row = sqlx::query(
@@ -41,43 +42,151 @@ pub async fn get_store_settings(
         "#,
     )
     .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
+    .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
 
-    Ok(pb::StoreSettings {
-        store_name: row.get("store_name"),
-        legal_name: row.get("legal_name"),
-        contact_email: row.get("contact_email"),
-        contact_phone: row.get("contact_phone"),
-        address_prefecture: row.get("address_prefecture"),
-        address_city: row.get("address_city"),
-        address_line1: row.get("address_line1"),
-        address_line2: row.get::<Option<String>, _>("address_line2").unwrap_or_default(),
-        legal_notice: row.get("legal_notice"),
-        default_language: row.get("default_language"),
-        primary_domain: row.get::<Option<String>, _>("primary_domain").unwrap_or_default(),
-        subdomain: row.get::<Option<String>, _>("subdomain").unwrap_or_default(),
-        https_enabled: row.get("https_enabled"),
-        currency: row.get("currency"),
-        tax_mode: row.get("tax_mode"),
-        tax_rounding: row.get("tax_rounding"),
-        order_initial_status: row.get("order_initial_status"),
-        cod_enabled: row.get("cod_enabled"),
-        cod_fee: Some(money_from_parts(
-            row.get::<i64, _>("cod_fee_amount"),
-            row.get::<String, _>("cod_fee_currency"),
-        )),
-        bank_name: row.get("bank_name"),
-        bank_branch: row.get("bank_branch"),
-        bank_account_type: row.get("bank_account_type"),
-        bank_account_number: row.get("bank_account_number"),
-        bank_account_name: row.get("bank_account_name"),
-        theme: row.get("theme"),
-        brand_color: row.get("brand_color"),
-        logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
-        favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
-    })
+    if let Some(row) = row {
+        return Ok(pb::StoreSettings {
+            store_name: row.get("store_name"),
+            legal_name: row.get("legal_name"),
+            contact_email: row.get("contact_email"),
+            contact_phone: row.get("contact_phone"),
+            address_prefecture: row.get("address_prefecture"),
+            address_city: row.get("address_city"),
+            address_line1: row.get("address_line1"),
+            address_line2: row.get::<Option<String>, _>("address_line2").unwrap_or_default(),
+            legal_notice: row.get("legal_notice"),
+            default_language: row.get("default_language"),
+            primary_domain: row.get::<Option<String>, _>("primary_domain").unwrap_or_default(),
+            subdomain: row.get::<Option<String>, _>("subdomain").unwrap_or_default(),
+            https_enabled: row.get("https_enabled"),
+            currency: row.get("currency"),
+            tax_mode: row.get("tax_mode"),
+            tax_rounding: row.get("tax_rounding"),
+            order_initial_status: row.get("order_initial_status"),
+            cod_enabled: row.get("cod_enabled"),
+            cod_fee: Some(money_from_parts(
+                row.get::<i64, _>("cod_fee_amount"),
+                row.get::<String, _>("cod_fee_currency"),
+            )),
+            bank_name: row.get("bank_name"),
+            bank_branch: row.get("bank_branch"),
+            bank_account_type: row.get("bank_account_type"),
+            bank_account_number: row.get("bank_account_number"),
+            bank_account_name: row.get("bank_account_name"),
+            theme: row.get("theme"),
+            brand_color: row.get("brand_color"),
+            logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
+            favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
+        });
+    }
+
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
+    let fallback_row = sqlx::query(
+        r#"
+        SELECT store_name, legal_name, contact_email, contact_phone,
+               address_prefecture, address_city, address_line1, address_line2,
+               legal_notice, default_language, primary_domain, subdomain, https_enabled,
+               currency, tax_mode, tax_rounding, order_initial_status,
+               cod_enabled, cod_fee_amount, cod_fee_currency,
+               bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
+               theme, brand_color, logo_url, favicon_url
+        FROM store_settings
+        WHERE tenant_id = $1
+        "#,
+    )
+    .bind(tenant_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if let Some(row) = fallback_row {
+        return Ok(pb::StoreSettings {
+            store_name: row.get("store_name"),
+            legal_name: row.get("legal_name"),
+            contact_email: row.get("contact_email"),
+            contact_phone: row.get("contact_phone"),
+            address_prefecture: row.get("address_prefecture"),
+            address_city: row.get("address_city"),
+            address_line1: row.get("address_line1"),
+            address_line2: row.get::<Option<String>, _>("address_line2").unwrap_or_default(),
+            legal_notice: row.get("legal_notice"),
+            default_language: row.get("default_language"),
+            primary_domain: row.get::<Option<String>, _>("primary_domain").unwrap_or_default(),
+            subdomain: row.get::<Option<String>, _>("subdomain").unwrap_or_default(),
+            https_enabled: row.get("https_enabled"),
+            currency: row.get("currency"),
+            tax_mode: row.get("tax_mode"),
+            tax_rounding: row.get("tax_rounding"),
+            order_initial_status: row.get("order_initial_status"),
+            cod_enabled: row.get("cod_enabled"),
+            cod_fee: Some(money_from_parts(
+                row.get::<i64, _>("cod_fee_amount"),
+                row.get::<String, _>("cod_fee_currency"),
+            )),
+            bank_name: row.get("bank_name"),
+            bank_branch: row.get("bank_branch"),
+            bank_account_type: row.get("bank_account_type"),
+            bank_account_number: row.get("bank_account_number"),
+            bank_account_name: row.get("bank_account_name"),
+            theme: row.get("theme"),
+            brand_color: row.get("brand_color"),
+            logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
+            favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
+        });
+    }
+
+    let store_name = sqlx::query("SELECT name FROM stores WHERE id = $1")
+        .bind(store_uuid.as_uuid())
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?
+        .map(|row| row.get::<String, _>("name"))
+        .unwrap_or_else(|| "Store".to_string());
+
+    Ok(default_store_settings(store_name))
+}
+
+fn default_store_settings(store_name: String) -> pb::StoreSettings {
+    pb::StoreSettings {
+        store_name: store_name.clone(),
+        legal_name: store_name,
+        contact_email: "".to_string(),
+        contact_phone: "".to_string(),
+        address_prefecture: "".to_string(),
+        address_city: "".to_string(),
+        address_line1: "".to_string(),
+        address_line2: "".to_string(),
+        legal_notice: "".to_string(),
+        default_language: "ja".to_string(),
+        primary_domain: "".to_string(),
+        subdomain: "".to_string(),
+        https_enabled: true,
+        currency: "JPY".to_string(),
+        tax_mode: "exclusive".to_string(),
+        tax_rounding: "round".to_string(),
+        order_initial_status: "pending_payment".to_string(),
+        cod_enabled: true,
+        cod_fee: Some(money_from_parts(0, "JPY".to_string())),
+        bank_name: "".to_string(),
+        bank_branch: "".to_string(),
+        bank_account_type: "".to_string(),
+        bank_account_number: "".to_string(),
+        bank_account_name: "".to_string(),
+        theme: "default".to_string(),
+        brand_color: "#111827".to_string(),
+        logo_url: "".to_string(),
+        favicon_url: "".to_string(),
+    }
+}
+
+fn default_mall_settings() -> pb::MallSettings {
+    pb::MallSettings {
+        enabled: false,
+        commission_rate: 0.0,
+        vendor_approval_required: true,
+    }
 }
 
 pub async fn update_store_settings(
@@ -88,24 +197,62 @@ pub async fn update_store_settings(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     validate_store_settings(&settings)?;
-    let before = get_store_settings(state, store_id.clone()).await.ok();
+    let before = get_store_settings(state, store_id.clone(), tenant_id.clone()).await.ok();
     let store_uuid = StoreId::parse(&store_id)?;
-    let _tenant_uuid = TenantId::parse(&tenant_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     sqlx::query(
         r#"
-        UPDATE store_settings
-        SET store_name = $1, legal_name = $2, contact_email = $3, contact_phone = $4,
-            address_prefecture = $5, address_city = $6, address_line1 = $7, address_line2 = $8,
-            legal_notice = $9, default_language = $10, primary_domain = $11, subdomain = $12,
-            https_enabled = $13, currency = $14, tax_mode = $15, tax_rounding = $16,
-            order_initial_status = $17, cod_enabled = $18, cod_fee_amount = $19, cod_fee_currency = $20,
-            bank_name = $21, bank_branch = $22, bank_account_type = $23, bank_account_number = $24,
-            bank_account_name = $25, theme = $26, brand_color = $27, logo_url = $28, favicon_url = $29,
-            updated_at = now()
-        WHERE store_id = $30
+        INSERT INTO store_settings (
+            tenant_id, store_id, store_name, legal_name, contact_email, contact_phone,
+            address_prefecture, address_city, address_line1, address_line2,
+            legal_notice, default_language, primary_domain, subdomain, https_enabled,
+            currency, tax_mode, tax_rounding, order_initial_status, cod_enabled,
+            cod_fee_amount, cod_fee_currency, bank_name, bank_branch, bank_account_type,
+            bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url
+        )
+        VALUES (
+            $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+            $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+            $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+            $31
+        )
+        ON CONFLICT (tenant_id)
+        DO UPDATE SET store_id = EXCLUDED.store_id,
+                      store_name = EXCLUDED.store_name,
+                      legal_name = EXCLUDED.legal_name,
+                      contact_email = EXCLUDED.contact_email,
+                      contact_phone = EXCLUDED.contact_phone,
+                      address_prefecture = EXCLUDED.address_prefecture,
+                      address_city = EXCLUDED.address_city,
+                      address_line1 = EXCLUDED.address_line1,
+                      address_line2 = EXCLUDED.address_line2,
+                      legal_notice = EXCLUDED.legal_notice,
+                      default_language = EXCLUDED.default_language,
+                      primary_domain = EXCLUDED.primary_domain,
+                      subdomain = EXCLUDED.subdomain,
+                      https_enabled = EXCLUDED.https_enabled,
+                      currency = EXCLUDED.currency,
+                      tax_mode = EXCLUDED.tax_mode,
+                      tax_rounding = EXCLUDED.tax_rounding,
+                      order_initial_status = EXCLUDED.order_initial_status,
+                      cod_enabled = EXCLUDED.cod_enabled,
+                      cod_fee_amount = EXCLUDED.cod_fee_amount,
+                      cod_fee_currency = EXCLUDED.cod_fee_currency,
+                      bank_name = EXCLUDED.bank_name,
+                      bank_branch = EXCLUDED.bank_branch,
+                      bank_account_type = EXCLUDED.bank_account_type,
+                      bank_account_number = EXCLUDED.bank_account_number,
+                      bank_account_name = EXCLUDED.bank_account_name,
+                      theme = EXCLUDED.theme,
+                      brand_color = EXCLUDED.brand_color,
+                      logo_url = EXCLUDED.logo_url,
+                      favicon_url = EXCLUDED.favicon_url,
+                      updated_at = now()
         "#,
     )
+    .bind(tenant_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .bind(&settings.store_name)
     .bind(&settings.legal_name)
     .bind(&settings.contact_email)
@@ -135,7 +282,6 @@ pub async fn update_store_settings(
     .bind(&settings.brand_color)
     .bind(&settings.logo_url)
     .bind(&settings.favicon_url)
-    .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -276,6 +422,7 @@ pub async fn initialize_store_settings(
 pub async fn get_mall_settings(
     state: &AppState,
     store_id: String,
+    tenant_id: String,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let row = sqlx::query(
@@ -286,15 +433,40 @@ pub async fn get_mall_settings(
         "#,
     )
     .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
+    .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
 
-    Ok(pb::MallSettings {
-        enabled: row.get("enabled"),
-        commission_rate: row.get::<f64, _>("commission_rate"),
-        vendor_approval_required: row.get("vendor_approval_required"),
-    })
+    if let Some(row) = row {
+        return Ok(pb::MallSettings {
+            enabled: row.get("enabled"),
+            commission_rate: row.get::<f64, _>("commission_rate"),
+            vendor_approval_required: row.get("vendor_approval_required"),
+        });
+    }
+
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
+    let fallback_row = sqlx::query(
+        r#"
+        SELECT enabled, commission_rate, vendor_approval_required
+        FROM mall_settings
+        WHERE tenant_id = $1
+        "#,
+    )
+    .bind(tenant_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if let Some(row) = fallback_row {
+        return Ok(pb::MallSettings {
+            enabled: row.get("enabled"),
+            commission_rate: row.get::<f64, _>("commission_rate"),
+            vendor_approval_required: row.get("vendor_approval_required"),
+        });
+    }
+
+    Ok(default_mall_settings())
 }
 
 pub async fn list_store_locations(
@@ -442,20 +614,26 @@ pub async fn update_mall_settings(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     validate_mall_settings(&mall)?;
-    let before = get_mall_settings(state, store_id.clone()).await.ok();
+    let before = get_mall_settings(state, store_id.clone(), tenant_id.clone()).await.ok();
     let store_uuid = StoreId::parse(&store_id)?;
-    let _tenant_uuid = TenantId::parse(&tenant_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
     sqlx::query(
         r#"
-        UPDATE mall_settings
-        SET enabled = $1, commission_rate = $2, vendor_approval_required = $3
-        WHERE store_id = $4
+        INSERT INTO mall_settings (tenant_id, store_id, enabled, commission_rate, vendor_approval_required)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (tenant_id)
+        DO UPDATE SET store_id = EXCLUDED.store_id,
+                      enabled = EXCLUDED.enabled,
+                      commission_rate = EXCLUDED.commission_rate,
+                      vendor_approval_required = EXCLUDED.vendor_approval_required,
+                      updated_at = now()
         "#,
     )
+    .bind(tenant_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .bind(mall.enabled)
     .bind(mall.commission_rate)
     .bind(mall.vendor_approval_required)
-    .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
     .map_err(db::error)?;

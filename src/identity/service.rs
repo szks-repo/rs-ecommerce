@@ -13,25 +13,67 @@ use sqlx::Row;
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::db,
+    infrastructure::{db, audit},
     rpc::json::ConnectError,
-    shared::time::chrono_to_timestamp,
+    shared::{
+        time::chrono_to_timestamp,
+        audit_action::IdentityAuditAction,
+        ids::{StoreId, TenantId},
+    },
     identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
-    shared::ids::{StoreId, TenantId},
 };
 
 pub async fn sign_in(
     state: &AppState,
     req: pb::IdentitySignInRequest,
 ) -> Result<pb::IdentitySignInResponse, (StatusCode, Json<ConnectError>)> {
+    let email = req.email.clone();
+    let login_id = req.login_id.clone();
+    let phone = req.phone.clone();
     let resp = sign_in_core(
         state,
         req.store,
         req.tenant,
-        req.email,
-        req.login_id,
-        req.phone,
+        email.clone(),
+        login_id.clone(),
+        phone.clone(),
         req.password,
+    )
+    .await?;
+
+    let identifier = if !email.is_empty() {
+        Some(("email", email))
+    } else if !login_id.is_empty() {
+        Some(("login_id", login_id))
+    } else if !phone.is_empty() {
+        Some(("phone", phone))
+    } else {
+        None
+    };
+
+    let metadata_json = identifier.map(|(key, value)| {
+        serde_json::json!({
+            "identifier_type": key,
+            "identifier": value,
+        })
+    });
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id: resp.tenant_id.clone(),
+            actor_id: Some(resp.staff_id.clone()),
+            actor_type: resp.role.clone(),
+            action: IdentityAuditAction::SignIn.into(),
+            target_type: Some("store_staff".to_string()),
+            target_id: Some(resp.staff_id.clone()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: None,
+            metadata_json,
+        },
     )
     .await?;
 
@@ -43,6 +85,40 @@ pub async fn sign_in(
         role: resp.role,
         expires_at: resp.expires_at,
     })
+}
+
+pub async fn sign_out(
+    state: &AppState,
+    req: pb::IdentitySignOutRequest,
+    actor: Option<pb::ActorContext>,
+) -> Result<pb::IdentitySignOutResponse, (StatusCode, Json<ConnectError>)> {
+    let (_store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let actor_id = actor.as_ref().and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_type = actor
+        .as_ref()
+        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .unwrap_or_else(|| "staff".to_string());
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id,
+            actor_id,
+            actor_type,
+            action: IdentityAuditAction::SignOut.into(),
+            target_type: None,
+            target_id: None,
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: None,
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    Ok(pb::IdentitySignOutResponse { signed_out: true })
 }
 
 

@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/connect";
 import {
   IdentityService,
   IdentitySignInRequestSchema,
+  IdentitySignOutRequestSchema,
   IdentityCreateStaffRequestSchema,
   IdentityListRolesRequestSchema,
   IdentityCreateRoleRequestSchema,
@@ -35,6 +36,15 @@ export async function identitySignIn(params: {
   });
   setActiveStore(resp.storeId, resp.tenantId, resp.accessToken);
   return resp;
+}
+
+export async function identitySignOut(params?: { storeId?: string; tenantId?: string }) {
+  return client.signOut(
+    create(IdentitySignOutRequestSchema, {
+      store: params?.storeId ? { storeId: params.storeId } : undefined,
+      tenant: params?.tenantId ? { tenantId: params.tenantId } : undefined,
+    })
+  );
 }
 
 export async function identityCreateStaff(params: {

@@ -45,6 +45,22 @@ export function setActiveStore(storeId: string, tenantId: string, accessToken: s
   window.localStorage.setItem(ACTIVE_STORE_KEY, storeId);
 }
 
+export function clearActiveStoreSession() {
+  if (typeof window === "undefined") {
+    return;
+  }
+  const activeStoreId = getActiveStoreId();
+  window.sessionStorage.removeItem("store_id");
+  window.sessionStorage.removeItem("tenant_id");
+  window.sessionStorage.removeItem("access_token");
+  if (activeStoreId) {
+    const tokens = readStoreTokens();
+    delete tokens[activeStoreId];
+    writeStoreTokens(tokens);
+  }
+  window.localStorage.removeItem(ACTIVE_STORE_KEY);
+}
+
 export function getActiveStoreId(): string | null {
   if (typeof window === "undefined") {
     return null;

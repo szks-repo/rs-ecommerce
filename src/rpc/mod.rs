@@ -198,6 +198,10 @@ pub fn router() -> Router<AppState> {
             post(identity::sign_in),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/SignOut",
+            post(identity::sign_out),
+        )
+        .route(
             "/rpc/ecommerce.v1.IdentityService/CreateStaff",
             post(identity::create_staff),
         )

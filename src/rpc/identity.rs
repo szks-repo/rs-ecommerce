@@ -3,6 +3,7 @@ use axum::{
     body::Bytes,
     http::{HeaderMap, StatusCode},
     extract::State,
+    extract::Extension,
 };
 
 use crate::{
@@ -19,6 +20,17 @@ pub async fn sign_in(
 ) -> Result<(StatusCode, Json<pb::IdentitySignInResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentitySignInRequest>(&headers, body)?;
     let resp = identity::service::sign_in(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn sign_out(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentitySignOutResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::IdentitySignOutRequest>(&headers, body)?;
+    let resp = identity::service::sign_out(&state, req, actor_ctx).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
