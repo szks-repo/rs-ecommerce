@@ -86,6 +86,27 @@ CREATE TABLE IF NOT EXISTS inventory_stocks (
     UNIQUE (variant_id, location_id)
 );
 
+-- Recreate cart_items/order_items with new variant FK (no data migration).
+CREATE TABLE IF NOT EXISTS cart_items (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    cart_id uuid NOT NULL REFERENCES carts(id),
+    vendor_id uuid REFERENCES vendors(id),
+    variant_id uuid NOT NULL REFERENCES variants(id),
+    price_amount bigint NOT NULL,
+    price_currency text NOT NULL,
+    quantity int NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS order_items (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id uuid NOT NULL REFERENCES orders(id),
+    vendor_id uuid REFERENCES vendors(id),
+    variant_id uuid NOT NULL REFERENCES variants(id),
+    price_amount bigint NOT NULL,
+    price_currency text NOT NULL,
+    quantity int NOT NULL
+);
+
 -- Reservation records (time-bound holds).
 CREATE TABLE IF NOT EXISTS inventory_reservations (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -142,27 +163,6 @@ CREATE INDEX IF NOT EXISTS inventory_reservation_requests_tenant_idx
 CREATE UNIQUE INDEX IF NOT EXISTS inventory_reservation_requests_idem_idx
     ON inventory_reservation_requests (idempotency_key)
     WHERE idempotency_key IS NOT NULL;
-
--- Recreate cart_items/order_items with new variant FK (no data migration).
-CREATE TABLE IF NOT EXISTS cart_items (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    cart_id uuid NOT NULL REFERENCES carts(id),
-    vendor_id uuid REFERENCES vendors(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
-    price_amount bigint NOT NULL,
-    price_currency text NOT NULL,
-    quantity int NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS order_items (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    order_id uuid NOT NULL REFERENCES orders(id),
-    vendor_id uuid REFERENCES vendors(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
-    price_amount bigint NOT NULL,
-    price_currency text NOT NULL,
-    quantity int NOT NULL
-);
 
 CREATE TABLE IF NOT EXISTS digital_deliveries (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
