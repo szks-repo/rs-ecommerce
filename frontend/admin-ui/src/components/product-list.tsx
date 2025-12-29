@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
@@ -13,6 +14,7 @@ import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 export default function ProductList() {
   const [products, setProducts] = useState<ProductAdmin[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [query, setQuery] = useState("");
   const { push } = useToast();
 
   async function loadProducts() {
@@ -43,6 +45,19 @@ export default function ProductList() {
     void loadProducts();
   }, []);
 
+  const filtered = query.trim()
+    ? products.filter((product) => {
+        const haystack = [
+          product.title,
+          product.id,
+          product.description ?? "",
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query.trim().toLowerCase());
+      })
+    : products;
+
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -52,16 +67,23 @@ export default function ProductList() {
             Recently created products in this store.
           </CardDescription>
         </div>
-        <Button variant="outline" onClick={loadProducts} disabled={isLoading}>
-          {isLoading ? "Loading..." : "Refresh"}
-        </Button>
+        <div className="flex w-full max-w-sm items-center gap-2">
+          <Input
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Search by title, id, description"
+          />
+          <Button variant="outline" onClick={loadProducts} disabled={isLoading}>
+            {isLoading ? "Loading..." : "Refresh"}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
-        {products.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="text-sm text-neutral-600">No products yet.</div>
         ) : (
           <div className="space-y-3 text-sm text-neutral-700">
-            {products.map((product) => (
+            {filtered.map((product) => (
               <div key={product.id} className="rounded-lg border border-neutral-200 p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
