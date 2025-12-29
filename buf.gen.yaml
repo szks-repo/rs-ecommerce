@@ -1,10 +1,12 @@
 version: v2
 plugins:
-  - remote: buf.build/bufbuild/es
+  - local: frontend/admin-ui/node_modules/.bin/protoc-gen-es
     out: frontend/admin-ui/src/gen
     opt:
       - target=ts
-  - remote: buf.build/connectrpc/es
+      - import_extension=none
+  - local: frontend/admin-ui/node_modules/.bin/protoc-gen-connect-es
     out: frontend/admin-ui/src/gen
     opt:
       - target=ts
+      - import_extension=none

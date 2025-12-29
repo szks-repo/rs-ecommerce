@@ -6,14 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
-
-type VariantAdmin = {
-  id: string;
-  productId: string;
-  sku: string;
-  fulfillmentType: string;
-  status: string;
-};
+import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 
 export default function VariantList() {
   const [productId, setProductId] = useState("");

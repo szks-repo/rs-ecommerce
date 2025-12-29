@@ -5,8 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { rpcFetch } from "@/lib/api";
-import { identityListRoles } from "@/lib/identity";
+import { identityAssignRole, identityListRoles } from "@/lib/identity";
 import {
   Select,
   SelectContent,
@@ -66,14 +65,7 @@ export default function RoleAssignForm() {
       if (!roleId) {
         throw new Error("role_id is missing. Please select a role.");
       }
-      const data = await rpcFetch<{ assigned: boolean }>(
-        "/rpc/ecommerce.v1.IdentityService/AssignRoleToStaff",
-        {
-          store: { storeId },
-          staffId,
-          roleId,
-        }
-      );
+      const data = await identityAssignRole({ storeId, staffId, roleId });
       setMessage(data.assigned ? "Role assigned" : "Role not assigned");
       setStaffId("");
     } catch (err) {

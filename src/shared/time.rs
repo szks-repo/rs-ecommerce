@@ -10,6 +10,8 @@ pub fn chrono_to_timestamp(dt: Option<DateTime<Utc>>) -> Option<pbjson_types::Ti
     let dt = dt?;
     Some(pbjson_types::Timestamp {
         seconds: dt.timestamp(),
-        nanos: dt.timestamp_subsec_nanos() as i32,
+        // Use whole-second precision so JSON encoding stays compatible with
+        // clients that only accept RFC3339 without fractional + offset.
+        nanos: 0,
     })
 }

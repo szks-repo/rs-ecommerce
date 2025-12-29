@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { rpcFetch } from "@/lib/api";
+import { identityCreateRole } from "@/lib/identity";
 
 const DEFAULT_PERMISSIONS = [
   "catalog.read",
@@ -43,17 +43,14 @@ export default function RoleCreateForm() {
         .split(",")
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
-      const data = await rpcFetch<{ role: { id: string } }>(
-        "/rpc/ecommerce.v1.IdentityService/CreateRole",
-        {
-          store: { storeId },
-          key,
-          name,
-          description,
-          permissionKeys: keys,
-        }
-      );
-      setMessage(`Created role: ${data.role.id}`);
+      const data = await identityCreateRole({
+        storeId,
+        key,
+        name,
+        description,
+        permissionKeys: keys,
+      });
+      setMessage(`Created role: ${data.role?.id ?? ""}`);
       setKey("");
       setName("");
       setDescription("");

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { rpcFetch } from "@/lib/api";
+import { initializeStore } from "@/lib/setup";
 
 export default function InitPage() {
   const router = useRouter();
@@ -23,10 +23,7 @@ export default function InitPage() {
     setError(null);
     setIsSubmitting(true);
     try {
-      const data = await rpcFetch<{
-        storeId: string;
-        tenantId: string;
-      }>("/rpc/ecommerce.v1.SetupService/InitializeStore", {
+      const data = await initializeStore({
         storeName,
         ownerEmail,
         ownerPassword,

@@ -1,26 +1,15 @@
-import { rpcFetch } from "@/lib/api";
 import { saveStoreSession, setActiveStore } from "@/lib/auth";
+import { createClient } from "@/lib/connect";
+import { IdentityService } from "@/gen/ecommerce/v1/identity_connect";
+import {
+  IdentitySignInRequest,
+  IdentityCreateStaffRequest,
+  IdentityListRolesRequest,
+  IdentityCreateRoleRequest,
+  IdentityAssignRoleRequest,
+} from "@/gen/ecommerce/v1/identity_pb";
 
-type IdentitySignInResponse = {
-  accessToken: string;
-  storeId: string;
-  tenantId: string;
-};
-
-type IdentityCreateStaffResponse = {
-  staffId: string;
-};
-
-type IdentityRole = {
-  id: string;
-  key: string;
-  name: string;
-  description?: string;
-};
-
-type IdentityListRolesResponse = {
-  roles: IdentityRole[];
-};
+const client = createClient(IdentityService);
 
 export async function identitySignIn(params: {
   storeId: string;
@@ -29,13 +18,15 @@ export async function identitySignIn(params: {
   phone?: string;
   password: string;
 }) {
-  const resp = await rpcFetch<IdentitySignInResponse>("/rpc/ecommerce.v1.IdentityService/SignIn", {
-    store: { storeId: params.storeId },
-    email: params.email || "",
-    loginId: params.loginId || "",
-    phone: params.phone || "",
-    password: params.password,
-  });
+  const resp = await client.signIn(
+    new IdentitySignInRequest({
+      store: { storeId: params.storeId },
+      email: params.email || "",
+      loginId: params.loginId || "",
+      phone: params.phone || "",
+      password: params.password,
+    })
+  );
   saveStoreSession({
     storeId: resp.storeId,
     tenantId: resp.tenantId,
@@ -53,21 +44,54 @@ export async function identityCreateStaff(params: {
   password: string;
   role: string;
 }) {
-  return rpcFetch<IdentityCreateStaffResponse>(
-    "/rpc/ecommerce.v1.IdentityService/CreateStaff",
-    {
+  return client.createStaff(
+    new IdentityCreateStaffRequest({
       store: { storeId: params.storeId },
       email: params.email || "",
       loginId: params.loginId || "",
       phone: params.phone || "",
       password: params.password,
       role: params.role,
-    }
+    })
   );
 }
 
 export async function identityListRoles(params: { storeId: string }) {
-  return rpcFetch<IdentityListRolesResponse>("/rpc/ecommerce.v1.IdentityService/ListRoles", {
-    store: { storeId: params.storeId },
-  });
+  return client.listRoles(
+    new IdentityListRolesRequest({
+      store: { storeId: params.storeId },
+    })
+  );
+}
+
+export async function identityCreateRole(params: {
+  storeId: string;
+  key: string;
+  name: string;
+  description?: string;
+  permissionKeys: string[];
+}) {
+  return client.createRole(
+    new IdentityCreateRoleRequest({
+      store: { storeId: params.storeId },
+      key: params.key,
+      name: params.name,
+      description: params.description || "",
+      permissionKeys: params.permissionKeys,
+    })
+  );
+}
+
+export async function identityAssignRole(params: {
+  storeId: string;
+  staffId: string;
+  roleId: string;
+}) {
+  return client.assignRoleToStaff(
+    new IdentityAssignRoleRequest({
+      store: { storeId: params.storeId },
+      staffId: params.staffId,
+      roleId: params.roleId,
+    })
+  );
 }

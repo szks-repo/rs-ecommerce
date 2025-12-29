@@ -1,50 +1,26 @@
-import { rpcFetch } from "@/lib/api";
+import { createClient } from "@/lib/connect";
+import { BackofficeService } from "@/gen/ecommerce/v1/backoffice_connect";
+import {
+  ListProductsAdminRequest,
+  ListVariantsAdminRequest,
+  CreateProductRequest,
+  UpdateProductRequest,
+  CreateVariantRequest,
+  UpdateVariantRequest,
+  SetInventoryRequest,
+} from "@/gen/ecommerce/v1/backoffice_pb";
 
-type ProductAdmin = {
-  id: string;
-  storeId: string;
-  vendorId?: string;
-  title: string;
-  description: string;
-  status: string;
-};
-
-type VariantAdmin = {
-  id: string;
-  productId: string;
-  sku: string;
-  fulfillmentType: string;
-  status: string;
-};
-
-type InventoryAdmin = {
-  variantId: string;
-  locationId: string;
-  stock: number;
-  reserved: number;
-};
-
-type ProductAdminListResponse = {
-  products: ProductAdmin[];
-};
-
-type VariantAdminListResponse = {
-  variants: VariantAdmin[];
-};
+const client = createClient(BackofficeService);
 
 export async function listProductsAdmin() {
-  return rpcFetch<ProductAdminListResponse>(
-    "/rpc/ecommerce.v1.BackofficeService/ListProducts",
-    {}
-  );
+  return client.listProducts(new ListProductsAdminRequest({}));
 }
 
 export async function listVariantsAdmin(params: { productId: string }) {
-  return rpcFetch<VariantAdminListResponse>(
-    "/rpc/ecommerce.v1.BackofficeService/ListVariants",
-    {
+  return client.listVariants(
+    new ListVariantsAdminRequest({
       productId: params.productId,
-    }
+    })
   );
 }
 
@@ -54,12 +30,14 @@ export async function createProduct(params: {
   description: string;
   status: string;
 }) {
-  return rpcFetch<{ product: ProductAdmin }>("/rpc/ecommerce.v1.BackofficeService/CreateProduct", {
-    vendorId: params.vendorId || "",
-    title: params.title,
-    description: params.description,
-    status: params.status,
-  });
+  return client.createProduct(
+    new CreateProductRequest({
+      vendorId: params.vendorId || "",
+      title: params.title,
+      description: params.description,
+      status: params.status,
+    })
+  );
 }
 
 export async function updateProduct(params: {
@@ -68,12 +46,14 @@ export async function updateProduct(params: {
   description: string;
   status: string;
 }) {
-  return rpcFetch<{ product: ProductAdmin }>("/rpc/ecommerce.v1.BackofficeService/UpdateProduct", {
-    productId: params.productId,
-    title: params.title,
-    description: params.description,
-    status: params.status,
-  });
+  return client.updateProduct(
+    new UpdateProductRequest({
+      productId: params.productId,
+      title: params.title,
+      description: params.description,
+      status: params.status,
+    })
+  );
 }
 
 export async function createVariant(params: {
@@ -85,17 +65,19 @@ export async function createVariant(params: {
   currency: string;
   status: string;
 }) {
-  return rpcFetch<{ variant: VariantAdmin }>("/rpc/ecommerce.v1.BackofficeService/CreateVariant", {
-    productId: params.productId,
-    sku: params.sku,
-    fulfillmentType: params.fulfillmentType,
-    price: { amount: params.priceAmount, currency: params.currency },
-    compareAt:
-      typeof params.compareAtAmount === "number"
-        ? { amount: params.compareAtAmount, currency: params.currency }
-        : undefined,
-    status: params.status,
-  });
+  return client.createVariant(
+    new CreateVariantRequest({
+      productId: params.productId,
+      sku: params.sku,
+      fulfillmentType: params.fulfillmentType,
+      price: { amount: params.priceAmount, currency: params.currency },
+      compareAt:
+        typeof params.compareAtAmount === "number"
+          ? { amount: params.compareAtAmount, currency: params.currency }
+          : undefined,
+      status: params.status,
+    })
+  );
 }
 
 export async function updateVariant(params: {
@@ -106,16 +88,18 @@ export async function updateVariant(params: {
   status: string;
   fulfillmentType?: string;
 }) {
-  return rpcFetch<{ variant: VariantAdmin }>("/rpc/ecommerce.v1.BackofficeService/UpdateVariant", {
-    variantId: params.variantId,
-    price: { amount: params.priceAmount, currency: params.currency },
-    compareAt:
-      typeof params.compareAtAmount === "number"
-        ? { amount: params.compareAtAmount, currency: params.currency }
-        : undefined,
-    status: params.status,
-    fulfillmentType: params.fulfillmentType || "",
-  });
+  return client.updateVariant(
+    new UpdateVariantRequest({
+      variantId: params.variantId,
+      price: { amount: params.priceAmount, currency: params.currency },
+      compareAt:
+        typeof params.compareAtAmount === "number"
+          ? { amount: params.compareAtAmount, currency: params.currency }
+          : undefined,
+      status: params.status,
+      fulfillmentType: params.fulfillmentType || "",
+    })
+  );
 }
 
 export async function setInventory(params: {
@@ -124,13 +108,12 @@ export async function setInventory(params: {
   stock: number;
   reserved: number;
 }) {
-  return rpcFetch<{ inventory: InventoryAdmin }>(
-    "/rpc/ecommerce.v1.BackofficeService/SetInventory",
-    {
+  return client.setInventory(
+    new SetInventoryRequest({
       variantId: params.variantId,
       locationId: params.locationId,
       stock: params.stock,
       reserved: params.reserved,
-    }
+    })
   );
 }

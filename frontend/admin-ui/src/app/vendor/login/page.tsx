@@ -17,6 +17,13 @@ export default function VendorLoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  useEffect(() => {
+    const saved = sessionStorage.getItem("store_id");
+    if (saved) {
+      setStoreId(saved);
+    }
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
@@ -108,9 +115,3 @@ export default function VendorLoginPage() {
     </div>
   );
 }
-  useEffect(() => {
-    const saved = sessionStorage.getItem("store_id");
-    if (saved) {
-      setStoreId(saved);
-    }
-  }, []);

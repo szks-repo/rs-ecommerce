@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { setInventory } from "@/lib/product";
-import { rpcFetch } from "@/lib/api";
+import { listStoreLocations } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import {
   Select,
@@ -16,13 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-type StoreLocation = {
-  id: string;
-  code: string;
-  name: string;
-  status: string;
-};
+import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
 
 export default function InventorySetForm() {
   const [variantId, setVariantId] = useState("");
@@ -41,10 +35,7 @@ export default function InventorySetForm() {
     }
     let cancelled = false;
     setIsLoadingLocations(true);
-    rpcFetch<{ locations: StoreLocation[] }>(
-      "/rpc/ecommerce.v1.StoreSettingsService/ListStoreLocations",
-      {}
-    )
+    listStoreLocations()
       .then((data) => {
         if (!cancelled) {
           setLocations(data.locations ?? []);

@@ -6,15 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { rpcFetch } from "@/lib/api";
+import { listStoreLocations, upsertStoreLocation } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
-
-type StoreLocation = {
-  id: string;
-  code: string;
-  name: string;
-  status: string;
-};
+import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
 
 export default function StoreLocationForm() {
   const [locations, setLocations] = useState<StoreLocation[]>([]);
@@ -29,10 +23,7 @@ export default function StoreLocationForm() {
     if (!getActiveAccessToken()) {
       return;
     }
-    const data = await rpcFetch<{ locations: StoreLocation[] }>(
-      "/rpc/ecommerce.v1.StoreSettingsService/ListStoreLocations",
-      {}
-    );
+    const data = await listStoreLocations();
     setLocations(data.locations || []);
   }
 
@@ -49,16 +40,7 @@ export default function StoreLocationForm() {
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
-      await rpcFetch<{ location: StoreLocation }>(
-        "/rpc/ecommerce.v1.StoreSettingsService/UpsertStoreLocation",
-        {
-          location: {
-            code,
-            name,
-            status,
-          },
-        }
-      );
+      await upsertStoreLocation({ code, name, status });
       setMessage("Location saved.");
       setCode("");
       setName("");

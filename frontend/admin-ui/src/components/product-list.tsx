@@ -6,15 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
-
-type ProductAdmin = {
-  id: string;
-  storeId: string;
-  vendorId?: string;
-  title: string;
-  description: string;
-  status: string;
-};
+import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 
 export default function ProductList() {
   const [products, setProducts] = useState<ProductAdmin[]>([]);

@@ -23,6 +23,8 @@ pub fn router() -> Router<AppState> {
             axum::http::header::HeaderName::from_static("x-actor-id"),
             axum::http::header::HeaderName::from_static("x-actor-type"),
             axum::http::header::HeaderName::from_static("x-request-id"),
+            axum::http::header::HeaderName::from_static("connect-protocol-version"),
+            axum::http::header::HeaderName::from_static("connect-timeout-ms"),
         ])
         .allow_origin([
             HeaderValue::from_static("http://localhost:3000"),
