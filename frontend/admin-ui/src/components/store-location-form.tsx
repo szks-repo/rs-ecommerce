@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { listStoreLocations, upsertStoreLocation } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
@@ -18,6 +25,7 @@ export default function StoreLocationForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const statusOptions = ["active", "inactive"] as const;
 
   async function loadLocations() {
     if (!getActiveAccessToken()) {
@@ -98,11 +106,18 @@ export default function StoreLocationForm() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="locationStatus">Status</Label>
-              <Input
-                id="locationStatus"
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-              />
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger id="locationStatus" className="bg-white">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div>

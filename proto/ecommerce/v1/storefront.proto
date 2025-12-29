@@ -27,6 +27,7 @@ message Product {
   string status = 5;
   repeated Variant variants = 6;
   google.protobuf.Timestamp updated_at = 7;
+  string tax_rule_id = 8;
 }
 
 message Variant {

@@ -6,6 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 
@@ -19,6 +26,8 @@ export default function VariantCreateForm() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const statusOptions = ["active", "inactive"] as const;
+  const fulfillmentOptions = ["physical", "digital"] as const;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -97,12 +106,18 @@ export default function VariantCreateForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="variantFulfillment">Fulfillment Type</Label>
-            <Input
-              id="variantFulfillment"
-              value={fulfillmentType}
-              onChange={(e) => setFulfillmentType(e.target.value)}
-              placeholder="physical or digital"
-            />
+            <Select value={fulfillmentType} onValueChange={setFulfillmentType}>
+              <SelectTrigger id="variantFulfillment" className="bg-white">
+                <SelectValue placeholder="Select fulfillment type" />
+              </SelectTrigger>
+              <SelectContent>
+                {fulfillmentOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
@@ -125,11 +140,18 @@ export default function VariantCreateForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="variantStatus">Status</Label>
-            <Input
-              id="variantStatus"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            />
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="variantStatus" className="bg-white">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Button type="submit" disabled={isSubmitting}>

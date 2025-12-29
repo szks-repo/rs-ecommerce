@@ -34,6 +34,7 @@ message ProductAdmin {
   string status = 5;
   google.protobuf.Timestamp updated_at = 6;
   string store_id = 7;
+  string tax_rule_id = 8;
 }
 
 message VariantAdmin {
@@ -113,6 +114,7 @@ message CreateProductRequest {
   string description = 4;
   string status = 5;
   ActorContext actor = 6;
+  string tax_rule_id = 7;
   StoreContext store = 10;
 }
 
@@ -127,6 +129,7 @@ message UpdateProductRequest {
   string description = 4;
   string status = 5;
   ActorContext actor = 6;
+  string tax_rule_id = 7;
   StoreContext store = 10;
 }
 

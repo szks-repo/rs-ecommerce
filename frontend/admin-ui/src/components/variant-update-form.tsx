@@ -1,23 +1,54 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { updateVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
+import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 
-export default function VariantUpdateForm() {
-  const [variantId, setVariantId] = useState("");
-  const [priceAmount, setPriceAmount] = useState("0");
-  const [compareAtAmount, setCompareAtAmount] = useState("");
-  const [status, setStatus] = useState("active");
-  const [fulfillmentType, setFulfillmentType] = useState("");
+type VariantUpdateFormProps = {
+  variant?: VariantAdmin | null;
+  onUpdated?: () => void;
+};
+
+export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateFormProps) {
+  const [variantId, setVariantId] = useState(variant?.id ?? "");
+  const [priceAmount, setPriceAmount] = useState(
+    variant?.price?.amount != null ? String(variant.price.amount) : "0"
+  );
+  const [compareAtAmount, setCompareAtAmount] = useState(
+    variant?.compareAt?.amount != null ? String(variant.compareAt.amount) : ""
+  );
+  const [status, setStatus] = useState(variant?.status ?? "active");
+  const [fulfillmentType, setFulfillmentType] = useState(variant?.fulfillmentType ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const statusOptions = ["active", "inactive"] as const;
+  const fulfillmentOptions = ["physical", "digital"] as const;
+  const canSubmit = variantId.trim().length > 0;
+
+  useEffect(() => {
+    if (!variant) {
+      return;
+    }
+    setVariantId(variant.id);
+    setPriceAmount(variant.price?.amount != null ? String(variant.price.amount) : "0");
+    setCompareAtAmount(variant.compareAt?.amount != null ? String(variant.compareAt.amount) : "");
+    setStatus(variant.status || "active");
+    setFulfillmentType(variant.fulfillmentType || "");
+  }, [variant]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,6 +76,7 @@ export default function VariantUpdateForm() {
         fulfillmentType: fulfillmentType || undefined,
       });
       setMessage(`Updated variant: ${data.variant.id}`);
+      onUpdated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
@@ -74,15 +106,15 @@ export default function VariantUpdateForm() {
           </Alert>
         )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="updateVariantId">Variant ID</Label>
-            <Input
-              id="updateVariantId"
-              value={variantId}
-              onChange={(e) => setVariantId(e.target.value)}
-              required
-            />
-          </div>
+          {variant ? (
+            <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">
+              Variant ID: {variantId}
+            </div>
+          ) : (
+            <div className="text-sm text-neutral-500">
+              Select a variant from the list to edit.
+            </div>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="updateVariantPrice">Price Amount (JPY)</Label>
@@ -104,23 +136,36 @@ export default function VariantUpdateForm() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="updateVariantStatus">Status</Label>
-            <Input
-              id="updateVariantStatus"
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-            />
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger id="updateVariantStatus" className="bg-white">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                {statusOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="updateVariantFulfillment">Fulfillment Type (optional)</Label>
-            <Input
-              id="updateVariantFulfillment"
-              value={fulfillmentType}
-              onChange={(e) => setFulfillmentType(e.target.value)}
-              placeholder="physical or digital"
-            />
+            <Select value={fulfillmentType} onValueChange={setFulfillmentType}>
+              <SelectTrigger id="updateVariantFulfillment" className="bg-white">
+                <SelectValue placeholder="Select fulfillment type" />
+              </SelectTrigger>
+              <SelectContent>
+                {fulfillmentOptions.map((option) => (
+                  <SelectItem key={option} value={option}>
+                    {option}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting || !canSubmit}>
               {isSubmitting ? "Updating..." : "Update Variant"}
             </Button>
           </div>

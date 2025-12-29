@@ -7,7 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
-    shared::{ids::parse_uuid, money::{money_from_parts, money_to_parts, money_to_parts_opt}},
+    shared::{ids::{parse_uuid, nullable_uuid}, money::{money_from_parts, money_to_parts, money_to_parts_opt}},
 };
 use crate::rpc::request_context;
 
@@ -18,14 +18,14 @@ pub async fn list_products(
     let store_id = store_id_for_tenant(state, &tenant_id).await?;
     let rows = sqlx::query(
         r#"
-        SELECT id::text as id, vendor_id::text as vendor_id, title, description, status
+        SELECT id::text as id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
         FROM products
         WHERE tenant_id = $1 AND store_id = $2
         ORDER BY created_at DESC
         LIMIT 50
         "#,
     )
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_all(&state.db)
     .await
@@ -41,6 +41,7 @@ pub async fn list_products(
             status: row.get("status"),
             variants: Vec::new(),
             updated_at: None,
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
         })
         .collect())
 }
@@ -53,12 +54,12 @@ pub async fn get_product(
     let store_id = store_id_for_tenant(state, &tenant_id).await?;
     let row = sqlx::query(
         r#"
-        SELECT id::text as id, vendor_id::text as vendor_id, title, description, status
+        SELECT id::text as id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
     )
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&product_id, "product_id")?)
     .fetch_optional(&state.db)
@@ -73,6 +74,7 @@ pub async fn get_product(
         status: row.get("status"),
         variants: Vec::new(),
         updated_at: None,
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
     }))
 }
 
@@ -84,14 +86,14 @@ pub async fn list_products_admin(
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let rows = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status
+        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
         FROM products
         WHERE tenant_id = $1 AND store_id = $2
         ORDER BY created_at DESC
         LIMIT 50
         "#,
     )
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .fetch_all(&state.db)
     .await
@@ -107,6 +109,7 @@ pub async fn list_products_admin(
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
         })
         .collect())
 }
@@ -171,19 +174,21 @@ pub async fn create_product(
 ) -> Result<pb::ProductAdmin, (StatusCode, Json<ConnectError>)> {
     let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let product_id = uuid::Uuid::new_v4();
+    let tax_rule_id = nullable_uuid(req.tax_rule_id.clone());
     sqlx::query(
         r#"
-        INSERT INTO products (id, tenant_id, store_id, vendor_id, title, description, status)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO products (id, tenant_id, store_id, vendor_id, title, description, status, tax_rule_id)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         "#,
     )
     .bind(product_id)
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .bind(crate::shared::ids::nullable_uuid(req.vendor_id.clone()))
     .bind(&req.title)
     .bind(&req.description)
     .bind(&req.status)
+    .bind(tax_rule_id)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -196,6 +201,7 @@ pub async fn create_product(
         status: req.status,
         updated_at: None,
         store_id,
+        tax_rule_id: req.tax_rule_id,
     };
 
     let _ = state
@@ -234,18 +240,20 @@ pub async fn update_product(
 ) -> Result<pb::ProductAdmin, (StatusCode, Json<ConnectError>)> {
     let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let before = fetch_product_admin(state, &tenant_id, &store_id, &req.product_id).await.ok();
+    let tax_rule_id = nullable_uuid(req.tax_rule_id.clone());
     sqlx::query(
         r#"
         UPDATE products
-        SET title = $1, description = $2, status = $3, updated_at = now()
-        WHERE id = $4 AND tenant_id = $5 AND store_id = $6
+        SET title = $1, description = $2, status = $3, tax_rule_id = $4, updated_at = now()
+        WHERE id = $5 AND tenant_id = $6 AND store_id = $7
         "#,
     )
     .bind(&req.title)
     .bind(&req.description)
     .bind(&req.status)
+    .bind(tax_rule_id)
     .bind(parse_uuid(&req.product_id, "product_id")?)
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .execute(&state.db)
     .await
@@ -259,17 +267,18 @@ pub async fn update_product(
         status: req.status,
         updated_at: None,
         store_id: store_id.clone(),
+        tax_rule_id: req.tax_rule_id,
     };
 
     let mut after = product.clone();
     if let Ok(row) = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status
+        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
     )
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&product.id, "product_id")?)
     .fetch_one(&state.db)
@@ -294,6 +303,7 @@ pub async fn update_product(
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
         };
     }
 
@@ -494,7 +504,7 @@ pub async fn set_inventory(
         DO UPDATE SET stock = EXCLUDED.stock, reserved = EXCLUDED.reserved, updated_at = now()
         "#,
     )
-    .bind(&tenant_id)
+    .bind(parse_uuid(&tenant_id, "tenant_id")?)
     .bind(parse_uuid(&store_id, "store_id")?)
     .bind(parse_uuid(&req.location_id, "location_id")?)
     .bind(parse_uuid(&req.variant_id, "variant_id")?)
@@ -593,12 +603,12 @@ async fn fetch_product_admin(
 ) -> Result<pb::ProductAdmin, (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status
+        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
     )
-    .bind(tenant_id)
+    .bind(parse_uuid(tenant_id, "tenant_id")?)
     .bind(parse_uuid(store_id, "store_id")?)
     .bind(parse_uuid(product_id, "product_id")?)
     .fetch_one(&state.db)
@@ -613,6 +623,7 @@ async fn fetch_product_admin(
         status: row.get("status"),
         updated_at: None,
         store_id: row.get("store_id"),
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
     })
 }
 

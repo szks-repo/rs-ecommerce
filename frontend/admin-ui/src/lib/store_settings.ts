@@ -4,6 +4,7 @@ import {
   StoreSettingsService,
   ListStoreLocationsRequestSchema,
   UpsertStoreLocationRequestSchema,
+  ListTaxRulesRequestSchema,
 } from "@/gen/ecommerce/v1/store_settings_pb";
 
 const client = createServiceClient(StoreSettingsService);
@@ -26,4 +27,8 @@ export async function upsertStoreLocation(params: {
       },
     })
   );
+}
+
+export async function listTaxRules() {
+  return client.listTaxRules(create(ListTaxRulesRequestSchema, {}));
 }

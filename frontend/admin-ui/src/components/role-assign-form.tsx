@@ -25,13 +25,9 @@ export default function RoleAssignForm() {
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
 
   useEffect(() => {
-    const storeId = sessionStorage.getItem("store_id");
-    if (!storeId) {
-      return;
-    }
     let cancelled = false;
     setIsLoadingRoles(true);
-    identityListRoles({ storeId })
+    identityListRoles()
       .then((data) => {
         if (!cancelled) {
           setRoles(data.roles ?? []);
@@ -58,14 +54,10 @@ export default function RoleAssignForm() {
     setMessage(null);
     setIsSubmitting(true);
     try {
-      const storeId = sessionStorage.getItem("store_id");
-      if (!storeId) {
-        throw new Error("store_id is missing. Please sign in first.");
-      }
       if (!roleId) {
         throw new Error("role_id is missing. Please select a role.");
       }
-      const data = await identityAssignRole({ storeId, staffId, roleId });
+      const data = await identityAssignRole({ staffId, roleId });
       setMessage(data.assigned ? "Role assigned" : "Role not assigned");
       setStaffId("");
     } catch (err) {

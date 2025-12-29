@@ -38,7 +38,6 @@ export async function identitySignIn(params: {
 }
 
 export async function identityCreateStaff(params: {
-  storeId: string;
   email?: string;
   loginId?: string;
   phone?: string;
@@ -47,7 +46,6 @@ export async function identityCreateStaff(params: {
 }) {
   return client.createStaff(
     create(IdentityCreateStaffRequestSchema, {
-      store: { storeId: params.storeId },
       email: params.email || "",
       loginId: params.loginId || "",
       phone: params.phone || "",
@@ -57,16 +55,13 @@ export async function identityCreateStaff(params: {
   );
 }
 
-export async function identityListRoles(params: { storeId: string }) {
+export async function identityListRoles() {
   return client.listRoles(
-    create(IdentityListRolesRequestSchema, {
-      store: { storeId: params.storeId },
-    })
+    create(IdentityListRolesRequestSchema, {})
   );
 }
 
 export async function identityCreateRole(params: {
-  storeId: string;
   key: string;
   name: string;
   description?: string;
@@ -74,7 +69,6 @@ export async function identityCreateRole(params: {
 }) {
   return client.createRole(
     create(IdentityCreateRoleRequestSchema, {
-      store: { storeId: params.storeId },
       key: params.key,
       name: params.name,
       description: params.description || "",
@@ -84,13 +78,11 @@ export async function identityCreateRole(params: {
 }
 
 export async function identityAssignRole(params: {
-  storeId: string;
   staffId: string;
   roleId: string;
 }) {
   return client.assignRoleToStaff(
     create(IdentityAssignRoleRequestSchema, {
-      store: { storeId: params.storeId },
       staffId: params.staffId,
       roleId: params.roleId,
     })

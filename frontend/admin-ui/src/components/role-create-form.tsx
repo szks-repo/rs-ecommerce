@@ -35,16 +35,11 @@ export default function RoleCreateForm() {
     setMessage(null);
     setIsSubmitting(true);
     try {
-      const storeId = sessionStorage.getItem("store_id");
-      if (!storeId) {
-        throw new Error("store_id is missing. Please sign in first.");
-      }
       const keys = permissionKeys
         .split(",")
         .map((v) => v.trim())
         .filter((v) => v.length > 0);
       const data = await identityCreateRole({
-        storeId,
         key,
         name,
         description,

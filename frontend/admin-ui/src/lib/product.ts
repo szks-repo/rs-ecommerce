@@ -30,6 +30,7 @@ export async function createProduct(params: {
   title: string;
   description: string;
   status: string;
+  taxRuleId?: string;
 }) {
   return client.createProduct(
     create(CreateProductRequestSchema, {
@@ -37,6 +38,7 @@ export async function createProduct(params: {
       title: params.title,
       description: params.description,
       status: params.status,
+      taxRuleId: params.taxRuleId || "",
     })
   );
 }
@@ -46,6 +48,7 @@ export async function updateProduct(params: {
   title: string;
   description: string;
   status: string;
+  taxRuleId?: string;
 }) {
   return client.updateProduct(
     create(UpdateProductRequestSchema, {
@@ -53,6 +56,7 @@ export async function updateProduct(params: {
       title: params.title,
       description: params.description,
       status: params.status,
+      taxRuleId: params.taxRuleId || "",
     })
   );
 }

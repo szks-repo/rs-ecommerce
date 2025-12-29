@@ -24,12 +24,7 @@ export default function StaffCreateForm() {
     setMessage(null);
     setIsSubmitting(true);
     try {
-      const storeId = sessionStorage.getItem("store_id");
-      if (!storeId) {
-        throw new Error("store_id is missing. Please sign in first.");
-      }
       const data = await identityCreateStaff({
-        storeId,
         email,
         loginId,
         phone,

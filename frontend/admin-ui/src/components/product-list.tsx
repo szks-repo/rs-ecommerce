@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -60,9 +61,19 @@ export default function ProductList() {
           <div className="space-y-3 text-sm text-neutral-700">
             {products.map((product) => (
               <div key={product.id} className="rounded-lg border border-neutral-200 p-3">
-                <div className="font-medium text-neutral-900">{product.title}</div>
-                <div className="text-xs text-neutral-500">
-                  id: {product.id} / status: {product.status}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-neutral-900">{product.title}</div>
+                    <div className="text-xs text-neutral-500">
+                      id: {product.id} / status: {product.status}
+                    </div>
+                  </div>
+                  <Link
+                    className="rounded-md border border-neutral-200 px-3 py-1 text-xs font-medium text-neutral-700 hover:bg-neutral-50"
+                    href={`/admin/products/${product.id}`}
+                  >
+                    Details
+                  </Link>
                 </div>
                 {product.description ? (
                   <div className="mt-2 text-sm text-neutral-600">
