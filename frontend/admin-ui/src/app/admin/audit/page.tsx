@@ -34,6 +34,17 @@ function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: numb
   return date.toLocaleString("ja-JP");
 }
 
+function formatJsonPreview(value?: string) {
+  if (!value) {
+    return "-";
+  }
+  try {
+    return JSON.stringify(JSON.parse(value), null, 2);
+  } catch {
+    return value;
+  }
+}
+
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [action, setAction] = useState("__all__");
@@ -45,6 +56,7 @@ export default function AuditLogsPage() {
   const [nextPageToken, setNextPageToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [actionOptions, setActionOptions] = useState<AuditActionItem[]>([]);
+  const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const { push } = useToast();
 
   const hasFilter = useMemo(
@@ -202,8 +214,45 @@ export default function AuditLogsPage() {
                 <div className="text-xs text-neutral-500">
                   target: {log.targetType || "-"} {log.targetId || "-"}
                 </div>
-                {log.requestId ? (
-                  <div className="text-xs text-neutral-400">request: {log.requestId}</div>
+                <div className="mt-2 flex items-center justify-between text-xs text-neutral-400">
+                  <span>request: {log.requestId || "-"}</span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedLogId((prev) => (prev === log.id ? null : log.id))}
+                  >
+                    {expandedLogId === log.id ? "Hide details" : "View details"}
+                  </Button>
+                </div>
+                {expandedLogId === log.id ? (
+                  <div className="mt-3 grid gap-3 rounded-md border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-700">
+                    <div className="grid gap-1">
+                      <div className="font-semibold text-neutral-800">Identifiers</div>
+                      <div>log_id: {log.id || "-"}</div>
+                      <div>request_id: {log.requestId || "-"}</div>
+                      <div>ip: {log.ipAddress || "-"}</div>
+                      <div>user_agent: {log.userAgent || "-"}</div>
+                    </div>
+                    <div className="grid gap-1">
+                      <div className="font-semibold text-neutral-800">Before</div>
+                      <pre className="whitespace-pre-wrap break-words rounded-md bg-white p-2 text-[11px] text-neutral-700">
+                        {formatJsonPreview(log.beforeJson)}
+                      </pre>
+                    </div>
+                    <div className="grid gap-1">
+                      <div className="font-semibold text-neutral-800">After</div>
+                      <pre className="whitespace-pre-wrap break-words rounded-md bg-white p-2 text-[11px] text-neutral-700">
+                        {formatJsonPreview(log.afterJson)}
+                      </pre>
+                    </div>
+                    <div className="grid gap-1">
+                      <div className="font-semibold text-neutral-800">Metadata</div>
+                      <pre className="whitespace-pre-wrap break-words rounded-md bg-white p-2 text-[11px] text-neutral-700">
+                        {formatJsonPreview(log.metadataJson)}
+                      </pre>
+                    </div>
+                  </div>
                 ) : null}
               </div>
             ))
