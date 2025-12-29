@@ -1,14 +1,15 @@
-import { createClient } from "@/lib/connect";
-import { StoreSettingsService } from "@/gen/ecommerce/v1/store_settings_connect";
+import { create } from "@bufbuild/protobuf";
+import { createServiceClient } from "@/lib/connect";
 import {
-  ListStoreLocationsRequest,
-  UpsertStoreLocationRequest,
+  StoreSettingsService,
+  ListStoreLocationsRequestSchema,
+  UpsertStoreLocationRequestSchema,
 } from "@/gen/ecommerce/v1/store_settings_pb";
 
-const client = createClient(StoreSettingsService);
+const client = createServiceClient(StoreSettingsService);
 
 export async function listStoreLocations() {
-  return client.listStoreLocations(new ListStoreLocationsRequest({}));
+  return client.listStoreLocations(create(ListStoreLocationsRequestSchema, {}));
 }
 
 export async function upsertStoreLocation(params: {
@@ -17,7 +18,7 @@ export async function upsertStoreLocation(params: {
   status: string;
 }) {
   return client.upsertStoreLocation(
-    new UpsertStoreLocationRequest({
+    create(UpsertStoreLocationRequestSchema, {
       location: {
         code: params.code,
         name: params.name,

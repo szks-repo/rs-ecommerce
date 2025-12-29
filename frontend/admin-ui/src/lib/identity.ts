@@ -1,15 +1,16 @@
 import { saveStoreSession, setActiveStore } from "@/lib/auth";
-import { createClient } from "@/lib/connect";
-import { IdentityService } from "@/gen/ecommerce/v1/identity_connect";
+import { create } from "@bufbuild/protobuf";
+import { createServiceClient } from "@/lib/connect";
 import {
-  IdentitySignInRequest,
-  IdentityCreateStaffRequest,
-  IdentityListRolesRequest,
-  IdentityCreateRoleRequest,
-  IdentityAssignRoleRequest,
+  IdentityService,
+  IdentitySignInRequestSchema,
+  IdentityCreateStaffRequestSchema,
+  IdentityListRolesRequestSchema,
+  IdentityCreateRoleRequestSchema,
+  IdentityAssignRoleRequestSchema,
 } from "@/gen/ecommerce/v1/identity_pb";
 
-const client = createClient(IdentityService);
+const client = createServiceClient(IdentityService);
 
 export async function identitySignIn(params: {
   storeId: string;
@@ -19,7 +20,7 @@ export async function identitySignIn(params: {
   password: string;
 }) {
   const resp = await client.signIn(
-    new IdentitySignInRequest({
+    create(IdentitySignInRequestSchema, {
       store: { storeId: params.storeId },
       email: params.email || "",
       loginId: params.loginId || "",
@@ -45,7 +46,7 @@ export async function identityCreateStaff(params: {
   role: string;
 }) {
   return client.createStaff(
-    new IdentityCreateStaffRequest({
+    create(IdentityCreateStaffRequestSchema, {
       store: { storeId: params.storeId },
       email: params.email || "",
       loginId: params.loginId || "",
@@ -58,7 +59,7 @@ export async function identityCreateStaff(params: {
 
 export async function identityListRoles(params: { storeId: string }) {
   return client.listRoles(
-    new IdentityListRolesRequest({
+    create(IdentityListRolesRequestSchema, {
       store: { storeId: params.storeId },
     })
   );
@@ -72,7 +73,7 @@ export async function identityCreateRole(params: {
   permissionKeys: string[];
 }) {
   return client.createRole(
-    new IdentityCreateRoleRequest({
+    create(IdentityCreateRoleRequestSchema, {
       store: { storeId: params.storeId },
       key: params.key,
       name: params.name,
@@ -88,7 +89,7 @@ export async function identityAssignRole(params: {
   roleId: string;
 }) {
   return client.assignRoleToStaff(
-    new IdentityAssignRoleRequest({
+    create(IdentityAssignRoleRequestSchema, {
       store: { storeId: params.storeId },
       staffId: params.staffId,
       roleId: params.roleId,

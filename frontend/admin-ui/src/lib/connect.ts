@@ -1,4 +1,4 @@
-import { createPromiseClient, type Interceptor } from "@connectrpc/connect";
+import { createClient, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { API_BASE } from "@/lib/api";
 import { getActiveAccessToken } from "@/lib/auth";
@@ -17,6 +17,6 @@ const transport = createConnectTransport({
   interceptors: [authInterceptor],
 });
 
-export function createClient<T>(service: T): ReturnType<typeof createPromiseClient<T>> {
-  return createPromiseClient(service, transport);
+export function createServiceClient<T>(service: T): ReturnType<typeof createClient<T>> {
+  return createClient(service, transport);
 }

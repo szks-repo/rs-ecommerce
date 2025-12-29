@@ -1,24 +1,25 @@
-import { createClient } from "@/lib/connect";
-import { BackofficeService } from "@/gen/ecommerce/v1/backoffice_connect";
+import { create } from "@bufbuild/protobuf";
+import { createServiceClient } from "@/lib/connect";
 import {
-  ListProductsAdminRequest,
-  ListVariantsAdminRequest,
-  CreateProductRequest,
-  UpdateProductRequest,
-  CreateVariantRequest,
-  UpdateVariantRequest,
-  SetInventoryRequest,
+  BackofficeService,
+  ListProductsAdminRequestSchema,
+  ListVariantsAdminRequestSchema,
+  CreateProductRequestSchema,
+  UpdateProductRequestSchema,
+  CreateVariantRequestSchema,
+  UpdateVariantRequestSchema,
+  SetInventoryRequestSchema,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 
-const client = createClient(BackofficeService);
+const client = createServiceClient(BackofficeService);
 
 export async function listProductsAdmin() {
-  return client.listProducts(new ListProductsAdminRequest({}));
+  return client.listProducts(create(ListProductsAdminRequestSchema, {}));
 }
 
 export async function listVariantsAdmin(params: { productId: string }) {
   return client.listVariants(
-    new ListVariantsAdminRequest({
+    create(ListVariantsAdminRequestSchema, {
       productId: params.productId,
     })
   );
@@ -31,7 +32,7 @@ export async function createProduct(params: {
   status: string;
 }) {
   return client.createProduct(
-    new CreateProductRequest({
+    create(CreateProductRequestSchema, {
       vendorId: params.vendorId || "",
       title: params.title,
       description: params.description,
@@ -47,7 +48,7 @@ export async function updateProduct(params: {
   status: string;
 }) {
   return client.updateProduct(
-    new UpdateProductRequest({
+    create(UpdateProductRequestSchema, {
       productId: params.productId,
       title: params.title,
       description: params.description,
@@ -66,7 +67,7 @@ export async function createVariant(params: {
   status: string;
 }) {
   return client.createVariant(
-    new CreateVariantRequest({
+    create(CreateVariantRequestSchema, {
       productId: params.productId,
       sku: params.sku,
       fulfillmentType: params.fulfillmentType,
@@ -89,7 +90,7 @@ export async function updateVariant(params: {
   fulfillmentType?: string;
 }) {
   return client.updateVariant(
-    new UpdateVariantRequest({
+    create(UpdateVariantRequestSchema, {
       variantId: params.variantId,
       price: { amount: params.priceAmount, currency: params.currency },
       compareAt:
@@ -109,7 +110,7 @@ export async function setInventory(params: {
   reserved: number;
 }) {
   return client.setInventory(
-    new SetInventoryRequest({
+    create(SetInventoryRequestSchema, {
       variantId: params.variantId,
       locationId: params.locationId,
       stock: params.stock,

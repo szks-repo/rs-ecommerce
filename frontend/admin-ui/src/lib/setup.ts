@@ -1,8 +1,8 @@
-import { createClient } from "@/lib/connect";
-import { SetupService } from "@/gen/ecommerce/v1/setup_connect";
-import { InitializeStoreRequest } from "@/gen/ecommerce/v1/setup_pb";
+import { create } from "@bufbuild/protobuf";
+import { createServiceClient } from "@/lib/connect";
+import { SetupService, InitializeStoreRequestSchema } from "@/gen/ecommerce/v1/setup_pb";
 
-const client = createClient(SetupService);
+const client = createServiceClient(SetupService);
 
 export async function initializeStore(params: {
   storeName: string;
@@ -11,7 +11,7 @@ export async function initializeStore(params: {
   ownerLoginId?: string;
 }) {
   return client.initializeStore(
-    new InitializeStoreRequest({
+    create(InitializeStoreRequestSchema, {
       storeName: params.storeName,
       ownerEmail: params.ownerEmail,
       ownerPassword: params.ownerPassword,
