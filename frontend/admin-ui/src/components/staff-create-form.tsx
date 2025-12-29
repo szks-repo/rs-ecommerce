@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { identityCreateStaff } from "@/lib/identity";
 
 export default function StaffCreateForm() {
@@ -14,14 +14,11 @@ export default function StaffCreateForm() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("staff");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       const data = await identityCreateStaff({
@@ -31,14 +28,22 @@ export default function StaffCreateForm() {
         password,
         role,
       });
-      setMessage(`Created staff: ${data.staffId}`);
+      push({
+        variant: "success",
+        title: "Staff created",
+        description: `Created staff: ${data.staffId}`,
+      });
       setEmail("");
       setLoginId("");
       setPhone("");
       setPassword("");
       setRole("staff");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Create failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -53,18 +58,6 @@ export default function StaffCreateForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Create failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

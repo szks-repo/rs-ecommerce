@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -23,16 +23,13 @@ export default function VariantCreateForm() {
   const [priceAmount, setPriceAmount] = useState("0");
   const [compareAtAmount, setCompareAtAmount] = useState("");
   const [status, setStatus] = useState("active");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
+  const { push } = useToast();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
@@ -55,7 +52,11 @@ export default function VariantCreateForm() {
         currency: "JPY",
         status,
       });
-      setMessage(`Created variant: ${data.variant.id}`);
+      push({
+        variant: "success",
+        title: "Variant created",
+        description: `Created variant: ${data.variant.id}`,
+      });
       setProductId("");
       setSku("");
       setFulfillmentType("physical");
@@ -63,7 +64,11 @@ export default function VariantCreateForm() {
       setCompareAtAmount("");
       setStatus("active");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Create failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -78,18 +83,6 @@ export default function VariantCreateForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Create failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="variantProductId">Product ID</Label>

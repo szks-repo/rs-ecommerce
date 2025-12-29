@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -32,11 +32,10 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
   const [status, setStatus] = useState(product?.status ?? "active");
   const [taxRuleId, setTaxRuleId] = useState(product?.taxRuleId ?? "__default__");
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive", "draft"] as const;
   const canSubmit = productId.trim().length > 0;
+  const { push } = useToast();
 
   useEffect(() => {
     if (!product) {
@@ -64,8 +63,6 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
@@ -78,10 +75,18 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
         status,
         taxRuleId: taxRuleId === "__default__" ? undefined : taxRuleId || undefined,
       });
-      setMessage(`Updated product: ${data.product.id}`);
+      push({
+        variant: "success",
+        title: "Product updated",
+        description: `Updated product: ${data.product.id}`,
+      });
       onUpdated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -96,18 +101,6 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Update failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           {product ? (
             <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">

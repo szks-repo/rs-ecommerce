@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { identityAssignRole, identityListRoles } from "@/lib/identity";
 import {
   Select,
@@ -19,10 +19,9 @@ export default function RoleAssignForm() {
   const [staffId, setStaffId] = useState("");
   const [roles, setRoles] = useState<Array<{ id: string; key: string; name: string }>>([]);
   const [roleId, setRoleId] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const { push } = useToast();
 
   useEffect(() => {
     let cancelled = false;
@@ -35,7 +34,11 @@ export default function RoleAssignForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load roles");
+          push({
+            variant: "error",
+            title: "Load failed",
+            description: err instanceof Error ? err.message : "Failed to load roles",
+          });
         }
       })
       .finally(() => {
@@ -50,18 +53,24 @@ export default function RoleAssignForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!roleId) {
         throw new Error("role_id is missing. Please select a role.");
       }
       const data = await identityAssignRole({ staffId, roleId });
-      setMessage(data.assigned ? "Role assigned" : "Role not assigned");
+      push({
+        variant: data.assigned ? "success" : "error",
+        title: data.assigned ? "Role assigned" : "Assign failed",
+        description: data.assigned ? "Role assigned." : "Role not assigned.",
+      });
       setStaffId("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Assign failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -76,18 +85,6 @@ export default function RoleAssignForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Assign failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="staffId">Staff ID</Label>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { identityCreateRole } from "@/lib/identity";
 
 const DEFAULT_PERMISSIONS = [
@@ -25,14 +25,11 @@ export default function RoleCreateForm() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [permissionKeys, setPermissionKeys] = useState(DEFAULT_PERMISSIONS.join(", "));
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       const keys = permissionKeys
@@ -45,13 +42,21 @@ export default function RoleCreateForm() {
         description,
         permissionKeys: keys,
       });
-      setMessage(`Created role: ${data.role?.id ?? ""}`);
+      push({
+        variant: "success",
+        title: "Role created",
+        description: `Created role: ${data.role?.id ?? ""}`,
+      });
       setKey("");
       setName("");
       setDescription("");
       setPermissionKeys(DEFAULT_PERMISSIONS.join(", "));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Create failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -66,18 +71,6 @@ export default function RoleCreateForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Create failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="roleKey">Role Key</Label>

@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -22,10 +22,9 @@ export default function StoreLocationForm() {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState("active");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
+  const { push } = useToast();
 
   async function loadLocations() {
     if (!getActiveAccessToken()) {
@@ -41,21 +40,27 @@ export default function StoreLocationForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
       await upsertStoreLocation({ code, name, status });
-      setMessage("Location saved.");
+      push({
+        variant: "success",
+        title: "Location saved",
+        description: "Store location has been saved.",
+      });
       setCode("");
       setName("");
       setStatus("active");
       await loadLocations();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Save failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -70,18 +75,6 @@ export default function StoreLocationForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {error && (
-          <Alert>
-            <AlertTitle>Save failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert>
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">

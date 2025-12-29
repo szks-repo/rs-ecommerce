@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { setInventory } from "@/lib/product";
 import { listStoreLocations } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
@@ -25,9 +25,8 @@ export default function InventorySetForm() {
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
   const [stock, setStock] = useState("0");
   const [reserved, setReserved] = useState("0");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
 
   useEffect(() => {
     if (!getActiveAccessToken()) {
@@ -43,7 +42,11 @@ export default function InventorySetForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Failed to load locations");
+          push({
+            variant: "error",
+            title: "Load failed",
+            description: err instanceof Error ? err.message : "Failed to load locations",
+          });
         }
       })
       .finally(() => {
@@ -58,8 +61,6 @@ export default function InventorySetForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
@@ -79,13 +80,21 @@ export default function InventorySetForm() {
         stock: stockValue,
         reserved: reservedValue,
       });
-      setMessage(`Inventory updated for variant: ${data.inventory.variantId}`);
+      push({
+        variant: "success",
+        title: "Inventory updated",
+        description: `Inventory updated for variant: ${data.inventory.variantId}`,
+      });
       setVariantId("");
       setLocationId("");
       setStock("0");
       setReserved("0");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -100,18 +109,6 @@ export default function InventorySetForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Update failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="inventoryVariantId">Variant ID</Label>

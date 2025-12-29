@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import {
   Select,
   SelectContent,
@@ -32,12 +32,11 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
   );
   const [status, setStatus] = useState(variant?.status ?? "active");
   const [fulfillmentType, setFulfillmentType] = useState(variant?.fulfillmentType ?? "");
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
   const canSubmit = variantId.trim().length > 0;
+  const { push } = useToast();
 
   useEffect(() => {
     if (!variant) {
@@ -52,8 +51,6 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
@@ -75,10 +72,18 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
         status,
         fulfillmentType: fulfillmentType || undefined,
       });
-      setMessage(`Updated variant: ${data.variant.id}`);
+      push({
+        variant: "success",
+        title: "Variant updated",
+        description: `Updated variant: ${data.variant.id}`,
+      });
       onUpdated?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -93,18 +98,6 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Update failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           {variant ? (
             <div className="rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm text-neutral-700">

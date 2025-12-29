@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { useToast } from "@/components/ui/toast";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -32,9 +32,8 @@ export default function ProductCreateForm() {
   const [compareAtAmount, setCompareAtAmount] = useState("");
   const [variantStatus, setVariantStatus] = useState("active");
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { push } = useToast();
   const statusOptions = ["active", "inactive", "draft"] as const;
   const variantStatusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
@@ -54,8 +53,6 @@ export default function ProductCreateForm() {
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    setMessage(null);
     setIsSubmitting(true);
     try {
       if (!getActiveAccessToken()) {
@@ -113,7 +110,11 @@ export default function ProductCreateForm() {
         payload.defaultVariant = defaultVariant;
       }
       const data = await createProduct(payload);
-      setMessage(`Created product: ${data.product.id}`);
+      push({
+        variant: "success",
+        title: "Product created",
+        description: `Created product: ${data.product.id}`,
+      });
       setTitle("");
       setVendorId("");
       setDescription("");
@@ -126,7 +127,11 @@ export default function ProductCreateForm() {
       setCompareAtAmount("");
       setVariantStatus("active");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      push({
+        variant: "error",
+        title: "Create failed",
+        description: err instanceof Error ? err.message : "Unknown error",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -141,18 +146,6 @@ export default function ProductCreateForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {error && (
-          <Alert className="mb-4">
-            <AlertTitle>Create failed</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-        {message && (
-          <Alert className="mb-4">
-            <AlertTitle>Success</AlertTitle>
-            <AlertDescription>{message}</AlertDescription>
-          </Alert>
-        )}
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="productTitle">Title</Label>
