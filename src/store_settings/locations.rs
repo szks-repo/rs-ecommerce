@@ -49,8 +49,10 @@ pub async fn upsert_store_location(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if location.id.is_empty() {
-        repo.insert_store_location(
+        repo.insert_store_location_tx(
+            &mut tx,
             &location_id,
             &tenant_uuid.as_uuid(),
             &store_uuid.as_uuid(),
@@ -58,8 +60,13 @@ pub async fn upsert_store_location(
         )
         .await?;
     } else {
-        repo.update_store_location(&location_id, &store_uuid.as_uuid(), &location)
-            .await?;
+        repo.update_store_location_tx(
+            &mut tx,
+            &location_id,
+            &store_uuid.as_uuid(),
+            &location,
+        )
+        .await?;
     }
 
     let updated = pb::StoreLocation {
@@ -69,8 +76,8 @@ pub async fn upsert_store_location(
         status: location.status,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             StoreLocationAuditAction::Upsert.into(),
@@ -83,6 +90,7 @@ pub async fn upsert_store_location(
     )
     .await?;
 
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -96,16 +104,18 @@ pub async fn delete_store_location(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     let rows = repo
-        .delete_store_location(
+        .delete_store_location_tx(
+            &mut tx,
             &parse_uuid(&location_id, "location_id")?,
             &store_uuid.as_uuid(),
         )
         .await?;
     let deleted = rows > 0;
     if deleted {
-        let _ = audit::record(
-            state,
+        audit::record_tx(
+            &mut tx,
             audit_input(
                 tenant_id.clone(),
                 StoreLocationAuditAction::Delete.into(),
@@ -118,6 +128,7 @@ pub async fn delete_store_location(
         )
         .await?;
     }
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

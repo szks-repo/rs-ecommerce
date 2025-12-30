@@ -300,8 +300,6 @@ pub async fn create_product(
         .map_err(db::error)?;
     }
 
-    tx.commit().await.map_err(db::error)?;
-
     let product = pb::ProductAdmin {
         id: product_id.to_string(),
         vendor_id: req.vendor_id,
@@ -325,8 +323,8 @@ pub async fn create_product(
         }])
         .await;
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             ProductAuditAction::Create.into(),
@@ -338,6 +336,8 @@ pub async fn create_product(
         ),
     )
     .await?;
+
+    tx.commit().await.map_err(db::error)?;
 
     Ok(product)
 }
@@ -354,6 +354,7 @@ pub async fn update_product(
     let before = fetch_product_admin(state, &tenant_id, &store_id, &req.product_id).await.ok();
     let tax_rule_id = nullable_uuid(req.tax_rule_id.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         UPDATE products
@@ -368,7 +369,7 @@ pub async fn update_product(
     .bind(product_uuid.as_uuid())
     .bind(tenant_uuid.as_uuid())
     .bind(store_uuid.as_uuid())
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
 
@@ -394,20 +395,9 @@ pub async fn update_product(
     .bind(tenant_uuid.as_uuid())
     .bind(store_uuid.as_uuid())
     .bind(product_uuid.as_uuid())
-    .fetch_one(&state.db)
+    .fetch_one(tx.as_mut())
     .await
-        {
-        let _ = state
-            .search
-            .upsert_products(&[crate::infrastructure::search::SearchProduct {
-                id: row.get::<String, _>("id"),
-                tenant_id: tenant_id.clone(),
-                vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
-                title: row.get("title"),
-                description: row.get("description"),
-                status: row.get("status"),
-            }])
-            .await;
+    {
         after = pb::ProductAdmin {
             id: row.get::<String, _>("id"),
             vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
@@ -420,19 +410,33 @@ pub async fn update_product(
         };
     }
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             ProductAuditAction::Update.into(),
             Some("product"),
             Some(product.id.clone()),
             to_json_opt(before),
-            to_json_opt(Some(after)),
+            to_json_opt(Some(after.clone())),
             _actor,
         ),
     )
     .await?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    let _ = state
+        .search
+        .upsert_products(&[crate::infrastructure::search::SearchProduct {
+            id: product.id.clone(),
+            tenant_id: tenant_id.clone(),
+            vendor_id: after.vendor_id.clone(),
+            title: after.title.clone(),
+            description: after.description.clone(),
+            status: after.status.clone(),
+        }])
+        .await;
 
     Ok(product)
 }
@@ -460,6 +464,7 @@ pub async fn create_variant(
     let fulfillment_type = FulfillmentType::parse(&req.fulfillment_type)?.as_str().to_string();
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
     let sku = SkuCode::parse(&req.sku)?;
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         INSERT INTO variants (
@@ -477,11 +482,9 @@ pub async fn create_variant(
     .bind(compare_amount)
     .bind(compare_currency)
     .bind(&status)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
-
-    let _ = reindex_product_by_id(state, &req.product_id).await;
 
     let variant = pb::VariantAdmin {
         id: variant_id.to_string(),
@@ -493,8 +496,8 @@ pub async fn create_variant(
         status,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id,
             VariantAuditAction::Create.into(),
@@ -506,6 +509,10 @@ pub async fn create_variant(
         ),
     )
     .await?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    let _ = reindex_product_by_id(state, &variant.product_id).await;
 
     Ok(variant)
 }
@@ -535,6 +542,7 @@ pub async fn update_variant(
         Some(FulfillmentType::parse(&req.fulfillment_type)?.as_str().to_string())
     };
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         UPDATE variants
@@ -553,20 +561,9 @@ pub async fn update_variant(
     .bind(&status)
     .bind(fulfillment_type.as_deref())
     .bind(parse_uuid(&req.variant_id, "variant_id")?)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
-
-    if let Ok(row) = sqlx::query(
-        "SELECT product_id::text as product_id FROM variants WHERE id = $1",
-    )
-    .bind(parse_uuid(&req.variant_id, "variant_id")?)
-    .fetch_one(&state.db)
-    .await
-    {
-        let product_id: String = row.get("product_id");
-        let _ = reindex_product_by_id(state, &product_id).await;
-    }
 
     let variant = pb::VariantAdmin {
         id: req.variant_id,
@@ -578,8 +575,8 @@ pub async fn update_variant(
         status,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id,
             VariantAuditAction::Update.into(),
@@ -591,6 +588,19 @@ pub async fn update_variant(
         ),
     )
     .await?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    if let Ok(row) = sqlx::query(
+        "SELECT product_id::text as product_id FROM variants WHERE id = $1",
+    )
+    .bind(parse_uuid(&variant.id, "variant_id")?)
+    .fetch_one(&state.db)
+    .await
+    {
+        let product_id: String = row.get("product_id");
+        let _ = reindex_product_by_id(state, &product_id).await;
+    }
 
     Ok(variant)
 }
@@ -614,6 +624,7 @@ pub async fn set_inventory(
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     ensure_variant_belongs_to_store(state, &req.variant_id, &store_id).await?;
     ensure_location_belongs_to_store(state, &req.location_id, &store_id).await?;
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         INSERT INTO inventory_stocks (tenant_id, store_id, location_id, variant_id, stock, reserved)
@@ -628,25 +639,9 @@ pub async fn set_inventory(
     .bind(parse_uuid(&req.variant_id, "variant_id")?)
     .bind(req.stock)
     .bind(req.reserved)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
-
-    if let Ok(row) = sqlx::query(
-        r#"
-        SELECT p.id::text as id
-        FROM products p
-        JOIN variants v ON v.product_id = p.id
-        WHERE v.id = $1
-        "#,
-    )
-    .bind(parse_uuid(&req.variant_id, "variant_id")?)
-    .fetch_one(&state.db)
-    .await
-    {
-        let product_id: String = row.get("id");
-        let _ = reindex_product_by_id(state, &product_id).await;
-    }
 
     let inventory = pb::InventoryAdmin {
         variant_id: req.variant_id,
@@ -656,8 +651,8 @@ pub async fn set_inventory(
         updated_at: None,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             InventoryAuditAction::Set.into(),
@@ -669,6 +664,24 @@ pub async fn set_inventory(
         ),
     )
     .await?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    if let Ok(row) = sqlx::query(
+        r#"
+        SELECT p.id::text as id
+        FROM products p
+        JOIN variants v ON v.product_id = p.id
+        WHERE v.id = $1
+        "#,
+    )
+    .bind(parse_uuid(&inventory.variant_id, "variant_id")?)
+    .fetch_one(&state.db)
+    .await
+    {
+        let product_id: String = row.get("id");
+        let _ = reindex_product_by_id(state, &product_id).await;
+    }
 
     Ok(inventory)
 }

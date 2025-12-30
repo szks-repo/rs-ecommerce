@@ -309,6 +309,7 @@ pub async fn create_customer(
         (uuid::Uuid::new_v4().to_string(), false)
     };
 
+    let mut tx = state.db.begin().await.map_err(CustomerError::from)?;
     if !matched_existing {
         sqlx::query(
             r#"
@@ -319,7 +320,7 @@ pub async fn create_customer(
         .bind(parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?)
         .bind(tenant_uuid.as_uuid())
         .bind(DEFAULT_CUSTOMER_STATUS)
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
     }
@@ -347,7 +348,7 @@ pub async fn create_customer(
     .bind(if profile.phone.is_empty() { None } else { Some(profile.phone) })
     .bind(if profile.status.is_empty() { DEFAULT_PROFILE_STATUS } else { profile.status.as_str() })
     .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
-    .fetch_one(&state.db)
+    .fetch_one(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
 
@@ -367,7 +368,7 @@ pub async fn create_customer(
         .bind(&identity.identity_value)
         .bind(identity.verified)
         .bind("admin")
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
     }
@@ -392,8 +393,8 @@ pub async fn create_customer(
         updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
     };
 
-    let _ = audit::record(
-        state,
+    let _ = audit::record_tx(
+        &mut tx,
         audit_input(
             customer.tenant_id.clone(),
             CustomerAuditAction::Create.into(),
@@ -406,8 +407,8 @@ pub async fn create_customer(
     )
     .await?;
 
-    let _ = outbox::enqueue(
-        state,
+    let _ = outbox::enqueue_tx(
+        &mut tx,
         outbox::OutboxEventInput {
             tenant_id: customer.tenant_id.clone(),
             store_id: Some(store_id.clone()),
@@ -419,11 +420,11 @@ pub async fn create_customer(
                 "source_store_id": store_id,
                 "customer_id": customer.id,
                 "profile": {
-                    "name": profile.name,
-                    "email": profile.email,
-                    "phone": profile.phone,
-                    "status": profile.status,
-                    "notes": profile.notes,
+                    "name": profile.name.clone(),
+                    "email": profile.email.clone(),
+                    "phone": profile.phone.clone(),
+                    "status": profile.status.clone(),
+                    "notes": profile.notes.clone(),
                 }
             }),
         },
@@ -431,8 +432,8 @@ pub async fn create_customer(
     .await?;
 
     for identity in identity_inputs {
-        let _ = outbox::enqueue(
-            state,
+        let _ = outbox::enqueue_tx(
+            &mut tx,
             outbox::OutboxEventInput {
                 tenant_id: customer.tenant_id.clone(),
                 store_id: Some(store_id.clone()),
@@ -455,6 +456,7 @@ pub async fn create_customer(
         .await?;
     }
 
+    tx.commit().await.map_err(CustomerError::from)?;
     Ok((customer, profile, matched_existing))
 }
 
@@ -479,6 +481,7 @@ pub async fn update_customer(
     profile.email = normalized_email;
     profile.phone = normalized_phone;
 
+    let mut tx = state.db.begin().await.map_err(CustomerError::from)?;
     if !customer_status.is_empty() {
         sqlx::query(
             r#"
@@ -490,7 +493,7 @@ pub async fn update_customer(
         .bind(&customer_status)
         .bind(customer_uuid)
         .bind(tenant_uuid.as_uuid())
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
     }
@@ -518,7 +521,7 @@ pub async fn update_customer(
     .bind(if profile.phone.is_empty() { None } else { Some(profile.phone) })
     .bind(if profile.status.is_empty() { DEFAULT_PROFILE_STATUS } else { profile.status.as_str() })
     .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
-    .fetch_one(&state.db)
+    .fetch_one(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
 
@@ -531,7 +534,7 @@ pub async fn update_customer(
     )
     .bind(customer_uuid)
     .bind(tenant_uuid.as_uuid())
-    .fetch_one(&state.db)
+    .fetch_one(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
 
@@ -555,8 +558,8 @@ pub async fn update_customer(
         updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
     };
 
-    let _ = audit::record(
-        state,
+    let _ = audit::record_tx(
+        &mut tx,
         audit_input(
             customer.tenant_id.clone(),
             CustomerAuditAction::Update.into(),
@@ -569,8 +572,8 @@ pub async fn update_customer(
     )
     .await?;
 
-    let _ = outbox::enqueue(
-        state,
+    let _ = outbox::enqueue_tx(
+        &mut tx,
         outbox::OutboxEventInput {
             tenant_id: customer.tenant_id.clone(),
             store_id: Some(store_id.clone()),
@@ -582,17 +585,18 @@ pub async fn update_customer(
                 "source_store_id": store_id,
                 "customer_id": customer.id,
                 "profile": {
-                    "name": profile.name,
-                    "email": profile.email,
-                    "phone": profile.phone,
-                    "status": profile.status,
-                    "notes": profile.notes,
+                    "name": profile.name.clone(),
+                    "email": profile.email.clone(),
+                    "phone": profile.phone.clone(),
+                    "status": profile.status.clone(),
+                    "notes": profile.notes.clone(),
                 }
             }),
         },
     )
     .await?;
 
+    tx.commit().await.map_err(CustomerError::from)?;
     Ok((customer, profile))
 }
 
@@ -612,6 +616,7 @@ pub async fn upsert_customer_identity(
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
     let normalized_value = normalize_identity(&identity.identity_type, &identity.identity_value);
 
+    let mut tx = state.db.begin().await.map_err(CustomerError::from)?;
     let existing = sqlx::query(
         r#"
         SELECT id::text as id, customer_id::text as customer_id, verified, source, created_at
@@ -622,7 +627,7 @@ pub async fn upsert_customer_identity(
     .bind(tenant_uuid.as_uuid())
     .bind(&identity.identity_type)
     .bind(&normalized_value)
-    .fetch_optional(&state.db)
+    .fetch_optional(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
 
@@ -643,7 +648,7 @@ pub async fn upsert_customer_identity(
         .bind(identity.verified)
         .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
         .bind(parse_uuid(&row.get::<String, _>("id"), "identity_id").map_err(CustomerError::from)?)
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
 
@@ -658,8 +663,8 @@ pub async fn upsert_customer_identity(
             created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         };
 
-        let _ = audit::record(
-            state,
+        let _ = audit::record_tx(
+            &mut tx,
             audit_input(
                 updated.tenant_id.clone(),
                 CustomerAuditAction::IdentityUpsert.into(),
@@ -672,8 +677,8 @@ pub async fn upsert_customer_identity(
         )
         .await?;
 
-        let _ = outbox::enqueue(
-            state,
+        let _ = outbox::enqueue_tx(
+            &mut tx,
             outbox::OutboxEventInput {
                 tenant_id: updated.tenant_id.clone(),
                 store_id: None,
@@ -685,16 +690,17 @@ pub async fn upsert_customer_identity(
                     "source_store_id": null,
                     "customer_id": updated.customer_id,
                     "identity": {
-                        "identity_type": updated.identity_type,
-                        "identity_value": updated.identity_value,
+                        "identity_type": updated.identity_type.clone(),
+                        "identity_value": updated.identity_value.clone(),
                         "verified": updated.verified,
-                        "source": updated.source,
+                        "source": updated.source.clone(),
                     }
                 }),
             },
         )
         .await?;
 
+        tx.commit().await.map_err(CustomerError::from)?;
         return Ok(updated);
     }
 
@@ -718,7 +724,7 @@ pub async fn upsert_customer_identity(
     .bind(&normalized_value)
     .bind(identity.verified)
     .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
 
@@ -733,8 +739,8 @@ pub async fn upsert_customer_identity(
         created_at: chrono_to_timestamp(Some(Utc::now())),
     };
 
-    let _ = audit::record(
-        state,
+    let _ = audit::record_tx(
+        &mut tx,
         audit_input(
             created.tenant_id.clone(),
             CustomerAuditAction::IdentityUpsert.into(),
@@ -747,8 +753,8 @@ pub async fn upsert_customer_identity(
     )
     .await?;
 
-    let _ = outbox::enqueue(
-        state,
+    let _ = outbox::enqueue_tx(
+        &mut tx,
         outbox::OutboxEventInput {
             tenant_id: created.tenant_id.clone(),
             store_id: None,
@@ -760,16 +766,17 @@ pub async fn upsert_customer_identity(
                 "source_store_id": null,
                 "customer_id": created.customer_id,
                 "identity": {
-                    "identity_type": created.identity_type,
-                    "identity_value": created.identity_value,
+                    "identity_type": created.identity_type.clone(),
+                    "identity_value": created.identity_value.clone(),
                     "verified": created.verified,
-                    "source": created.source,
+                    "source": created.source.clone(),
                 }
             }),
         },
     )
     .await?;
 
+    tx.commit().await.map_err(CustomerError::from)?;
     Ok(created)
 }
 
@@ -798,6 +805,7 @@ pub async fn upsert_customer_address(
         parse_uuid(&address.id, "address_id").map_err(CustomerError::from)?
     };
 
+    let mut tx = state.db.begin().await.map_err(CustomerError::from)?;
     if address.id.is_empty() {
         sqlx::query(
             r#"
@@ -816,7 +824,7 @@ pub async fn upsert_customer_address(
         .bind(&address.line1)
         .bind(if address.line2.is_empty() { None } else { Some(address.line2.clone()) })
         .bind(if address.phone.is_empty() { None } else { Some(address.phone.clone()) })
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
     } else {
@@ -838,7 +846,7 @@ pub async fn upsert_customer_address(
         .bind(if address.phone.is_empty() { None } else { Some(address.phone.clone()) })
         .bind(address_id)
         .bind(customer_uuid)
-        .execute(&state.db)
+        .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
     }
@@ -858,10 +866,21 @@ pub async fn upsert_customer_address(
         updated_at: None,
     };
 
-    let tenant_id = resolve_tenant_id(state, &updated.customer_id).await?;
+    let tenant_row = sqlx::query(
+        r#"
+        SELECT tenant_id::text as tenant_id
+        FROM customers
+        WHERE id = $1
+        "#,
+    )
+    .bind(customer_uuid)
+    .fetch_one(tx.as_mut())
+    .await
+    .map_err(CustomerError::from)?;
+    let tenant_id: String = tenant_row.get("tenant_id");
 
-    let _ = audit::record(
-        state,
+    let _ = audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             CustomerAuditAction::AddressUpsert.into(),
@@ -874,8 +893,8 @@ pub async fn upsert_customer_address(
     )
     .await?;
 
-    let _ = outbox::enqueue(
-        state,
+    let _ = outbox::enqueue_tx(
+        &mut tx,
         outbox::OutboxEventInput {
             tenant_id,
             store_id: None,
@@ -884,12 +903,13 @@ pub async fn upsert_customer_address(
             event_type: "customer.address_upsert".to_string(),
             payload_json: serde_json::json!({
                 "customer_id": updated.customer_id,
-                "address_id": updated.id,
+                "address_id": updated.id.clone(),
             }),
         },
     )
     .await?;
 
+    tx.commit().await.map_err(CustomerError::from)?;
     Ok(updated)
 }
 
@@ -941,22 +961,4 @@ fn normalize_identity(identity_type: &str, value: &str) -> String {
         "phone" => trimmed.chars().filter(|c| c.is_ascii_digit()).collect(),
         _ => trimmed.to_string(),
     }
-}
-
-async fn resolve_tenant_id(
-    state: &AppState,
-    customer_id: &str,
-) -> CustomerResult<String> {
-    let row = sqlx::query(
-        r#"
-        SELECT tenant_id::text as tenant_id
-        FROM customers
-        WHERE id = $1
-        "#,
-    )
-    .bind(parse_uuid(customer_id, "customer_id").map_err(CustomerError::from)?)
-    .fetch_one(&state.db)
-    .await
-    .map_err(CustomerError::from)?;
-    Ok(row.get("tenant_id"))
 }

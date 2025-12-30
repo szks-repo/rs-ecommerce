@@ -3,7 +3,7 @@ use axum::{Json, http::StatusCode};
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::audit,
+    infrastructure::{audit, db},
     rpc::json::ConnectError,
     store_settings::{
         repository::{PgStoreSettingsRepository, StoreSettingsRepository},
@@ -339,7 +339,9 @@ pub async fn update_store_settings(
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    repo.upsert_store_settings(
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    repo.upsert_store_settings_tx(
+        &mut tx,
         &tenant_uuid.as_uuid(),
         &store_uuid.as_uuid(),
         &settings,
@@ -348,8 +350,8 @@ pub async fn update_store_settings(
     )
     .await?;
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             StoreSettingsAuditAction::Update.into(),
@@ -361,6 +363,7 @@ pub async fn update_store_settings(
         ),
     )
     .await?;
+    tx.commit().await.map_err(db::error)?;
 
     Ok(settings)
 }
@@ -379,7 +382,9 @@ pub async fn initialize_store_settings(
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    repo.insert_store_settings_if_absent(
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    repo.insert_store_settings_if_absent_tx(
+        &mut tx,
         &tenant_uuid.as_uuid(),
         &store_uuid.as_uuid(),
         &settings,
@@ -388,8 +393,8 @@ pub async fn initialize_store_settings(
     )
     .await?;
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             StoreSettingsAuditAction::Initialize.into(),
@@ -402,11 +407,11 @@ pub async fn initialize_store_settings(
     )
     .await?;
 
-    repo.upsert_mall_settings(&tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
+    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
         .await?;
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             MallSettingsAuditAction::Initialize.into(),
@@ -418,6 +423,7 @@ pub async fn initialize_store_settings(
         ),
     )
     .await?;
+    tx.commit().await.map_err(db::error)?;
 
     Ok((settings, mall))
 }
@@ -494,11 +500,12 @@ pub async fn update_mall_settings(
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    repo.upsert_mall_settings(&tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
         .await?;
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             MallSettingsAuditAction::Update.into(),
@@ -510,6 +517,7 @@ pub async fn update_mall_settings(
         ),
     )
     .await?;
+    tx.commit().await.map_err(db::error)?;
 
     Ok(mall)
 }

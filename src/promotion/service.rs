@@ -22,6 +22,7 @@ pub async fn create_promotion(
 ) -> Result<pb::PromotionAdmin, (StatusCode, Json<ConnectError>)> {
     let (value_amount, value_currency) = money_to_parts(req.value.clone())?;
     let promotion_id = uuid::Uuid::new_v4();
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         INSERT INTO promotions (
@@ -39,7 +40,7 @@ pub async fn create_promotion(
     .bind(&req.status)
     .bind(timestamp_to_chrono(req.starts_at.clone()))
     .bind(timestamp_to_chrono(req.ends_at.clone()))
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
 
@@ -53,8 +54,8 @@ pub async fn create_promotion(
         ends_at: req.ends_at,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             PromotionAuditAction::Create.into(),
@@ -67,6 +68,7 @@ pub async fn create_promotion(
     )
     .await?;
 
+    tx.commit().await.map_err(db::error)?;
     Ok(promotion)
 }
 
@@ -78,6 +80,7 @@ pub async fn update_promotion(
 ) -> Result<pb::PromotionAdmin, (StatusCode, Json<ConnectError>)> {
     let before = fetch_promotion(state, &tenant_id, &req.promotion_id).await.ok();
     let (value_amount, value_currency) = money_to_parts(req.value.clone())?;
+    let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         UPDATE promotions
@@ -95,7 +98,7 @@ pub async fn update_promotion(
     .bind(timestamp_to_chrono(req.ends_at.clone()))
     .bind(crate::shared::ids::parse_uuid(&req.promotion_id, "promotion_id")?)
     .bind(&tenant_id)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
 
@@ -109,8 +112,8 @@ pub async fn update_promotion(
         ends_at: req.ends_at,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             PromotionAuditAction::Update.into(),
@@ -123,6 +126,7 @@ pub async fn update_promotion(
     )
     .await?;
 
+    tx.commit().await.map_err(db::error)?;
     Ok(promotion)
 }
 

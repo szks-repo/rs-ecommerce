@@ -49,8 +49,10 @@ pub async fn upsert_tax_rule(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if rule.id.is_empty() {
-        repo.insert_tax_rule(
+        repo.insert_tax_rule_tx(
+            &mut tx,
             &rule_id,
             &store_uuid.as_uuid(),
             &tenant_uuid.as_uuid(),
@@ -58,7 +60,7 @@ pub async fn upsert_tax_rule(
         )
         .await?;
     } else {
-        repo.update_tax_rule(&rule_id, &store_uuid.as_uuid(), &rule)
+        repo.update_tax_rule_tx(&mut tx, &rule_id, &store_uuid.as_uuid(), &rule)
             .await?;
     }
 
@@ -69,8 +71,8 @@ pub async fn upsert_tax_rule(
         applies_to: rule.applies_to,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             TaxRuleAuditAction::Upsert.into(),
@@ -83,6 +85,7 @@ pub async fn upsert_tax_rule(
     )
     .await?;
 
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -96,16 +99,18 @@ pub async fn delete_tax_rule(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     let rows = repo
-        .delete_tax_rule(
+        .delete_tax_rule_tx(
+            &mut tx,
             &parse_uuid(&rule_id, "rule_id")?,
             &store_uuid.as_uuid(),
         )
         .await?;
     let deleted = rows > 0;
     if deleted {
-        let _ = audit::record(
-            state,
+        audit::record_tx(
+            &mut tx,
             audit_input(
                 tenant_id.clone(),
                 TaxRuleAuditAction::Delete.into(),
@@ -118,6 +123,7 @@ pub async fn delete_tax_rule(
         )
         .await?;
     }
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

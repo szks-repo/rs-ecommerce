@@ -118,6 +118,15 @@ pub trait StoreSettingsRepository {
         cod_fee_amount: i64,
         cod_fee_currency: String,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn upsert_store_settings_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        settings: &crate::pb::pb::StoreSettings,
+        cod_fee_amount: i64,
+        cod_fee_currency: String,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn insert_store_settings_if_absent(
         &self,
@@ -127,9 +136,25 @@ pub trait StoreSettingsRepository {
         cod_fee_amount: i64,
         cod_fee_currency: String,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn insert_store_settings_if_absent_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        settings: &crate::pb::pb::StoreSettings,
+        cod_fee_amount: i64,
+        cod_fee_currency: String,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn upsert_mall_settings(
         &self,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        mall: &crate::pb::pb::MallSettings,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn upsert_mall_settings_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
         tenant_uuid: &uuid::Uuid,
         store_uuid: &uuid::Uuid,
         mall: &crate::pb::pb::MallSettings,
@@ -157,6 +182,14 @@ pub trait StoreSettingsRepository {
         store_uuid: &uuid::Uuid,
         location: &crate::pb::pb::StoreLocation,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn insert_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        location_id: &uuid::Uuid,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        location: &crate::pb::pb::StoreLocation,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn update_store_location(
         &self,
@@ -164,9 +197,23 @@ pub trait StoreSettingsRepository {
         store_uuid: &uuid::Uuid,
         location: &crate::pb::pb::StoreLocation,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn update_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        location_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        location: &crate::pb::pb::StoreLocation,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn delete_store_location(
         &self,
+        location_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
+
+    async fn delete_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
         location_id: &uuid::Uuid,
         store_uuid: &uuid::Uuid,
     ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
@@ -234,6 +281,17 @@ pub trait StoreSettingsRepository {
         min: Option<i64>,
         max: Option<i64>,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn insert_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rate_id: &uuid::Uuid,
+        zone_uuid: &uuid::Uuid,
+        rate: &crate::pb::pb::ShippingRate,
+        fee_amount: i64,
+        fee_currency: &str,
+        min: Option<i64>,
+        max: Option<i64>,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn update_shipping_rate(
         &self,
@@ -244,9 +302,25 @@ pub trait StoreSettingsRepository {
         min: Option<i64>,
         max: Option<i64>,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn update_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rate_id: &uuid::Uuid,
+        rate: &crate::pb::pb::ShippingRate,
+        fee_amount: i64,
+        fee_currency: &str,
+        min: Option<i64>,
+        max: Option<i64>,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn delete_shipping_rate(
         &self,
+        store_uuid: &uuid::Uuid,
+        rate_id: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
+    async fn delete_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
         store_uuid: &uuid::Uuid,
         rate_id: &uuid::Uuid,
     ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
@@ -263,6 +337,14 @@ pub trait StoreSettingsRepository {
         tenant_uuid: &uuid::Uuid,
         rule: &crate::pb::pb::TaxRule,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn insert_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        tenant_uuid: &uuid::Uuid,
+        rule: &crate::pb::pb::TaxRule,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn update_tax_rule(
         &self,
@@ -270,9 +352,22 @@ pub trait StoreSettingsRepository {
         store_uuid: &uuid::Uuid,
         rule: &crate::pb::pb::TaxRule,
     ) -> Result<(), (StatusCode, Json<ConnectError>)>;
+    async fn update_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        rule: &crate::pb::pb::TaxRule,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)>;
 
     async fn delete_tax_rule(
         &self,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
+    async fn delete_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
         rule_id: &uuid::Uuid,
         store_uuid: &uuid::Uuid,
     ) -> Result<u64, (StatusCode, Json<ConnectError>)>;
@@ -515,6 +610,104 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn upsert_store_settings_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        settings: &crate::pb::pb::StoreSettings,
+        cod_fee_amount: i64,
+        cod_fee_currency: String,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO store_settings (
+                tenant_id, store_id, store_name, legal_name, contact_email, contact_phone,
+                address_prefecture, address_city, address_line1, address_line2,
+                legal_notice, default_language, primary_domain, subdomain, https_enabled,
+                currency, tax_mode, tax_rounding, order_initial_status, cod_enabled,
+                cod_fee_amount, cod_fee_currency, bank_name, bank_branch, bank_account_type,
+                bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url, time_zone
+            )
+            VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+                $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+                $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+                $31,$32
+            )
+            ON CONFLICT (tenant_id)
+            DO UPDATE SET store_id = EXCLUDED.store_id,
+                          store_name = EXCLUDED.store_name,
+                          legal_name = EXCLUDED.legal_name,
+                          contact_email = EXCLUDED.contact_email,
+                          contact_phone = EXCLUDED.contact_phone,
+                          address_prefecture = EXCLUDED.address_prefecture,
+                          address_city = EXCLUDED.address_city,
+                          address_line1 = EXCLUDED.address_line1,
+                          address_line2 = EXCLUDED.address_line2,
+                          legal_notice = EXCLUDED.legal_notice,
+                          default_language = EXCLUDED.default_language,
+                          primary_domain = EXCLUDED.primary_domain,
+                          subdomain = EXCLUDED.subdomain,
+                          https_enabled = EXCLUDED.https_enabled,
+                          currency = EXCLUDED.currency,
+                          tax_mode = EXCLUDED.tax_mode,
+                          tax_rounding = EXCLUDED.tax_rounding,
+                          order_initial_status = EXCLUDED.order_initial_status,
+                          cod_enabled = EXCLUDED.cod_enabled,
+                          cod_fee_amount = EXCLUDED.cod_fee_amount,
+                          cod_fee_currency = EXCLUDED.cod_fee_currency,
+                          bank_name = EXCLUDED.bank_name,
+                          bank_branch = EXCLUDED.bank_branch,
+                          bank_account_type = EXCLUDED.bank_account_type,
+                          bank_account_number = EXCLUDED.bank_account_number,
+                          bank_account_name = EXCLUDED.bank_account_name,
+                          theme = EXCLUDED.theme,
+                          brand_color = EXCLUDED.brand_color,
+                          logo_url = EXCLUDED.logo_url,
+                          favicon_url = EXCLUDED.favicon_url,
+                          time_zone = EXCLUDED.time_zone,
+                          updated_at = now()
+            "#,
+        )
+        .bind(tenant_uuid)
+        .bind(store_uuid)
+        .bind(&settings.store_name)
+        .bind(&settings.legal_name)
+        .bind(&settings.contact_email)
+        .bind(&settings.contact_phone)
+        .bind(&settings.address_prefecture)
+        .bind(&settings.address_city)
+        .bind(&settings.address_line1)
+        .bind(&settings.address_line2)
+        .bind(&settings.legal_notice)
+        .bind(&settings.default_language)
+        .bind(&settings.primary_domain)
+        .bind(&settings.subdomain)
+        .bind(settings.https_enabled)
+        .bind(&settings.currency)
+        .bind(&settings.tax_mode)
+        .bind(&settings.tax_rounding)
+        .bind(&settings.order_initial_status)
+        .bind(settings.cod_enabled)
+        .bind(cod_fee_amount)
+        .bind(cod_fee_currency)
+        .bind(&settings.bank_name)
+        .bind(&settings.bank_branch)
+        .bind(&settings.bank_account_type)
+        .bind(&settings.bank_account_number)
+        .bind(&settings.bank_account_name)
+        .bind(&settings.theme)
+        .bind(&settings.brand_color)
+        .bind(&settings.logo_url)
+        .bind(&settings.favicon_url)
+        .bind(&settings.time_zone)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn insert_store_settings_if_absent(
         &self,
         tenant_uuid: &uuid::Uuid,
@@ -579,6 +772,71 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn insert_store_settings_if_absent_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        settings: &crate::pb::pb::StoreSettings,
+        cod_fee_amount: i64,
+        cod_fee_currency: String,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO store_settings (
+                store_id, tenant_id, store_name, legal_name, contact_email, contact_phone,
+                address_prefecture, address_city, address_line1, address_line2, legal_notice,
+                default_language, primary_domain, subdomain, https_enabled, currency,
+                tax_mode, tax_rounding, order_initial_status, cod_enabled,
+                cod_fee_amount, cod_fee_currency, bank_name, bank_branch, bank_account_type,
+                bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url, time_zone
+            ) VALUES (
+                $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
+                $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
+                $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
+                $31,$32
+            )
+            ON CONFLICT (tenant_id) DO NOTHING
+            "#,
+        )
+        .bind(store_uuid)
+        .bind(tenant_uuid)
+        .bind(&settings.store_name)
+        .bind(&settings.legal_name)
+        .bind(&settings.contact_email)
+        .bind(&settings.contact_phone)
+        .bind(&settings.address_prefecture)
+        .bind(&settings.address_city)
+        .bind(&settings.address_line1)
+        .bind(&settings.address_line2)
+        .bind(&settings.legal_notice)
+        .bind(&settings.default_language)
+        .bind(&settings.primary_domain)
+        .bind(&settings.subdomain)
+        .bind(settings.https_enabled)
+        .bind(&settings.currency)
+        .bind(&settings.tax_mode)
+        .bind(&settings.tax_rounding)
+        .bind(&settings.order_initial_status)
+        .bind(settings.cod_enabled)
+        .bind(cod_fee_amount)
+        .bind(cod_fee_currency)
+        .bind(&settings.bank_name)
+        .bind(&settings.bank_branch)
+        .bind(&settings.bank_account_type)
+        .bind(&settings.bank_account_number)
+        .bind(&settings.bank_account_name)
+        .bind(&settings.theme)
+        .bind(&settings.brand_color)
+        .bind(&settings.logo_url)
+        .bind(&settings.favicon_url)
+        .bind(&settings.time_zone)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn upsert_mall_settings(
         &self,
         tenant_uuid: &uuid::Uuid,
@@ -603,6 +861,36 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         .bind(mall.commission_rate)
         .bind(mall.vendor_approval_required)
         .execute(self.db)
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
+    async fn upsert_mall_settings_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        mall: &crate::pb::pb::MallSettings,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO mall_settings (tenant_id, store_id, enabled, commission_rate, vendor_approval_required)
+            VALUES ($1,$2,$3,$4,$5)
+            ON CONFLICT (tenant_id)
+            DO UPDATE SET store_id = EXCLUDED.store_id,
+                          enabled = EXCLUDED.enabled,
+                          commission_rate = EXCLUDED.commission_rate,
+                          vendor_approval_required = EXCLUDED.vendor_approval_required,
+                          updated_at = now()
+            "#,
+        )
+        .bind(tenant_uuid)
+        .bind(store_uuid)
+        .bind(mall.enabled)
+        .bind(mall.commission_rate)
+        .bind(mall.vendor_approval_required)
+        .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
         Ok(())
@@ -704,6 +992,32 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn insert_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        location_id: &uuid::Uuid,
+        tenant_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        location: &crate::pb::pb::StoreLocation,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO store_locations (id, tenant_id, store_id, code, name, status)
+            VALUES ($1,$2,$3,$4,$5,$6)
+            "#,
+        )
+        .bind(location_id)
+        .bind(tenant_uuid)
+        .bind(store_uuid)
+        .bind(&location.code)
+        .bind(&location.name)
+        .bind(&location.status)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn update_store_location(
         &self,
         location_id: &uuid::Uuid,
@@ -728,6 +1042,31 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn update_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        location_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        location: &crate::pb::pb::StoreLocation,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            UPDATE store_locations
+            SET code = $1, name = $2, status = $3, updated_at = now()
+            WHERE id = $4 AND store_id = $5
+            "#,
+        )
+        .bind(&location.code)
+        .bind(&location.name)
+        .bind(&location.status)
+        .bind(location_id)
+        .bind(store_uuid)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn delete_store_location(
         &self,
         location_id: &uuid::Uuid,
@@ -737,6 +1076,21 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             .bind(location_id)
             .bind(store_uuid)
             .execute(self.db)
+            .await
+            .map_err(db::error)?;
+        Ok(res.rows_affected())
+    }
+
+    async fn delete_store_location_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        location_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)> {
+        let res = sqlx::query("DELETE FROM store_locations WHERE id = $1 AND store_id = $2")
+            .bind(location_id)
+            .bind(store_uuid)
+            .execute(exec.as_mut())
             .await
             .map_err(db::error)?;
         Ok(res.rows_affected())
@@ -957,6 +1311,38 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn insert_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rate_id: &uuid::Uuid,
+        zone_uuid: &uuid::Uuid,
+        rate: &crate::pb::pb::ShippingRate,
+        fee_amount: i64,
+        fee_currency: &str,
+        min: Option<i64>,
+        max: Option<i64>,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO shipping_rates (
+                id, zone_id, name, min_subtotal_amount, max_subtotal_amount,
+                fee_amount, fee_currency
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+            "#,
+        )
+        .bind(rate_id)
+        .bind(zone_uuid)
+        .bind(&rate.name)
+        .bind(min)
+        .bind(max)
+        .bind(fee_amount)
+        .bind(fee_currency)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn update_shipping_rate(
         &self,
         rate_id: &uuid::Uuid,
@@ -986,6 +1372,36 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn update_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rate_id: &uuid::Uuid,
+        rate: &crate::pb::pb::ShippingRate,
+        fee_amount: i64,
+        fee_currency: &str,
+        min: Option<i64>,
+        max: Option<i64>,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            UPDATE shipping_rates
+            SET name = $1, min_subtotal_amount = $2, max_subtotal_amount = $3,
+                fee_amount = $4, fee_currency = $5, updated_at = now()
+            WHERE id = $6
+            "#,
+        )
+        .bind(&rate.name)
+        .bind(min)
+        .bind(max)
+        .bind(fee_amount)
+        .bind(fee_currency)
+        .bind(rate_id)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn delete_shipping_rate(
         &self,
         store_uuid: &uuid::Uuid,
@@ -1001,6 +1417,27 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         .bind(store_uuid)
         .bind(rate_id)
         .execute(self.db)
+        .await
+        .map_err(db::error)?;
+        Ok(res.rows_affected())
+    }
+
+    async fn delete_shipping_rate_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        store_uuid: &uuid::Uuid,
+        rate_id: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)> {
+        let res = sqlx::query(
+            r#"
+            DELETE FROM shipping_rates r
+            USING shipping_zones z
+            WHERE r.zone_id = z.id AND z.store_id = $1 AND r.id = $2
+            "#,
+        )
+        .bind(store_uuid)
+        .bind(rate_id)
+        .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
         Ok(res.rows_affected())
@@ -1058,6 +1495,32 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn insert_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        tenant_uuid: &uuid::Uuid,
+        rule: &crate::pb::pb::TaxRule,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            INSERT INTO tax_rules (id, store_id, tenant_id, name, rate, applies_to)
+            VALUES ($1,$2,$3,$4,$5,$6)
+            "#,
+        )
+        .bind(rule_id)
+        .bind(store_uuid)
+        .bind(tenant_uuid)
+        .bind(&rule.name)
+        .bind(rule.rate)
+        .bind(&rule.applies_to)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn update_tax_rule(
         &self,
         rule_id: &uuid::Uuid,
@@ -1082,6 +1545,31 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         Ok(())
     }
 
+    async fn update_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        rule: &crate::pb::pb::TaxRule,
+    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        sqlx::query(
+            r#"
+            UPDATE tax_rules
+            SET name = $1, rate = $2, applies_to = $3, updated_at = now()
+            WHERE id = $4 AND store_id = $5
+            "#,
+        )
+        .bind(&rule.name)
+        .bind(rule.rate)
+        .bind(&rule.applies_to)
+        .bind(rule_id)
+        .bind(store_uuid)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+        Ok(())
+    }
+
     async fn delete_tax_rule(
         &self,
         rule_id: &uuid::Uuid,
@@ -1090,7 +1578,22 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND store_id = $2")
             .bind(rule_id)
             .bind(store_uuid)
-            .execute(self.db)
+        .execute(self.db)
+        .await
+        .map_err(db::error)?;
+        Ok(res.rows_affected())
+    }
+
+    async fn delete_tax_rule_tx(
+        &self,
+        exec: &mut Transaction<'_, Postgres>,
+        rule_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+    ) -> Result<u64, (StatusCode, Json<ConnectError>)> {
+        let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND store_id = $2")
+            .bind(rule_id)
+            .bind(store_uuid)
+            .execute(exec.as_mut())
             .await
             .map_err(db::error)?;
         Ok(res.rows_affected())

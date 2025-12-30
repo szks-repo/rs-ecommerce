@@ -80,8 +80,6 @@ pub async fn upsert_shipping_zone(
         repo.insert_zone_prefecture_tx(&mut tx, &zone_id, pref).await?;
     }
 
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
-
     let updated = pb::ShippingZone {
         id: zone_id.to_string(),
         name: zone.name,
@@ -89,8 +87,8 @@ pub async fn upsert_shipping_zone(
         prefectures: zone.prefectures,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             ShippingZoneAuditAction::Upsert.into(),
@@ -103,6 +101,7 @@ pub async fn upsert_shipping_zone(
     )
     .await?;
 
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -122,11 +121,10 @@ pub async fn delete_shipping_zone(
     let rows = repo
         .delete_shipping_zone_tx(&mut tx, &zone_uuid, &store_uuid.as_uuid())
         .await?;
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     let deleted = rows > 0;
     if deleted {
-        let _ = audit::record(
-            state,
+        audit::record_tx(
+            &mut tx,
             audit_input(
                 tenant_id.clone(),
                 ShippingZoneAuditAction::Delete.into(),
@@ -139,6 +137,7 @@ pub async fn delete_shipping_zone(
         )
         .await?;
     }
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 
@@ -190,9 +189,11 @@ pub async fn upsert_shipping_rate(
     let min = rate.min_subtotal.clone().map(|m| m.amount);
     let max = rate.max_subtotal.clone().map(|m| m.amount);
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if rate.id.is_empty() {
         let zone_uuid = parse_uuid(&rate.zone_id, "zone_id")?;
-        repo.insert_shipping_rate(
+        repo.insert_shipping_rate_tx(
+            &mut tx,
             &rate_id,
             &zone_uuid,
             &rate,
@@ -203,8 +204,16 @@ pub async fn upsert_shipping_rate(
         )
         .await?;
     } else {
-        repo.update_shipping_rate(&rate_id, &rate, fee_amount, &fee_currency, min, max)
-            .await?;
+        repo.update_shipping_rate_tx(
+            &mut tx,
+            &rate_id,
+            &rate,
+            fee_amount,
+            &fee_currency,
+            min,
+            max,
+        )
+        .await?;
     }
 
     let _ = tenant_id;
@@ -217,8 +226,8 @@ pub async fn upsert_shipping_rate(
         fee: rate.fee,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             ShippingRateAuditAction::Upsert.into(),
@@ -231,6 +240,7 @@ pub async fn upsert_shipping_rate(
     )
     .await?;
 
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -244,16 +254,18 @@ pub async fn delete_shipping_rate(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     let rows = repo
-        .delete_shipping_rate(
+        .delete_shipping_rate_tx(
+            &mut tx,
             &store_uuid.as_uuid(),
             &parse_uuid(&rate_id, "rate_id")?,
         )
         .await?;
     let deleted = rows > 0;
     if deleted {
-        let _ = audit::record(
-            state,
+        audit::record_tx(
+            &mut tx,
             audit_input(
                 tenant_id.clone(),
                 ShippingRateAuditAction::Delete.into(),
@@ -266,6 +278,7 @@ pub async fn delete_shipping_rate(
         )
         .await?;
     }
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

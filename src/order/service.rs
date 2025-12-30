@@ -85,6 +85,7 @@ pub async fn update_order_status(
         .map(|row| row.get::<String, _>("status"));
     let status = order_status_to_string(req.status)
         .ok_or_else(|| OrderError::invalid_argument("status is required"))?;
+    let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     sqlx::query(
         r#"
         UPDATE orders SET status = $1, updated_at = now()
@@ -94,7 +95,7 @@ pub async fn update_order_status(
     .bind(status)
     .bind(parse_uuid(&req.order_id, "order_id")?)
     .bind(&tenant_id)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(OrderError::from)?;
 
@@ -109,8 +110,8 @@ pub async fn update_order_status(
 
     let before_json = before_status.map(|s| serde_json::json!({ "status": s }));
     let after_json = Some(serde_json::json!({ "status": status }));
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id.clone(),
             OrderAuditAction::UpdateStatus.into(),
@@ -123,6 +124,7 @@ pub async fn update_order_status(
     )
     .await?;
 
+    tx.commit().await.map_err(OrderError::from)?;
     Ok(order)
 }
 
@@ -133,6 +135,7 @@ pub async fn create_shipment(
 ) -> OrderResult<pb::ShipmentAdmin> {
     let tenant_id = tenant_id_for_order(state, &req.order_id).await?;
     let shipment_id = uuid::Uuid::new_v4();
+    let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     sqlx::query(
         r#"
         INSERT INTO shipments (id, order_id, vendor_id, status, tracking_no, carrier)
@@ -145,7 +148,7 @@ pub async fn create_shipment(
     .bind(shipment_status_to_string(req.status))
     .bind(req.tracking_no.clone())
     .bind(req.carrier.clone())
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(OrderError::from)?;
 
@@ -158,8 +161,8 @@ pub async fn create_shipment(
         carrier: req.carrier,
     };
 
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id,
             ShipmentAuditAction::Create.into(),
@@ -172,6 +175,7 @@ pub async fn create_shipment(
     )
     .await?;
 
+    tx.commit().await.map_err(OrderError::from)?;
     Ok(shipment)
 }
 
@@ -181,9 +185,10 @@ pub async fn update_shipment_status(
     _actor: Option<pb::ActorContext>,
 ) -> OrderResult<pb::ShipmentAdmin> {
     let tenant_id = tenant_id_for_shipment(state, &req.shipment_id).await?;
+    let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     let before_status = sqlx::query("SELECT status FROM shipments WHERE id = $1")
         .bind(parse_uuid(&req.shipment_id, "shipment_id")?)
-        .fetch_optional(&state.db)
+        .fetch_optional(tx.as_mut())
         .await
         .map_err(OrderError::from)?
         .map(|row| row.get::<String, _>("status"));
@@ -198,7 +203,7 @@ pub async fn update_shipment_status(
     .bind(req.tracking_no.clone())
     .bind(req.carrier.clone())
     .bind(parse_uuid(&req.shipment_id, "shipment_id")?)
-    .execute(&state.db)
+    .execute(tx.as_mut())
     .await
     .map_err(OrderError::from)?;
 
@@ -213,8 +218,8 @@ pub async fn update_shipment_status(
 
     let before_json = before_status.map(|s| serde_json::json!({ "status": s }));
     let after_json = Some(serde_json::json!({ "status": shipment_status_to_string(req.status) }));
-    let _ = audit::record(
-        state,
+    audit::record_tx(
+        &mut tx,
         audit_input(
             tenant_id,
             ShipmentAuditAction::UpdateStatus.into(),
@@ -227,6 +232,7 @@ pub async fn update_shipment_status(
     )
     .await?;
 
+    tx.commit().await.map_err(OrderError::from)?;
     Ok(shipment)
 }
 

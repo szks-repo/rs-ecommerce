@@ -846,4 +846,139 @@ impl<'a> PgIdentityRepository<'a> {
         .map_err(IdentityError::from)?;
         Ok(())
     }
+
+    pub async fn insert_staff_tx<'e, E>(
+        &self,
+        exec: E,
+        staff_id: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        email: Option<&str>,
+        login_id: Option<&str>,
+        phone: Option<&str>,
+        password_hash: &str,
+        role_uuid: &uuid::Uuid,
+        status: &str,
+        display_name: Option<&str>,
+    ) -> IdentityResult<()>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query(
+            r#"
+            INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status, display_name)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            "#,
+        )
+        .bind(staff_id)
+        .bind(store_uuid)
+        .bind(email)
+        .bind(login_id)
+        .bind(phone)
+        .bind(password_hash)
+        .bind(role_uuid)
+        .bind(status)
+        .bind(display_name)
+        .execute(exec)
+        .await
+        .map_err(IdentityError::from)?;
+        Ok(())
+    }
+
+    pub async fn update_staff_tx<'e, E>(
+        &self,
+        exec: E,
+        staff_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        role_id: &str,
+        status: &str,
+        display_name: &str,
+    ) -> IdentityResult<Option<StaffSummaryRow>>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        let row = sqlx::query(
+            r#"
+            UPDATE store_staff
+            SET role_id = COALESCE(NULLIF($1, '')::uuid, role_id),
+                status = COALESCE(NULLIF($2, ''), status),
+                display_name = COALESCE(NULLIF($3, ''), display_name),
+                updated_at = now()
+            WHERE id = $4 AND store_id = $5
+            RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name
+            "#,
+        )
+        .bind(role_id)
+        .bind(status)
+        .bind(display_name)
+        .bind(staff_uuid)
+        .bind(store_uuid)
+        .fetch_optional(exec)
+        .await
+        .map_err(IdentityError::from)?;
+
+        Ok(row.map(|row| StaffSummaryRow {
+            staff_id: row.get("staff_id"),
+            email: row.get("email"),
+            login_id: row.get("login_id"),
+            phone: row.get("phone"),
+            status: row.get("status"),
+            display_name: row.get("display_name"),
+            role_id: row.get("role_id"),
+            role_key: String::new(),
+        }))
+    }
+
+    pub async fn update_staff_role_tx<'e, E>(
+        &self,
+        exec: E,
+        staff_uuid: &uuid::Uuid,
+        store_uuid: &uuid::Uuid,
+        role_uuid: &uuid::Uuid,
+    ) -> IdentityResult<()>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        sqlx::query(
+            r#"
+            UPDATE store_staff
+            SET role_id = $1, updated_at = now()
+            WHERE id = $2 AND store_id = $3
+            "#,
+        )
+        .bind(role_uuid)
+        .bind(staff_uuid)
+        .bind(store_uuid)
+        .execute(exec)
+        .await
+        .map_err(IdentityError::from)?;
+        Ok(())
+    }
+
+    pub async fn delete_role_tx<'e, E>(
+        &self,
+        exec: E,
+        store_uuid: &uuid::Uuid,
+        role_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Option<RoleRow>>
+    where
+        E: Executor<'e, Database = Postgres>,
+    {
+        let row = sqlx::query(
+            r#"
+            DELETE FROM store_roles
+            WHERE id = $1 AND store_id = $2
+            RETURNING id::text as id, key, name
+            "#,
+        )
+        .bind(role_uuid)
+        .bind(store_uuid)
+        .fetch_optional(exec)
+        .await
+        .map_err(IdentityError::from)?;
+        Ok(row.map(|row| RoleRow {
+            id: row.get("id"),
+            key: row.get("key"),
+            name: row.get("name"),
+        }))
+    }
 }
