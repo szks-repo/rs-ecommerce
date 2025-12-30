@@ -263,6 +263,14 @@ pub fn router() -> Router<AppState> {
             post(identity::update_staff),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/InviteStaff",
+            post(identity::invite_staff),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/TransferOwner",
+            post(identity::transfer_owner),
+        )
+        .route(
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
             post(audit::list_audit_logs),
         )

@@ -31,6 +31,7 @@ type StaffOption = {
   phone: string;
   roleKey: string;
   status: string;
+  displayName: string;
 };
 
 function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: number }) {
@@ -144,6 +145,7 @@ export default function AuditLogsPage() {
             phone: item.phone ?? "",
             roleKey: item.roleKey ?? "",
             status: item.status ?? "",
+            displayName: item.displayName ?? "",
           }))
         );
       })
@@ -154,7 +156,7 @@ export default function AuditLogsPage() {
   }, []);
 
   function formatStaffLabel(staff: StaffOption) {
-    const primary = staff.email || staff.loginId || staff.phone || staff.staffId;
+    const primary = staff.displayName || staff.email || staff.loginId || staff.phone || staff.staffId;
     const suffix = staff.roleKey ? ` (${staff.roleKey})` : "";
     return `${primary}${suffix}`;
   }

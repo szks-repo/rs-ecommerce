@@ -8,6 +8,8 @@ import {
   IdentityCreateStaffRequestSchema,
   IdentityListStaffRequestSchema,
   IdentityUpdateStaffRequestSchema,
+  IdentityInviteStaffRequestSchema,
+  IdentityTransferOwnerRequestSchema,
   IdentityListRolesRequestSchema,
   IdentityListRolesWithPermissionsRequestSchema,
   IdentityUpdateRoleRequestSchema,
@@ -58,6 +60,7 @@ export async function identityCreateStaff(params: {
   phone?: string;
   password: string;
   roleId: string;
+  displayName?: string;
 }) {
   return client.createStaff(
     create(IdentityCreateStaffRequestSchema, {
@@ -66,6 +69,7 @@ export async function identityCreateStaff(params: {
       phone: params.phone || "",
       password: params.password,
       roleId: params.roleId,
+      displayName: params.displayName || "",
     })
   );
 }
@@ -80,12 +84,38 @@ export async function identityUpdateStaff(params: {
   staffId: string;
   roleId?: string;
   status?: string;
+  displayName?: string;
 }) {
   return client.updateStaff(
     create(IdentityUpdateStaffRequestSchema, {
       staffId: params.staffId,
       roleId: params.roleId || "",
       status: params.status || "",
+      displayName: params.displayName || "",
+    })
+  );
+}
+
+export async function identityInviteStaff(params: {
+  email: string;
+  roleId: string;
+  displayName?: string;
+}) {
+  return client.inviteStaff(
+    create(IdentityInviteStaffRequestSchema, {
+      email: params.email,
+      roleId: params.roleId,
+      displayName: params.displayName || "",
+    })
+  );
+}
+
+export async function identityTransferOwner(params: {
+  newOwnerStaffId: string;
+}) {
+  return client.transferOwner(
+    create(IdentityTransferOwnerRequestSchema, {
+      newOwnerStaffId: params.newOwnerStaffId,
     })
   );
 }

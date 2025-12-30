@@ -1,5 +1,7 @@
 import StaffCreateForm from "@/components/staff-create-form";
 import StaffListForm from "@/components/staff-list-form";
+import StaffInviteForm from "@/components/staff-invite-form";
+import OwnerTransferForm from "@/components/owner-transfer-form";
 
 export default function IdentityPage() {
   return (
@@ -10,6 +12,8 @@ export default function IdentityPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         <StaffCreateForm />
         <StaffListForm />
+        <StaffInviteForm />
+        <OwnerTransferForm />
       </div>
 
       <div className="mt-8 rounded-lg border border-neutral-200 bg-white p-6 text-sm text-neutral-600">

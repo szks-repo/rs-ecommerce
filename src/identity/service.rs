@@ -9,11 +9,12 @@ use jsonwebtoken::{EncodingKey, Header, encode};
 use rand_core::OsRng;
 use serde::Serialize;
 use sqlx::Row;
+use chrono::{Duration, Utc};
 
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::{db, audit},
+    infrastructure::{db, audit, email},
     rpc::json::ConnectError,
     shared::{
         time::chrono_to_timestamp,
@@ -97,7 +98,7 @@ pub async fn list_staff(
     let rows = sqlx::query(
         r#"
         SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
-               sr.id::text as role_id, sr.key as role_key
+               ss.display_name, sr.id::text as role_id, sr.key as role_key
         FROM store_staff ss
         JOIN store_roles sr ON sr.id = ss.role_id
         WHERE ss.store_id = $1
@@ -119,6 +120,7 @@ pub async fn list_staff(
             role_id: row.get("role_id"),
             role_key: row.get("role_key"),
             status: row.get("status"),
+            display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
         })
         .collect();
 
@@ -138,12 +140,12 @@ pub async fn update_staff(
             }),
         ));
     }
-    if req.role_id.is_empty() && req.status.is_empty() {
+    if req.role_id.is_empty() && req.status.is_empty() && req.display_name.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
                 code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id or status is required".to_string(),
+                message: "role_id, status, or display_name is required".to_string(),
             }),
         ));
     }
@@ -218,13 +220,15 @@ pub async fn update_staff(
         UPDATE store_staff
         SET role_id = COALESCE(NULLIF($1, '')::uuid, role_id),
             status = COALESCE(NULLIF($2, ''), status),
+            display_name = COALESCE(NULLIF($3, ''), display_name),
             updated_at = now()
-        WHERE id = $3 AND store_id = $4
-        RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id
+        WHERE id = $4 AND store_id = $5
+        RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name
         "#,
     )
     .bind(&req.role_id)
     .bind(&req.status)
+    .bind(&req.display_name)
     .bind(staff_uuid)
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
@@ -259,12 +263,22 @@ pub async fn update_staff(
         role_id: row.get("role_id"),
         role_key: role_key_row.get("key"),
         status: row.get("status"),
+        display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
     };
 
     let actor_id = req
         .actor
         .as_ref()
         .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    if actor_id.is_none() {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::PermissionDenied,
+                message: "actor_id is required".to_string(),
+            }),
+        ));
+    }
     let actor_type = req
         .actor
         .as_ref()
@@ -289,6 +303,7 @@ pub async fn update_staff(
                 "role_id": staff.role_id,
                 "role_key": staff.role_key,
                 "status": staff.status,
+                "display_name": staff.display_name,
             })),
             metadata_json: None,
         },
@@ -298,6 +313,400 @@ pub async fn update_staff(
     Ok(pb::IdentityUpdateStaffResponse {
         updated: true,
         staff: Some(staff),
+    })
+}
+
+pub async fn invite_staff(
+    state: &AppState,
+    req: pb::IdentityInviteStaffRequest,
+) -> Result<pb::IdentityInviteStaffResponse, (StatusCode, Json<ConnectError>)> {
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    require_owner(req.actor.as_ref())?;
+
+    if req.email.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "email is required".to_string(),
+            }),
+        ));
+    }
+    if req.role_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id is required".to_string(),
+            }),
+        ));
+    }
+
+    let store_uuid = StoreId::parse(&store_id)?;
+    let role_uuid = parse_uuid(&req.role_id, "role_id")?;
+    let role_row = sqlx::query(
+        r#"
+        SELECT key, name
+        FROM store_roles
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(role_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    let Some(role_row) = role_row else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id is invalid".to_string(),
+            }),
+        ));
+    };
+    let role_key: String = role_row.get("key");
+    let role_name: Option<String> = role_row.get("name");
+    if role_key == "owner" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "owner role cannot be invited".to_string(),
+            }),
+        ));
+    }
+
+    let existing = sqlx::query(
+        r#"
+        SELECT 1
+        FROM store_staff
+        WHERE store_id = $1 AND email = $2
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(&req.email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if existing.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::AlreadyExists,
+                message: "email already exists".to_string(),
+            }),
+        ));
+    }
+
+    let existing_invite = sqlx::query(
+        r#"
+        SELECT 1
+        FROM store_staff_invites
+        WHERE store_id = $1 AND email = $2 AND accepted_at IS NULL
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(&req.email)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if existing_invite.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::AlreadyExists,
+                message: "invite already exists".to_string(),
+            }),
+        ));
+    }
+
+    let actor_id = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let created_by = match actor_id.as_ref() {
+        Some(id) => Some(parse_uuid(id, "actor_id")?),
+        None => None,
+    };
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let staff_id = uuid::Uuid::new_v4();
+    let invite_id = uuid::Uuid::new_v4();
+    let token = uuid::Uuid::new_v4().to_string();
+    let expires_at = Utc::now() + Duration::days(7);
+
+    sqlx::query(
+        r#"
+        INSERT INTO store_staff (id, store_id, email, role_id, status, display_name)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        "#,
+    )
+    .bind(staff_id)
+    .bind(store_uuid.as_uuid())
+    .bind(&req.email)
+    .bind(role_uuid)
+    .bind("invited")
+    .bind(if req.display_name.is_empty() { None } else { Some(req.display_name.clone()) })
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO store_staff_invites (id, store_id, email, role_id, token, created_by, expires_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        "#,
+    )
+    .bind(invite_id)
+    .bind(store_uuid.as_uuid())
+    .bind(&req.email)
+    .bind(role_uuid)
+    .bind(&token)
+    .bind(created_by)
+    .bind(expires_at)
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    let store_row = sqlx::query("SELECT name FROM stores WHERE id = $1")
+        .bind(store_uuid.as_uuid())
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
+    let store_name: String = store_row
+        .and_then(|row| row.try_get::<String, _>("name").ok())
+        .unwrap_or_else(|| "Store".to_string());
+
+    let email_config = email::EmailConfig::from_env();
+    email::send_invite_email(
+        &email_config,
+        &req.email,
+        &store_name,
+        Some(req.display_name.as_str()),
+        role_name.as_deref(),
+        &token,
+    )
+    .await?;
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id,
+            actor_id,
+            actor_type: req
+                .actor
+                .as_ref()
+                .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+                .unwrap_or_else(|| "staff".to_string()),
+            action: IdentityAuditAction::StaffInvite.into(),
+            target_type: Some("store_staff_invite".to_string()),
+            target_id: Some(invite_id.to_string()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "invite_id": invite_id.to_string(),
+                "staff_id": staff_id.to_string(),
+                "email": req.email,
+                "role_id": req.role_id,
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    Ok(pb::IdentityInviteStaffResponse {
+        invite_id: invite_id.to_string(),
+        invite_token: token,
+        email: req.email,
+        role_id: req.role_id,
+        expires_at: chrono_to_timestamp(Some(expires_at)),
+    })
+}
+
+pub async fn transfer_owner(
+    state: &AppState,
+    req: pb::IdentityTransferOwnerRequest,
+) -> Result<pb::IdentityTransferOwnerResponse, (StatusCode, Json<ConnectError>)> {
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    require_owner(req.actor.as_ref())?;
+
+    if req.new_owner_staff_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "new_owner_staff_id is required".to_string(),
+            }),
+        ));
+    }
+
+    let store_uuid = StoreId::parse(&store_id)?;
+    let new_owner_uuid = parse_uuid(&req.new_owner_staff_id, "new_owner_staff_id")?;
+    let actor_id = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+
+    let current_owner_row = sqlx::query(
+        r#"
+        SELECT ss.id::text as staff_id
+        FROM store_staff ss
+        JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE ss.store_id = $1 AND sr.key = 'owner'
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    let Some(current_owner_row) = current_owner_row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "owner not found".to_string(),
+            }),
+        ));
+    };
+    let current_owner_id: String = current_owner_row.get("staff_id");
+    if current_owner_id == req.new_owner_staff_id {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "new owner is already the owner".to_string(),
+            }),
+        ));
+    }
+
+    if let Some(actor_id) = actor_id.as_ref() {
+        if actor_id != &current_owner_id {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "only owner can transfer ownership".to_string(),
+                }),
+            ));
+        }
+    }
+
+    let target_row = sqlx::query(
+        r#"
+        SELECT ss.id::text as staff_id, ss.status
+        FROM store_staff ss
+        WHERE ss.id = $1 AND ss.store_id = $2
+        "#,
+    )
+    .bind(new_owner_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    let Some(target_row) = target_row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "new owner staff not found".to_string(),
+            }),
+        ));
+    };
+    let target_status: String = target_row.get("status");
+    if target_status != "active" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "new owner must be active".to_string(),
+            }),
+        ));
+    }
+
+    let owner_role_row = sqlx::query(
+        "SELECT id FROM store_roles WHERE store_id = $1 AND key = 'owner'",
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+    let owner_role_id: uuid::Uuid = owner_role_row.get("id");
+
+    let staff_role_row = sqlx::query(
+        "SELECT id FROM store_roles WHERE store_id = $1 AND key = 'staff'",
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+    let staff_role_id: uuid::Uuid = staff_role_row.get("id");
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    sqlx::query(
+        r#"
+        UPDATE store_staff
+        SET role_id = $1, updated_at = now()
+        WHERE id = $2 AND store_id = $3
+        "#,
+    )
+    .bind(owner_role_id)
+    .bind(new_owner_uuid)
+    .bind(store_uuid.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
+    sqlx::query(
+        r#"
+        UPDATE store_staff
+        SET role_id = $1, updated_at = now()
+        WHERE id = $2 AND store_id = $3
+        "#,
+    )
+    .bind(staff_role_id)
+    .bind(parse_uuid(&current_owner_id, "current_owner_id")?)
+    .bind(store_uuid.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
+    tx.commit().await.map_err(db::error)?;
+
+    let new_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
+    let previous_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id,
+            actor_id,
+            actor_type: req
+                .actor
+                .as_ref()
+                .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+                .unwrap_or_else(|| "staff".to_string()),
+            action: IdentityAuditAction::OwnerTransfer.into(),
+            target_type: Some("store".to_string()),
+            target_id: Some(store_id),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: Some(serde_json::json!({ "owner_staff_id": current_owner_id })),
+            after_json: Some(serde_json::json!({ "owner_staff_id": req.new_owner_staff_id })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    Ok(pb::IdentityTransferOwnerResponse {
+        transferred: true,
+        new_owner: Some(new_owner),
+        previous_owner: Some(previous_owner),
     })
 }
 
@@ -346,6 +755,7 @@ pub async fn create_staff(
     let login_id = req.login_id.clone();
     let phone = req.phone.clone();
     let role_id = req.role_id.clone();
+    let display_name = req.display_name.clone();
     let actor = req.actor.clone();
 
     let resp = create_staff_core(
@@ -357,6 +767,7 @@ pub async fn create_staff(
         phone.clone(),
         req.password,
         role_id.clone(),
+        display_name.clone(),
     )
     .await?;
 
@@ -389,6 +800,7 @@ pub async fn create_staff(
                 "email": email,
                 "login_id": login_id,
                 "phone": phone,
+                "display_name": display_name,
             })),
             metadata_json: None,
         },
@@ -401,6 +813,7 @@ pub async fn create_staff(
         tenant_id: resp.tenant_id,
         role_id: resp.role_id,
         role_key: resp.role_key,
+        display_name: resp.display_name,
     })
 }
 
@@ -562,7 +975,7 @@ pub async fn list_roles_with_permissions(
         r#"
         SELECT id, id::text as id_text, key, name, description
         FROM store_roles
-        WHERE store_id = $1
+        WHERE store_id = $1 AND key <> 'owner'
         ORDER BY created_at ASC
         "#,
     )
@@ -1036,6 +1449,7 @@ struct CreateStaffCoreResult {
     tenant_id: String,
     role_id: String,
     role_key: String,
+    display_name: String,
 }
 
 async fn create_staff_core(
@@ -1047,6 +1461,7 @@ async fn create_staff_core(
     phone: String,
     password: String,
     role_id: String,
+    display_name: String,
 ) -> Result<CreateStaffCoreResult, (StatusCode, Json<ConnectError>)> {
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
@@ -1109,8 +1524,8 @@ async fn create_staff_core(
 
     sqlx::query(
         r#"
-        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status, display_name)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         "#,
     )
     .bind(staff_id)
@@ -1121,6 +1536,7 @@ async fn create_staff_core(
     .bind(password_hash)
     .bind(role_uuid)
     .bind("active")
+    .bind(if display_name.is_empty() { None } else { Some(display_name.clone()) })
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -1131,6 +1547,56 @@ async fn create_staff_core(
         tenant_id,
         role_id,
         role_key,
+        display_name,
+    })
+}
+
+fn require_owner(actor: Option<&pb::ActorContext>) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    let actor_type = actor
+        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.as_str()) })
+        .unwrap_or("");
+    if actor_type != "owner" {
+        return Err((
+            StatusCode::FORBIDDEN,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::PermissionDenied,
+                message: "owner role is required".to_string(),
+            }),
+        ));
+    }
+    Ok(())
+}
+
+async fn fetch_staff_summary(
+    state: &AppState,
+    store_uuid: &uuid::Uuid,
+    staff_id: &str,
+) -> Result<pb::IdentityStaffSummary, (StatusCode, Json<ConnectError>)> {
+    let staff_uuid = parse_uuid(staff_id, "staff_id")?;
+    let row = sqlx::query(
+        r#"
+        SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
+               ss.display_name, sr.id::text as role_id, sr.key as role_key
+        FROM store_staff ss
+        JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE ss.id = $1 AND ss.store_id = $2
+        "#,
+    )
+    .bind(staff_uuid)
+    .bind(store_uuid)
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    Ok(pb::IdentityStaffSummary {
+        staff_id: row.get("staff_id"),
+        email: row.get::<Option<String>, _>("email").unwrap_or_default(),
+        login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
+        phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
+        role_id: row.get("role_id"),
+        role_key: row.get("role_key"),
+        status: row.get("status"),
+        display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
     })
 }
 
@@ -1331,7 +1797,7 @@ async fn list_roles_core(
         r#"
         SELECT id::text as id, key, name, description
         FROM store_roles
-        WHERE store_id = $1
+        WHERE store_id = $1 AND key <> 'owner'
         ORDER BY created_at ASC
         "#,
     )

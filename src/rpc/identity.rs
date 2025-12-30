@@ -147,3 +147,31 @@ pub async fn update_staff(
     let resp = identity::service::update_staff(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
+
+pub async fn invite_staff(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityInviteStaffResponse>), (StatusCode, Json<ConnectError>)> {
+    let mut req = parse_request::<pb::IdentityInviteStaffRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
+    let resp = identity::service::invite_staff(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn transfer_owner(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityTransferOwnerResponse>), (StatusCode, Json<ConnectError>)> {
+    let mut req = parse_request::<pb::IdentityTransferOwnerRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
+    let resp = identity::service::transfer_owner(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}

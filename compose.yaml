@@ -16,10 +16,15 @@ services:
       MEILI_URL: http://meilisearch:7700
       MEILI_MASTER_KEY: local-master-key
       AUTH_JWT_SECRET: local-dev-secret
+      SMTP_HOST: mailpit
+      SMTP_PORT: "1025"
+      SMTP_FROM: "no-reply@local.test"
+      BASE_URL: "http://localhost:3000"
     depends_on:
       - db
       - redis
       - meilisearch
+      - mailpit
     ports:
       - "8080:8080"
 
@@ -95,6 +100,12 @@ services:
     ports:
       - "16686:16686"
       - "4317:4317"
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    ports:
+      - "1025:1025"
+      - "8025:8025"
 
 volumes:
   pgdata:

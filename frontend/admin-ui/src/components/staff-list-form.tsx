@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { identityListRoles, identityListStaff, identityUpdateStaff } from "@/lib/identity";
 import { formatConnectError } from "@/lib/handle-error";
@@ -23,6 +24,7 @@ type StaffRow = {
   roleId: string;
   roleKey: string;
   status: string;
+  displayName: string;
 };
 
 type RoleRow = {
@@ -35,6 +37,7 @@ export default function StaffListForm() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [pending, setPending] = useState<Record<string, string>>({});
+  const [pendingName, setPendingName] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const { push } = useToast();
@@ -63,13 +66,17 @@ export default function StaffListForm() {
         roleId: item.roleId ?? "",
         roleKey: item.roleKey ?? "",
         status: item.status ?? "",
+        displayName: item.displayName ?? "",
       }));
       setStaff(list);
       const initial: Record<string, string> = {};
+      const initialNames: Record<string, string> = {};
       list.forEach((row) => {
         initial[row.staffId] = row.roleId;
+        initialNames[row.staffId] = row.displayName;
       });
       setPending(initial);
+      setPendingName(initialNames);
     } catch (err) {
       const uiError = formatConnectError(err, "Load failed", "Failed to load staff");
       push({
@@ -87,12 +94,13 @@ export default function StaffListForm() {
   }, []);
 
   function formatStaffLabel(row: StaffRow) {
-    const primary = row.email || row.loginId || row.phone || row.staffId;
+    const primary = row.displayName || row.email || row.loginId || row.phone || row.staffId;
     return primary;
   }
 
   async function handleSave(staffId: string) {
     const roleId = pending[staffId] ?? "";
+    const displayName = pendingName[staffId] ?? "";
     if (!roleId) {
       push({
         variant: "error",
@@ -103,17 +111,19 @@ export default function StaffListForm() {
     }
     setIsSaving(staffId);
     try {
-      const resp = await identityUpdateStaff({ staffId, roleId });
+      const resp = await identityUpdateStaff({ staffId, roleId, displayName });
       if (!resp.updated) {
         throw new Error("Update failed");
       }
       setStaff((prev) =>
-        prev.map((row) => (row.staffId === staffId ? { ...row, roleId } : row))
+        prev.map((row) =>
+          row.staffId === staffId ? { ...row, roleId, displayName } : row
+        )
       );
       push({
         variant: "success",
         title: "Updated",
-        description: "Staff role updated.",
+        description: "Staff updated.",
       });
     } catch (err) {
       const uiError = formatConnectError(err, "Update failed", "Failed to update staff");
@@ -149,57 +159,69 @@ export default function StaffListForm() {
             staff.map((row) => {
               const isOwner = row.roleKey === "owner";
               return (
-              <div
-                key={row.staffId}
-                className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50/60 p-3 md:grid-cols-[1.6fr_1fr_auto]"
-              >
-                <div>
-                  <div className="text-sm font-medium text-neutral-900">{formatStaffLabel(row)}</div>
-                  <div className="text-xs text-neutral-500">
-                    role: {(roleLabelMap.get(row.roleKey) ?? row.roleKey) || "-"}
+                <div
+                  key={row.staffId}
+                  className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50/60 p-3 md:grid-cols-[1.6fr_1fr_auto]"
+                >
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-sm font-medium text-neutral-900">{formatStaffLabel(row)}</div>
+                      <div className="text-xs text-neutral-500">
+                        role: {(roleLabelMap.get(row.roleKey) ?? row.roleKey) || "-"}
+                      </div>
+                      {isOwner ? (
+                        <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
+                      ) : null}
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-neutral-500">Display name</Label>
+                      <Input
+                        value={pendingName[row.staffId] ?? ""}
+                        onChange={(e) =>
+                          setPendingName((prev) => ({ ...prev, [row.staffId]: e.target.value }))
+                        }
+                        disabled={isOwner}
+                      />
+                    </div>
                   </div>
-                  {isOwner ? (
-                    <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
-                  ) : null}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-neutral-500">Role</Label>
-                  <Select
-                    value={pending[row.staffId] ?? ""}
-                    onValueChange={(value) =>
-                      setPending((prev) => ({ ...prev, [row.staffId]: value }))
-                    }
-                    disabled={isOwner}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select role" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {roles.length === 0 ? (
-                        <SelectItem value="__none__" disabled>
-                          No roles found
-                        </SelectItem>
-                      ) : (
-                        roles.map((role) => (
-                          <SelectItem key={role.id} value={role.id}>
-                            {role.name} {role.key ? `(${role.key})` : ""}
+                  <div className="space-y-1">
+                    <Label className="text-xs text-neutral-500">Role</Label>
+                    <Select
+                      value={pending[row.staffId] ?? ""}
+                      onValueChange={(value) =>
+                        setPending((prev) => ({ ...prev, [row.staffId]: value }))
+                      }
+                      disabled={isOwner}
+                    >
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Select role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.length === 0 ? (
+                          <SelectItem value="__none__" disabled>
+                            No roles found
                           </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                        ) : (
+                          roles.map((role) => (
+                            <SelectItem key={role.id} value={role.id}>
+                              {role.name} {role.key ? `(${role.key})` : ""}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button
+                      type="button"
+                      onClick={() => handleSave(row.staffId)}
+                      disabled={isOwner || isSaving === row.staffId}
+                    >
+                      {isSaving === row.staffId ? "Saving..." : "Save"}
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-end">
-                  <Button
-                    type="button"
-                    onClick={() => handleSave(row.staffId)}
-                    disabled={isOwner || isSaving === row.staffId}
-                  >
-                    {isSaving === row.staffId ? "Saving..." : "Save"}
-                  </Button>
-                </div>
-              </div>
-            );
+              );
             })
           )}
         </div>
