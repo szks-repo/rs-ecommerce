@@ -93,3 +93,44 @@ fn error_response(status: StatusCode, message: &str) -> Response {
     });
     (status, body).into_response()
 }
+
+#[derive(Clone, Copy, Debug)]
+pub enum PermissionKey {
+    CatalogRead,
+    CatalogWrite,
+    OrdersRead,
+    OrdersWrite,
+    PromotionsWrite,
+    SettingsRead,
+    SettingsWrite,
+    StaffManage,
+    AuditRead,
+    CustomersRead,
+    CustomersWrite,
+}
+
+impl PermissionKey {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            PermissionKey::CatalogRead => "catalog.read",
+            PermissionKey::CatalogWrite => "catalog.write",
+            PermissionKey::OrdersRead => "orders.read",
+            PermissionKey::OrdersWrite => "orders.write",
+            PermissionKey::PromotionsWrite => "promotions.write",
+            PermissionKey::SettingsRead => "settings.read",
+            PermissionKey::SettingsWrite => "settings.write",
+            PermissionKey::StaffManage => "staff.manage",
+            PermissionKey::AuditRead => "audit.read",
+            PermissionKey::CustomersRead => "customers.read",
+            PermissionKey::CustomersWrite => "customers.write",
+        }
+    }
+}
+
+pub async fn require_permission_key(
+    req: axum::http::Request<Body>,
+    next: Next,
+    permission: PermissionKey,
+) -> Response {
+    require_permission(req, next, permission.as_str()).await
+}

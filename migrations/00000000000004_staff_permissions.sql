@@ -44,5 +44,7 @@ INSERT INTO permissions (key, name, description) VALUES
     ('promotions.write', 'Promotions Write', 'Create/update promotions'),
     ('settings.read', 'Settings Read', 'Read store settings'),
     ('settings.write', 'Settings Write', 'Update store settings'),
-    ('staff.manage', 'Staff Manage', 'Create/update staff and roles')
+    ('staff.manage', 'Staff Manage', 'Create/update staff and roles'),
+    ('customers.read', 'Customers Read', 'Read customer profiles and identities'),
+    ('customers.write', 'Customers Write', 'Create/update customer profiles and identities')
 ON CONFLICT (key) DO NOTHING;
