@@ -1,6 +1,5 @@
 use axum::{Json, http::StatusCode};
 use sqlx::Row;
-use serde_json::Value;
 
 use crate::{
     AppState,
@@ -9,7 +8,8 @@ use crate::{
     rpc::json::ConnectError,
     product::domain::SkuCode,
     shared::{
-        audit_action::{AuditAction, ProductAuditAction, VariantAuditAction, InventoryAuditAction},
+        audit_action::{ProductAuditAction, VariantAuditAction, InventoryAuditAction},
+        audit_helpers::{audit_input, to_json_opt},
         ids::{parse_uuid, nullable_uuid, TenantId, StoreId, ProductId},
         money::{money_from_parts, money_to_parts, money_to_parts_opt},
         status::{ProductStatus, VariantStatus, FulfillmentType},
@@ -673,45 +673,6 @@ pub async fn set_inventory(
     Ok(inventory)
 }
 
-fn audit_input(
-    tenant_id: String,
-    action: AuditAction,
-    target_type: Option<&str>,
-    target_id: Option<String>,
-    before_json: Option<Value>,
-    after_json: Option<Value>,
-    actor: Option<pb::ActorContext>,
-) -> audit::AuditInput {
-    let (actor_id, actor_type) = actor_fields(actor);
-    audit::AuditInput {
-        tenant_id,
-        actor_id,
-        actor_type,
-        action,
-        target_type: target_type.map(|v| v.to_string()),
-        target_id,
-        request_id: None,
-        ip_address: None,
-        user_agent: None,
-        before_json,
-        after_json,
-        metadata_json: None,
-    }
-}
-
-fn actor_fields(actor: Option<pb::ActorContext>) -> (Option<String>, String) {
-    let actor_id = actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
-    let actor_type = actor
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type) })
-        .unwrap_or_else(|| "system".to_string());
-    (actor_id, actor_type)
-}
-
-fn to_json_opt<T: serde::Serialize>(value: Option<T>) -> Option<Value> {
-    value.and_then(|v| serde_json::to_value(v).ok())
-}
 
 async fn fetch_product_admin(
     state: &AppState,
