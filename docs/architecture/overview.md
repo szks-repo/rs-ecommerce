@@ -60,9 +60,9 @@
 
 ## Domain ValueObjects
 
-- `src/domain/ids`: typed IDs (`StoreId`, `TenantId`, `CustomerId`, `SkuId`/`VariantId` etc.) instead of raw `String`
-- `src/domain/status`: enums for status/type (`ProductStatus`, `VariantStatus`, `FulfillmentType`, etc.)
-- `src/domain/validation`: validated values (`StoreCode`, `SkuCode`, `Email`, `Phone`)
+- `src/shared/ids`: typed IDs (`StoreId`, `TenantId`, `CustomerId`, `SkuId`/`VariantId` etc.) instead of raw `String`
+- `src/shared/status`: enums for status/type (`ProductStatus`, `VariantStatus`, `FulfillmentType`, etc.)
+- `src/shared/validation`: validated values (`StoreCode`, `SkuCode`, `Email`, `Phone`)
 - Boundary conversion: RPC/DB layers convert to/from ValueObjects; domain logic prefers typed values
 
 ## Multi-Tenant Design (Mainstream = Single Brand)

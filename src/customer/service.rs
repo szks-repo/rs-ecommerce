@@ -7,7 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit, outbox},
     rpc::json::ConnectError,
-    domain::validation::{Email, Phone},
+    shared::validation::{Email, Phone},
     shared::{
         ids::{parse_uuid, StoreId, TenantId},
         time::chrono_to_timestamp,

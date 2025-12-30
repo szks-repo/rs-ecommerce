@@ -9,7 +9,7 @@ use crate::{
     pb::pb,
     infrastructure::db,
     rpc::json::ConnectError,
-    domain::validation::StoreCode,
+    shared::validation::StoreCode,
 };
 
 pub async fn initialize_store(

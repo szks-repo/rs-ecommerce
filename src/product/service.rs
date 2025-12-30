@@ -7,7 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
-    domain::validation::SkuCode,
+    product::domain::SkuCode,
     shared::{
         audit_action::{AuditAction, ProductAuditAction, VariantAuditAction, InventoryAuditAction},
         ids::{parse_uuid, nullable_uuid, TenantId, StoreId, ProductId},

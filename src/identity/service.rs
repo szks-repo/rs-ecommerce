@@ -16,7 +16,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit, email},
     rpc::json::ConnectError,
-    domain::validation::{Email, Phone},
+    shared::validation::{Email, Phone},
     shared::{
         time::chrono_to_timestamp,
         audit_action::IdentityAuditAction,
