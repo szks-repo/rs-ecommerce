@@ -218,7 +218,7 @@ pub async fn create_product(
                 return Err((
                     StatusCode::BAD_REQUEST,
                     Json(ConnectError {
-                        code: "invalid_argument",
+                        code: crate::rpc::json::ErrorCode::InvalidArgument,
                         message: "variant_axes.name is required".to_string(),
                     }),
                 ));
@@ -247,7 +247,7 @@ pub async fn create_product(
             (
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "default_variant is required when variant_axes is empty".to_string(),
                 }),
             )
@@ -256,7 +256,7 @@ pub async fn create_product(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "default_variant.sku is required".to_string(),
                 }),
             ));
@@ -265,7 +265,7 @@ pub async fn create_product(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "default_variant.fulfillment_type is required".to_string(),
                 }),
             ));
@@ -274,7 +274,7 @@ pub async fn create_product(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "default_variant.status is required".to_string(),
                 }),
             ));
@@ -455,7 +455,7 @@ pub async fn create_variant(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "tenant does not match product".to_string(),
                 }),
             ));
@@ -527,7 +527,7 @@ pub async fn update_variant(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "tenant does not match variant".to_string(),
                 }),
             ));
@@ -610,7 +610,7 @@ pub async fn set_inventory(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "location_id is required".to_string(),
             }),
         ));
@@ -798,7 +798,7 @@ async fn store_id_for_tenant(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "store not found for tenant".to_string(),
             }),
         ));
@@ -820,7 +820,7 @@ async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_id does not match token".to_string(),
                         }),
                     ));
@@ -835,7 +835,7 @@ async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "tenant_id does not match token".to_string(),
                         }),
                     ));
@@ -864,7 +864,7 @@ async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_code not found".to_string(),
                 }),
             ));
@@ -877,7 +877,7 @@ async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_code does not match token".to_string(),
                         }),
                     ));
@@ -911,7 +911,7 @@ async fn resolve_store_context(
     Err((
         StatusCode::BAD_REQUEST,
         Json(ConnectError {
-            code: "invalid_argument",
+            code: crate::rpc::json::ErrorCode::InvalidArgument,
             message: "store.store_id or tenant.tenant_id is required".to_string(),
         }),
     ))
@@ -939,7 +939,7 @@ async fn ensure_variant_belongs_to_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "variant does not belong to store".to_string(),
             }),
         ));
@@ -962,7 +962,7 @@ async fn ensure_location_belongs_to_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "location does not belong to store".to_string(),
             }),
         ));

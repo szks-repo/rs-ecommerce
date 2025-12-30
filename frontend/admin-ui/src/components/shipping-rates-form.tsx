@@ -16,6 +16,7 @@ import { listShippingZones, listShippingRates, upsertShippingRate } from "@/lib/
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import type { ShippingRate, ShippingZone } from "@/gen/ecommerce/v1/store_settings_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function ShippingRatesForm() {
   const [zones, setZones] = useState<ShippingZone[]>([]);
@@ -38,10 +39,11 @@ export default function ShippingRatesForm() {
       const data = await listShippingZones();
       setZones(data.zones ?? []);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load zones");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load zones",
+        title: uiError.title,
+        description: uiError.description,
       });
     }
   }
@@ -58,10 +60,11 @@ export default function ShippingRatesForm() {
       const data = await listShippingRates({ zoneId: targetZoneId });
       setRates(data.rates ?? []);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load shipping rates");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load shipping rates",
+        title: uiError.title,
+        description: uiError.description,
       });
     }
   }
@@ -126,10 +129,11 @@ export default function ShippingRatesForm() {
       setFeeAmount("");
       await loadRates(zoneId);
     } catch (err) {
+      const uiError = formatConnectError(err, "Save failed", "Unknown error");
       push({
         variant: "error",
-        title: "Save failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

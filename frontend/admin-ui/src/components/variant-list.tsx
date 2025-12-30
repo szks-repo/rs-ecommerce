@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function VariantList() {
   const [productId, setProductId] = useState("");
@@ -44,10 +45,11 @@ export default function VariantList() {
       setVariants(data.variants ?? []);
       sessionStorage.setItem("last_product_id", productId);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load variants");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load variants",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);

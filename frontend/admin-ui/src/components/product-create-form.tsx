@@ -18,6 +18,7 @@ import { createProduct } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function ProductCreateForm() {
   const [title, setTitle] = useState("");
@@ -127,10 +128,11 @@ export default function ProductCreateForm() {
       setCompareAtAmount("");
       setVariantStatus("active");
     } catch (err) {
+      const uiError = formatConnectError(err, "Create failed", "Unknown error");
       push({
         variant: "error",
-        title: "Create failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

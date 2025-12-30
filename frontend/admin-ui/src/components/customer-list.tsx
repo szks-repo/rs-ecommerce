@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { getActiveAccessToken } from "@/lib/auth";
 import { listCustomers } from "@/lib/customer";
 import type { CustomerSummary } from "@/gen/ecommerce/v1/customer_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function CustomerList() {
   const [customers, setCustomers] = useState<CustomerSummary[]>([]);
@@ -30,10 +31,11 @@ export default function CustomerList() {
       const data = await listCustomers({ query: nextQuery ?? query });
       setCustomers(data.customers ?? []);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load customers");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load customers",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);

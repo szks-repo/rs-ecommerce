@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
+import { formatConnectError } from "@/lib/handle-error";
 
 type StoreSettingsSection =
   | "basic"
@@ -109,11 +110,12 @@ export default function StoreSettingsForm({
         setFaviconUrl(settings.faviconUrl || "");
       })
       .catch((err) => {
-        push({
-          variant: "error",
-          title: "Load failed",
-          description: err instanceof Error ? err.message : "Failed to load store settings",
-        });
+        const uiError = formatConnectError(err, "Load failed", "Failed to load store settings");
+      push({
+        variant: "error",
+        title: uiError.title,
+        description: uiError.description,
+      });
       })
       .finally(() => {
         setIsLoading(false);
@@ -170,10 +172,11 @@ export default function StoreSettingsForm({
         description: "Store settings have been updated.",
       });
     } catch (err) {
+      const uiError = formatConnectError(err, "Update failed", "Unknown error");
       push({
         variant: "error",
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSaving(false);

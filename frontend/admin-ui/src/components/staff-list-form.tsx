@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { identityListRoles, identityListStaff, identityUpdateStaff } from "@/lib/identity";
+import { formatConnectError } from "@/lib/handle-error";
 import {
   Select,
   SelectContent,
@@ -19,7 +20,8 @@ type StaffRow = {
   email: string;
   loginId: string;
   phone: string;
-  role: string;
+  roleId: string;
+  roleKey: string;
   status: string;
 };
 
@@ -58,20 +60,22 @@ export default function StaffListForm() {
         email: item.email ?? "",
         loginId: item.loginId ?? "",
         phone: item.phone ?? "",
-        role: item.role ?? "",
+        roleId: item.roleId ?? "",
+        roleKey: item.roleKey ?? "",
         status: item.status ?? "",
       }));
       setStaff(list);
       const initial: Record<string, string> = {};
       list.forEach((row) => {
-        initial[row.staffId] = row.role;
+        initial[row.staffId] = row.roleId;
       });
       setPending(initial);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load staff");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load staff",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);
@@ -88,8 +92,8 @@ export default function StaffListForm() {
   }
 
   async function handleSave(staffId: string) {
-    const role = pending[staffId] ?? "";
-    if (!role) {
+    const roleId = pending[staffId] ?? "";
+    if (!roleId) {
       push({
         variant: "error",
         title: "Role required",
@@ -99,12 +103,12 @@ export default function StaffListForm() {
     }
     setIsSaving(staffId);
     try {
-      const resp = await identityUpdateStaff({ staffId, role });
+      const resp = await identityUpdateStaff({ staffId, roleId });
       if (!resp.updated) {
         throw new Error("Update failed");
       }
       setStaff((prev) =>
-        prev.map((row) => (row.staffId === staffId ? { ...row, role } : row))
+        prev.map((row) => (row.staffId === staffId ? { ...row, roleId } : row))
       );
       push({
         variant: "success",
@@ -112,10 +116,11 @@ export default function StaffListForm() {
         description: "Staff role updated.",
       });
     } catch (err) {
+      const uiError = formatConnectError(err, "Update failed", "Failed to update staff");
       push({
         variant: "error",
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Failed to update staff",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSaving(null);
@@ -142,7 +147,7 @@ export default function StaffListForm() {
             <div className="text-sm text-neutral-600">No staff found.</div>
           ) : (
             staff.map((row) => {
-              const isOwner = row.role === "owner";
+              const isOwner = row.roleKey === "owner";
               return (
               <div
                 key={row.staffId}
@@ -151,7 +156,7 @@ export default function StaffListForm() {
                 <div>
                   <div className="text-sm font-medium text-neutral-900">{formatStaffLabel(row)}</div>
                   <div className="text-xs text-neutral-500">
-                    role: {(roleLabelMap.get(row.role) ?? row.role) || "-"}
+                    role: {(roleLabelMap.get(row.roleKey) ?? row.roleKey) || "-"}
                   </div>
                   {isOwner ? (
                     <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
@@ -176,7 +181,7 @@ export default function StaffListForm() {
                         </SelectItem>
                       ) : (
                         roles.map((role) => (
-                          <SelectItem key={role.id} value={role.key}>
+                          <SelectItem key={role.id} value={role.id}>
                             {role.name} {role.key ? `(${role.key})` : ""}
                           </SelectItem>
                         ))

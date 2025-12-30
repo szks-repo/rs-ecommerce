@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identityCreateStaff, identityListRoles } from "@/lib/identity";
+import { formatConnectError } from "@/lib/handle-error";
 import {
   Select,
   SelectContent,
@@ -21,7 +22,7 @@ export default function StaffCreateForm() {
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [roles, setRoles] = useState<Array<{ id: string; key: string; name: string }>>([]);
-  const [role, setRole] = useState("");
+  const [roleId, setRoleId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const { push } = useToast();
@@ -34,17 +35,18 @@ export default function StaffCreateForm() {
         if (cancelled) return;
         const list = data.roles ?? [];
         setRoles(list);
-        if (!role && list.length > 0) {
-          setRole(list[0].key || "");
+        if (!roleId && list.length > 0) {
+          setRoleId(list[0].id || "");
         }
       })
       .catch((err) => {
         if (!cancelled) {
-          push({
-            variant: "error",
-            title: "Load failed",
-            description: err instanceof Error ? err.message : "Failed to load roles",
-          });
+          const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
+      push({
+        variant: "error",
+        title: uiError.title,
+        description: uiError.description,
+      });
         }
       })
       .finally(() => {
@@ -61,7 +63,7 @@ export default function StaffCreateForm() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      if (!role) {
+      if (!roleId) {
         throw new Error("role is required");
       }
       const data = await identityCreateStaff({
@@ -69,7 +71,7 @@ export default function StaffCreateForm() {
         loginId,
         phone,
         password,
-        role,
+        roleId,
       });
       push({
         variant: "success",
@@ -80,12 +82,13 @@ export default function StaffCreateForm() {
       setLoginId("");
       setPhone("");
       setPassword("");
-      setRole(roles[0]?.key ?? "");
+      setRoleId(roles[0]?.id ?? "");
     } catch (err) {
+      const uiError = formatConnectError(err, "Create failed", "Failed to create staff");
       push({
         variant: "error",
-        title: "Create failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);
@@ -120,7 +123,7 @@ export default function StaffCreateForm() {
           </div>
           <div className="space-y-2 md:col-span-2">
             <Label htmlFor="role">Role</Label>
-            <Select value={role} onValueChange={setRole}>
+            <Select value={roleId} onValueChange={setRoleId}>
               <SelectTrigger id="role" className="bg-white">
                 <SelectValue placeholder={isLoadingRoles ? "Loading roles..." : "Select role"} />
               </SelectTrigger>
@@ -131,7 +134,7 @@ export default function StaffCreateForm() {
                   </SelectItem>
                 ) : (
                   roles.map((item) => (
-                    <SelectItem key={item.id} value={item.key}>
+                    <SelectItem key={item.id} value={item.id}>
                       {item.name} {item.key ? `(${item.key})` : ""}
                     </SelectItem>
                   ))

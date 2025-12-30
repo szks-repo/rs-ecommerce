@@ -15,6 +15,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { listAuditActions, listAuditLogs } from "@/lib/audit";
 import { identityListStaff } from "@/lib/identity";
+import { formatConnectError } from "@/lib/handle-error";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
 
@@ -28,7 +29,7 @@ type StaffOption = {
   email: string;
   loginId: string;
   phone: string;
-  role: string;
+  roleKey: string;
   status: string;
 };
 
@@ -113,10 +114,11 @@ export default function AuditLogsPage() {
       setNextPageToken(data.page?.nextPageToken ?? "");
       setPageToken(nextToken);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load audit logs");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load audit logs",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);
@@ -140,7 +142,7 @@ export default function AuditLogsPage() {
             email: item.email ?? "",
             loginId: item.loginId ?? "",
             phone: item.phone ?? "",
-            role: item.role ?? "",
+            roleKey: item.roleKey ?? "",
             status: item.status ?? "",
           }))
         );
@@ -153,7 +155,7 @@ export default function AuditLogsPage() {
 
   function formatStaffLabel(staff: StaffOption) {
     const primary = staff.email || staff.loginId || staff.phone || staff.staffId;
-    const suffix = staff.role ? ` (${staff.role})` : "";
+    const suffix = staff.roleKey ? ` (${staff.roleKey})` : "";
     return `${primary}${suffix}`;
   }
 

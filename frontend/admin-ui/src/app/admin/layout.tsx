@@ -21,6 +21,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
                     Identity & Staff
                   </a>
+                  <a className="ml-2 block rounded-lg px-3 py-2 text-xs text-neutral-500 hover:bg-neutral-100" href="/admin/identity/roles">
+                    Roles
+                  </a>
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/customers">
                     Customers
                   </a>

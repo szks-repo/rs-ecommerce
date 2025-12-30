@@ -19,6 +19,7 @@ import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 type ProductUpdateFormProps = {
   product?: ProductAdmin | null;
@@ -82,10 +83,11 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
       });
       onUpdated?.();
     } catch (err) {
+      const uiError = formatConnectError(err, "Update failed", "Unknown error");
       push({
         variant: "error",
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

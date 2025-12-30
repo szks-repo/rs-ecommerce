@@ -73,6 +73,8 @@ fn audit_action_type(action: &AuditAction) -> i32 {
         AuditAction::IdentityStaffUpdate => pb::AuditActionType::AuditActionIdentityStaffUpdate as i32,
         AuditAction::IdentityRoleCreate => pb::AuditActionType::AuditActionIdentityRoleCreate as i32,
         AuditAction::IdentityRoleAssign => pb::AuditActionType::AuditActionIdentityRoleAssign as i32,
+        AuditAction::IdentityRoleUpdate => pb::AuditActionType::AuditActionIdentityRoleUpdate as i32,
+        AuditAction::IdentityRoleDelete => pb::AuditActionType::AuditActionIdentityRoleDelete as i32,
         AuditAction::CustomerCreate => pb::AuditActionType::AuditActionCustomerCreate as i32,
         AuditAction::CustomerUpdate => pb::AuditActionType::AuditActionCustomerUpdate as i32,
         AuditAction::CustomerIdentityUpsert => {

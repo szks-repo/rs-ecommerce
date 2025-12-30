@@ -8,68 +8,21 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/toast";
 import { identityCreateRole } from "@/lib/identity";
-
-const PERMISSION_GROUPS = [
-  {
-    label: "Catalog",
-    description: "Products, variants, inventory",
-    permissions: [
-      { key: "catalog.read", label: "Read catalog" },
-      { key: "catalog.write", label: "Write catalog" },
-    ],
-  },
-  {
-    label: "Orders",
-    description: "Orders and fulfillment",
-    permissions: [
-      { key: "orders.read", label: "Read orders" },
-      { key: "orders.write", label: "Write orders" },
-    ],
-  },
-  {
-    label: "Promotions",
-    description: "Discounts, campaigns",
-    permissions: [
-      { key: "promotions.read", label: "Read promotions" },
-      { key: "promotions.write", label: "Write promotions" },
-    ],
-  },
-  {
-    label: "Settings",
-    description: "Store settings and configurations",
-    permissions: [
-      { key: "settings.read", label: "Read settings" },
-      { key: "settings.write", label: "Write settings" },
-    ],
-  },
-  {
-    label: "Identity",
-    description: "Staff and roles",
-    permissions: [{ key: "staff.manage", label: "Manage staff & roles" }],
-  },
-  {
-    label: "Audit",
-    description: "Audit log access",
-    permissions: [{ key: "audit.read", label: "View audit logs" }],
-  },
-];
-
-const DEFAULT_PERMISSIONS = PERMISSION_GROUPS.flatMap((group) =>
-  group.permissions.map((permission) => permission.key)
-);
+import { DEFAULT_PERMISSION_KEYS, PERMISSION_GROUPS } from "@/lib/permissions";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function RoleCreateForm() {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [permissionKeys, setPermissionKeys] = useState<Set<string>>(
-    () => new Set(DEFAULT_PERMISSIONS)
+    () => new Set(DEFAULT_PERMISSION_KEYS)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
 
   function handleSelectAll() {
-    setPermissionKeys(new Set(DEFAULT_PERMISSIONS));
+    setPermissionKeys(new Set(DEFAULT_PERMISSION_KEYS));
   }
 
   function handleClearAll() {
@@ -107,12 +60,13 @@ export default function RoleCreateForm() {
       setKey("");
       setName("");
       setDescription("");
-      setPermissionKeys(new Set(DEFAULT_PERMISSIONS));
+      setPermissionKeys(new Set(DEFAULT_PERMISSION_KEYS));
     } catch (err) {
+      const uiError = formatConnectError(err, "Create failed", "Failed to create role");
       push({
         variant: "error",
-        title: "Create failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

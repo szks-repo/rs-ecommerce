@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identitySignOut } from "@/lib/identity";
 import { clearActiveStoreSession, getActiveStoreId, getActiveTenantId } from "@/lib/auth";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -23,10 +24,11 @@ export default function LogoutButton() {
         tenantId: getActiveTenantId() || undefined,
       });
     } catch (err) {
+      const uiError = formatConnectError(err, "Sign out failed", "Failed to sign out");
       push({
         variant: "error",
-        title: "Sign out failed",
-        description: err instanceof Error ? err.message : "Failed to sign out",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       clearActiveStoreSession();

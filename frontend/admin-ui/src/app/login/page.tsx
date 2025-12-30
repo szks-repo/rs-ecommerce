@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
 import { identitySignIn } from "@/lib/identity";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,10 +39,11 @@ export default function LoginPage() {
       sessionStorage.setItem("store_code", storeCode);
       router.push("/admin");
     } catch (err) {
+      const uiError = formatConnectError(err, "Sign in failed", "Unknown error");
       push({
         variant: "error",
-        title: "Sign in failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

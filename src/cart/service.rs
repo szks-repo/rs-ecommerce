@@ -48,7 +48,7 @@ pub async fn add_cart_item(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "quantity must be greater than 0".to_string(),
             }),
         ));
@@ -80,7 +80,7 @@ pub async fn add_cart_item(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "cart not found".to_string(),
             }),
         ));
@@ -104,7 +104,7 @@ pub async fn add_cart_item(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "variant not found".to_string(),
             }),
         ));
@@ -204,7 +204,7 @@ pub async fn remove_cart_item(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "cart item not found".to_string(),
             }),
         ));
@@ -266,7 +266,7 @@ pub async fn update_cart_item(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "quantity must be greater than 0".to_string(),
             }),
         ));
@@ -296,7 +296,7 @@ pub async fn update_cart_item(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "cart item not found".to_string(),
             }),
         ));
@@ -443,7 +443,7 @@ pub async fn checkout(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "payment_method is required".to_string(),
             }),
         )
@@ -462,7 +462,7 @@ pub async fn checkout(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "cart not found".to_string(),
             }),
         ));
@@ -486,7 +486,7 @@ pub async fn checkout(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "cart has no items".to_string(),
             }),
         ));
@@ -507,7 +507,7 @@ pub async fn checkout(
                 return Err((
                     StatusCode::BAD_REQUEST,
                     Json(ConnectError {
-                        code: "invalid_argument",
+                        code: crate::rpc::json::ErrorCode::InvalidArgument,
                         message: "mixed currency cart is not supported".to_string(),
                     }),
                 ));
@@ -534,7 +534,7 @@ pub async fn checkout(
             return Err((
                 StatusCode::CONFLICT,
                 Json(ConnectError {
-                    code: "failed_precondition",
+                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
                     message: "inventory reservation not ready".to_string(),
                 }),
             ));
@@ -544,7 +544,7 @@ pub async fn checkout(
             return Err((
                 StatusCode::CONFLICT,
                 Json(ConnectError {
-                    code: "failed_precondition",
+                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
                     message: "reserved quantity is insufficient".to_string(),
                 }),
             ));
@@ -570,7 +570,7 @@ pub async fn checkout(
             return Err((
                 StatusCode::CONFLICT,
                 Json(ConnectError {
-                    code: "failed_precondition",
+                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
                     message: "inventory stock is insufficient".to_string(),
                 }),
             ));

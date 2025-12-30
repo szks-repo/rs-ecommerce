@@ -23,7 +23,7 @@ pub async fn enqueue(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "tenant_id is invalid".to_string(),
             }),
         )
@@ -51,7 +51,7 @@ pub async fn enqueue(
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ConnectError {
-                code: "internal",
+                code: crate::rpc::json::ErrorCode::Internal,
                 message: format!("outbox enqueue failed: {}", err),
             }),
         )

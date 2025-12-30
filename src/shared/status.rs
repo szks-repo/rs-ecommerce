@@ -18,7 +18,7 @@ impl ProductStatus {
             _ => Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "product.status must be active|inactive|draft".to_string(),
                 }),
             )),
@@ -48,7 +48,7 @@ impl VariantStatus {
             _ => Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "variant.status must be active|inactive".to_string(),
                 }),
             )),
@@ -77,7 +77,7 @@ impl FulfillmentType {
             _ => Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "fulfillment_type must be physical|digital".to_string(),
                 }),
             )),

@@ -118,7 +118,7 @@ pub async fn get_customer(
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
-                code: "not_found",
+                code: crate::rpc::json::ErrorCode::NotFound,
                 message: "customer not found".to_string(),
             }),
         ));
@@ -596,7 +596,7 @@ pub async fn upsert_customer_identity(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "identity_type and identity_value are required".to_string(),
             }),
         ));
@@ -625,7 +625,7 @@ pub async fn upsert_customer_identity(
             return Err((
                 StatusCode::CONFLICT,
                 Json(ConnectError {
-                    code: "already_exists",
+                    code: crate::rpc::json::ErrorCode::AlreadyExists,
                     message: "identity is already linked to another customer".to_string(),
                 }),
             ));
@@ -786,7 +786,7 @@ pub async fn upsert_customer_address(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "address required fields are missing".to_string(),
             }),
         ));
@@ -903,7 +903,7 @@ fn validate_customer_profile(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "customer name or identity is required".to_string(),
             }),
         ));

@@ -12,6 +12,7 @@ import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin, VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -61,10 +62,11 @@ export default function ProductDetailPage() {
         setSelectedVariant(null);
       }
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load product");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load product",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);

@@ -86,7 +86,7 @@ pub async fn update_order_status(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "status is required".to_string(),
             }),
         )

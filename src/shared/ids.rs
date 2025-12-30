@@ -106,7 +106,7 @@ pub fn parse_uuid(id: &str, field: &str) -> Result<uuid::Uuid, (StatusCode, Json
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: format!("{} must be a valid UUID", field),
             }),
         )

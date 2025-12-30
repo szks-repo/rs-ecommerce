@@ -96,10 +96,12 @@ pub async fn list_staff(
 
     let rows = sqlx::query(
         r#"
-        SELECT id::text as staff_id, email, login_id, phone, role, status
-        FROM store_staff
-        WHERE store_id = $1
-        ORDER BY created_at ASC
+        SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
+               sr.id::text as role_id, sr.key as role_key
+        FROM store_staff ss
+        JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE ss.store_id = $1
+        ORDER BY ss.created_at ASC
         "#,
     )
     .bind(store_uuid.as_uuid())
@@ -114,7 +116,8 @@ pub async fn list_staff(
             email: row.get::<Option<String>, _>("email").unwrap_or_default(),
             login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-            role: row.get("role"),
+            role_id: row.get("role_id"),
+            role_key: row.get("role_key"),
             status: row.get("status"),
         })
         .collect();
@@ -130,17 +133,17 @@ pub async fn update_staff(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "staff_id is required".to_string(),
             }),
         ));
     }
-    if req.role.is_empty() && req.status.is_empty() {
+    if req.role_id.is_empty() && req.status.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
-                message: "role or status is required".to_string(),
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id or status is required".to_string(),
             }),
         ));
     }
@@ -151,9 +154,10 @@ pub async fn update_staff(
 
     let current = sqlx::query(
         r#"
-        SELECT role
-        FROM store_staff
-        WHERE id = $1 AND store_id = $2
+        SELECT sr.key as role_key
+        FROM store_staff ss
+        JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE ss.id = $1 AND ss.store_id = $2
         "#,
     )
     .bind(staff_uuid)
@@ -162,13 +166,48 @@ pub async fn update_staff(
     .await
     .map_err(db::error)?;
     if let Some(row) = current {
-        let current_role: String = row.get("role");
-        if current_role == "owner" && !req.role.is_empty() && req.role != "owner" {
+        let current_role: String = row.get("role_key");
+        if current_role == "owner" && !req.role_id.is_empty() {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ConnectError {
-                    code: "permission_denied",
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
                     message: "owner role cannot be changed".to_string(),
+                }),
+            ));
+        }
+    }
+
+    if !req.role_id.is_empty() {
+        let role_uuid = parse_uuid(&req.role_id, "role_id")?;
+        let role_row = sqlx::query(
+            r#"
+            SELECT key
+            FROM store_roles
+            WHERE id = $1 AND store_id = $2
+            "#,
+        )
+        .bind(role_uuid)
+        .bind(store_uuid.as_uuid())
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
+        let Some(role_row) = role_row else {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "role_id is invalid".to_string(),
+                }),
+            ));
+        };
+        let role_key: String = role_row.get("key");
+        if role_key == "owner" {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "owner role cannot be assigned".to_string(),
                 }),
             ));
         }
@@ -177,14 +216,14 @@ pub async fn update_staff(
     let updated = sqlx::query(
         r#"
         UPDATE store_staff
-        SET role = COALESCE(NULLIF($1, ''), role),
+        SET role_id = COALESCE(NULLIF($1, '')::uuid, role_id),
             status = COALESCE(NULLIF($2, ''), status),
             updated_at = now()
         WHERE id = $3 AND store_id = $4
-        RETURNING id::text as staff_id, email, login_id, phone, role, status
+        RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id
         "#,
     )
-    .bind(&req.role)
+    .bind(&req.role_id)
     .bind(&req.status)
     .bind(staff_uuid)
     .bind(store_uuid.as_uuid())
@@ -199,12 +238,26 @@ pub async fn update_staff(
         });
     };
 
+    let role_key_row = sqlx::query(
+        r#"
+        SELECT key
+        FROM store_roles
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(parse_uuid(&row.get::<String, _>("role_id"), "role_id")?)
+    .bind(store_uuid.as_uuid())
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+
     let staff = pb::IdentityStaffSummary {
         staff_id: row.get("staff_id"),
         email: row.get::<Option<String>, _>("email").unwrap_or_default(),
         login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
         phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-        role: row.get("role"),
+        role_id: row.get("role_id"),
+        role_key: role_key_row.get("key"),
         status: row.get("status"),
     };
 
@@ -233,7 +286,8 @@ pub async fn update_staff(
             before_json: None,
             after_json: Some(serde_json::json!({
                 "staff_id": staff.staff_id,
-                "role": staff.role,
+                "role_id": staff.role_id,
+                "role_key": staff.role_key,
                 "status": staff.status,
             })),
             metadata_json: None,
@@ -291,7 +345,7 @@ pub async fn create_staff(
     let email = req.email.clone();
     let login_id = req.login_id.clone();
     let phone = req.phone.clone();
-    let role = req.role.clone();
+    let role_id = req.role_id.clone();
     let actor = req.actor.clone();
 
     let resp = create_staff_core(
@@ -302,7 +356,7 @@ pub async fn create_staff(
         login_id.clone(),
         phone.clone(),
         req.password,
-        role.clone(),
+        role_id.clone(),
     )
     .await?;
 
@@ -330,7 +384,8 @@ pub async fn create_staff(
             after_json: Some(serde_json::json!({
                 "staff_id": resp.staff_id,
                 "store_id": resp.store_id,
-                "role": resp.role,
+                "role_id": resp.role_id,
+                "role_key": resp.role_key,
                 "email": email,
                 "login_id": login_id,
                 "phone": phone,
@@ -344,7 +399,8 @@ pub async fn create_staff(
         staff_id: resp.staff_id,
         store_id: resp.store_id,
         tenant_id: resp.tenant_id,
-        role: resp.role,
+        role_id: resp.role_id,
+        role_key: resp.role_key,
     })
 }
 
@@ -495,6 +551,301 @@ pub async fn list_roles(
     })
 }
 
+pub async fn list_roles_with_permissions(
+    state: &AppState,
+    req: pb::IdentityListRolesWithPermissionsRequest,
+) -> Result<pb::IdentityListRolesWithPermissionsResponse, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+
+    let role_rows = sqlx::query(
+        r#"
+        SELECT id, id::text as id_text, key, name, description
+        FROM store_roles
+        WHERE store_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    let mut roles: Vec<pb::IdentityRoleDetail> = role_rows
+        .iter()
+        .map(|row| pb::IdentityRoleDetail {
+            id: row.get("id_text"),
+            key: row.get("key"),
+            name: row.get("name"),
+            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+            permission_keys: Vec::new(),
+        })
+        .collect();
+
+    if !roles.is_empty() {
+        let role_ids: Vec<uuid::Uuid> = role_rows
+            .iter()
+            .map(|row| row.get::<uuid::Uuid, _>("id"))
+            .collect();
+        let permission_rows = sqlx::query(
+            r#"
+            SELECT srp.role_id::text as role_id, p.key as key
+            FROM store_role_permissions srp
+            JOIN permissions p ON p.id = srp.permission_id
+            WHERE srp.role_id = ANY($1)
+            "#,
+        )
+        .bind(&role_ids)
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?;
+
+        for row in permission_rows {
+            let role_id: String = row.get("role_id");
+            let key: String = row.get("key");
+            if let Some(role) = roles.iter_mut().find(|r| r.id == role_id) {
+                role.permission_keys.push(key);
+            }
+        }
+    }
+
+    Ok(pb::IdentityListRolesWithPermissionsResponse { roles })
+}
+
+pub async fn update_role(
+    state: &AppState,
+    req: pb::IdentityUpdateRoleRequest,
+) -> Result<pb::IdentityUpdateRoleResponse, (StatusCode, Json<ConnectError>)> {
+    if req.role_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id is required".to_string(),
+            }),
+        ));
+    }
+
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let role_uuid = parse_uuid(&req.role_id, "role_id")?;
+    let permission_keys = req.permission_keys.clone();
+
+    let rows = sqlx::query(
+        r#"
+        SELECT id::text as id, key
+        FROM permissions
+        WHERE key = ANY($1)
+        "#,
+    )
+    .bind(&permission_keys)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if rows.len() != permission_keys.len() && !permission_keys.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "unknown permission key included".to_string(),
+            }),
+        ));
+    }
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let updated = sqlx::query(
+        r#"
+        UPDATE store_roles
+        SET name = COALESCE(NULLIF($1, ''), name),
+            description = COALESCE(NULLIF($2, ''), description),
+            updated_at = now()
+        WHERE id = $3 AND store_id = $4
+        RETURNING id::text as id, key, name, description
+        "#,
+    )
+    .bind(&req.name)
+    .bind(&req.description)
+    .bind(role_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
+    let Some(row) = updated else {
+        return Ok(pb::IdentityUpdateRoleResponse {
+            updated: false,
+            role: None,
+        });
+    };
+
+    sqlx::query("DELETE FROM store_role_permissions WHERE role_id = $1")
+        .bind(role_uuid)
+        .execute(&mut *tx)
+        .await
+        .map_err(db::error)?;
+
+    for permission in rows {
+        let permission_id: String = permission.get("id");
+        sqlx::query(
+            r#"
+            INSERT INTO store_role_permissions (role_id, permission_id)
+            VALUES ($1,$2)
+            ON CONFLICT DO NOTHING
+            "#,
+        )
+        .bind(role_uuid)
+        .bind(parse_uuid(&permission_id, "permission_id")?)
+        .execute(&mut *tx)
+        .await
+        .map_err(db::error)?;
+    }
+
+    tx.commit().await.map_err(db::error)?;
+
+    let role = pb::IdentityRoleDetail {
+        id: row.get("id"),
+        key: row.get("key"),
+        name: row.get("name"),
+        description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+        permission_keys,
+    };
+
+    let actor_id = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_type = req
+        .actor
+        .as_ref()
+        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .unwrap_or_else(|| "staff".to_string());
+
+    let _ = audit::record(
+        state,
+        audit::AuditInput {
+            tenant_id,
+            actor_id,
+            actor_type,
+            action: IdentityAuditAction::RoleUpdate.into(),
+            target_type: Some("store_role".to_string()),
+            target_id: Some(role.id.clone()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "role_id": role.id,
+                "key": role.key,
+                "name": role.name,
+                "description": role.description,
+                "permission_keys": role.permission_keys,
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    Ok(pb::IdentityUpdateRoleResponse {
+        updated: true,
+        role: Some(role),
+    })
+}
+
+pub async fn delete_role(
+    state: &AppState,
+    req: pb::IdentityDeleteRoleRequest,
+) -> Result<pb::IdentityDeleteRoleResponse, (StatusCode, Json<ConnectError>)> {
+    if req.role_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id is required".to_string(),
+            }),
+        ));
+    }
+
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let role_uuid = parse_uuid(&req.role_id, "role_id")?;
+
+    let attached = sqlx::query(
+        r#"
+        SELECT 1
+        FROM store_staff
+        WHERE role_id = $1
+        LIMIT 1
+        "#,
+    )
+    .bind(role_uuid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if attached.is_some() {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::FailedPrecondition,
+                message: "role is attached to staff".to_string(),
+            }),
+        ));
+    }
+
+    let deleted = sqlx::query(
+        r#"
+        DELETE FROM store_roles
+        WHERE id = $1 AND store_id = $2
+        RETURNING id::text as id, key, name
+        "#,
+    )
+    .bind(role_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if let Some(row) = deleted {
+        let actor_id = req
+            .actor
+            .as_ref()
+            .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+        let actor_type = req
+            .actor
+            .as_ref()
+            .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+            .unwrap_or_else(|| "staff".to_string());
+
+        let _ = audit::record(
+            state,
+            audit::AuditInput {
+                tenant_id,
+                actor_id,
+                actor_type,
+                action: IdentityAuditAction::RoleDelete.into(),
+                target_type: Some("store_role".to_string()),
+                target_id: Some(row.get::<String, _>("id")),
+                request_id: None,
+                ip_address: None,
+                user_agent: None,
+                before_json: Some(serde_json::json!({
+                    "role_id": row.get::<String, _>("id"),
+                    "key": row.get::<String, _>("key"),
+                    "name": row.get::<String, _>("name"),
+                })),
+                after_json: None,
+                metadata_json: None,
+            },
+        )
+        .await?;
+
+        return Ok(pb::IdentityDeleteRoleResponse { deleted: true });
+    }
+
+    Ok(pb::IdentityDeleteRoleResponse { deleted: false })
+}
+
 
 struct SignInCoreResult {
     access_token: String,
@@ -518,7 +869,7 @@ async fn sign_in_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "password is required".to_string(),
             }),
         ));
@@ -531,9 +882,11 @@ async fn sign_in_core(
     let row = if !email.is_empty() {
         sqlx::query(
             r#"
-            SELECT id::text as id, email, login_id, phone, password_hash, role
-            FROM store_staff
-            WHERE store_id = $1 AND email = $2 AND status = 'active'
+            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
+                   sr.key as role_key
+            FROM store_staff ss
+            JOIN store_roles sr ON sr.id = ss.role_id
+            WHERE ss.store_id = $1 AND ss.email = $2 AND ss.status = 'active'
             LIMIT 1
             "#,
         )
@@ -545,9 +898,11 @@ async fn sign_in_core(
     } else if !login_id.is_empty() {
         sqlx::query(
             r#"
-            SELECT id::text as id, email, login_id, phone, password_hash, role
-            FROM store_staff
-            WHERE store_id = $1 AND login_id = $2 AND status = 'active'
+            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
+                   sr.key as role_key
+            FROM store_staff ss
+            JOIN store_roles sr ON sr.id = ss.role_id
+            WHERE ss.store_id = $1 AND ss.login_id = $2 AND ss.status = 'active'
             LIMIT 1
             "#,
         )
@@ -559,9 +914,11 @@ async fn sign_in_core(
     } else if !phone.is_empty() {
         sqlx::query(
             r#"
-            SELECT id::text as id, email, login_id, phone, password_hash, role
-            FROM store_staff
-            WHERE store_id = $1 AND phone = $2 AND status = 'active'
+            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
+                   sr.key as role_key
+            FROM store_staff ss
+            JOIN store_roles sr ON sr.id = ss.role_id
+            WHERE ss.store_id = $1 AND ss.phone = $2 AND ss.status = 'active'
             LIMIT 1
             "#,
         )
@@ -574,7 +931,7 @@ async fn sign_in_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "email or login_id or phone is required".to_string(),
             }),
         ));
@@ -584,7 +941,7 @@ async fn sign_in_core(
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(ConnectError {
-                code: "unauthenticated",
+                code: crate::rpc::json::ErrorCode::Unauthenticated,
                 message: "invalid credentials".to_string(),
             }),
         ));
@@ -596,7 +953,7 @@ async fn sign_in_core(
             (
                 StatusCode::UNAUTHORIZED,
                 Json(ConnectError {
-                    code: "unauthenticated",
+                    code: crate::rpc::json::ErrorCode::Unauthenticated,
                     message: "invalid credentials".to_string(),
                 }),
             )
@@ -606,7 +963,7 @@ async fn sign_in_core(
         (
             StatusCode::UNAUTHORIZED,
             Json(ConnectError {
-                code: "unauthenticated",
+                code: crate::rpc::json::ErrorCode::Unauthenticated,
                 message: "invalid credentials".to_string(),
             }),
         )
@@ -618,20 +975,20 @@ async fn sign_in_core(
             (
                 StatusCode::UNAUTHORIZED,
                 Json(ConnectError {
-                    code: "unauthenticated",
+                    code: crate::rpc::json::ErrorCode::Unauthenticated,
                     message: "invalid credentials".to_string(),
                 }),
             )
         })?;
 
     let staff_id: String = row.get("id");
-    let role: String = row.get("role");
+    let role: String = row.get("role_key");
 
     let jwt_secret = std::env::var("AUTH_JWT_SECRET").map_err(|_| {
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ConnectError {
-                code: "internal",
+                code: crate::rpc::json::ErrorCode::Internal,
                 message: "AUTH_JWT_SECRET is required".to_string(),
             }),
         )
@@ -657,7 +1014,7 @@ async fn sign_in_core(
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ConnectError {
-                code: "internal",
+                code: crate::rpc::json::ErrorCode::Internal,
                 message: "failed to sign token".to_string(),
             }),
         )
@@ -677,7 +1034,8 @@ struct CreateStaffCoreResult {
     staff_id: String,
     store_id: String,
     tenant_id: String,
-    role: String,
+    role_id: String,
+    role_key: String,
 }
 
 async fn create_staff_core(
@@ -688,27 +1046,18 @@ async fn create_staff_core(
     login_id: String,
     phone: String,
     password: String,
-    role: String,
+    role_id: String,
 ) -> Result<CreateStaffCoreResult, (StatusCode, Json<ConnectError>)> {
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
-    if role.is_empty() {
+    if role_id.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
-                message: "role is required".to_string(),
-            }),
-        ));
-    }
-    if role == "owner" {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: "invalid_argument",
-                message: "owner role cannot be assigned".to_string(),
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "role_id is required".to_string(),
             }),
         ));
     }
@@ -716,7 +1065,7 @@ async fn create_staff_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "email or login_id or phone is required".to_string(),
             }),
         ));
@@ -725,7 +1074,7 @@ async fn create_staff_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "password is required".to_string(),
             }),
         ));
@@ -734,9 +1083,33 @@ async fn create_staff_core(
     let password_hash = hash_password(&password)?;
     let staff_id = uuid::Uuid::new_v4();
 
+    let role_uuid = parse_uuid(&role_id, "role_id")?;
+    let role_row = sqlx::query(
+        r#"
+        SELECT key
+        FROM store_roles
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(role_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+    let role_key: String = role_row.get("key");
+    if role_key == "owner" {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "owner role cannot be assigned".to_string(),
+            }),
+        ));
+    }
+
     sqlx::query(
         r#"
-        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role, status)
+        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         "#,
     )
@@ -746,7 +1119,7 @@ async fn create_staff_core(
     .bind(if login_id.is_empty() { None } else { Some(login_id) })
     .bind(if phone.is_empty() { None } else { Some(phone) })
     .bind(password_hash)
-    .bind(&role)
+    .bind(role_uuid)
     .bind("active")
     .execute(&state.db)
     .await
@@ -756,7 +1129,8 @@ async fn create_staff_core(
         staff_id: staff_id.to_string(),
         store_id,
         tenant_id,
-        role,
+        role_id,
+        role_key,
     })
 }
 
@@ -770,7 +1144,7 @@ fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ConnectErro
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ConnectError {
-                    code: "internal",
+                    code: crate::rpc::json::ErrorCode::Internal,
                     message: "failed to hash password".to_string(),
                 }),
             )
@@ -803,7 +1177,7 @@ async fn create_role_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "key and name are required".to_string(),
             }),
         ));
@@ -880,7 +1254,7 @@ async fn assign_role_to_staff_core(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "staff_id and role_id are required".to_string(),
             }),
         ));
@@ -897,7 +1271,7 @@ async fn assign_role_to_staff_core(
         return Err((
             StatusCode::FORBIDDEN,
             Json(ConnectError {
-                code: "permission_denied",
+                code: crate::rpc::json::ErrorCode::PermissionDenied,
                 message: "role does not belong to store".to_string(),
             }),
         ));
@@ -905,9 +1279,10 @@ async fn assign_role_to_staff_core(
 
     let staff_row = sqlx::query(
         r#"
-        SELECT role
-        FROM store_staff
-        WHERE id = $1 AND store_id = $2
+        SELECT sr.key as role_key
+        FROM store_staff ss
+        JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE ss.id = $1 AND ss.store_id = $2
         "#,
     )
     .bind(parse_uuid(&staff_id, "staff_id")?)
@@ -916,12 +1291,12 @@ async fn assign_role_to_staff_core(
     .await
     .map_err(db::error)?;
     if let Some(row) = staff_row {
-        let current_role: String = row.get("role");
+        let current_role: String = row.get("role_key");
         if current_role == "owner" {
             return Err((
                 StatusCode::FORBIDDEN,
                 Json(ConnectError {
-                    code: "permission_denied",
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
                     message: "owner role cannot be assigned".to_string(),
                 }),
             ));
@@ -930,13 +1305,14 @@ async fn assign_role_to_staff_core(
 
     sqlx::query(
         r#"
-        INSERT INTO store_staff_roles (staff_id, role_id)
-        VALUES ($1,$2)
-        ON CONFLICT DO NOTHING
+        UPDATE store_staff
+        SET role_id = $1, updated_at = now()
+        WHERE id = $2 AND store_id = $3
         "#,
     )
-    .bind(parse_uuid(&staff_id, "staff_id")?)
     .bind(parse_uuid(&role_id, "role_id")?)
+    .bind(parse_uuid(&staff_id, "staff_id")?)
+    .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
     .map_err(db::error)?;

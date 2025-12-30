@@ -86,6 +86,44 @@ pub async fn list_roles(
     Ok((StatusCode::OK, Json(resp)))
 }
 
+pub async fn list_roles_with_permissions(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityListRolesWithPermissionsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::IdentityListRolesWithPermissionsRequest>(&headers, body)?;
+    let resp = identity::service::list_roles_with_permissions(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn update_role(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityUpdateRoleResponse>), (StatusCode, Json<ConnectError>)> {
+    let mut req = parse_request::<pb::IdentityUpdateRoleRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
+    let resp = identity::service::update_role(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn delete_role(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityDeleteRoleResponse>), (StatusCode, Json<ConnectError>)> {
+    let mut req = parse_request::<pb::IdentityDeleteRoleRequest>(&headers, body)?;
+    if req.actor.is_none() {
+        req.actor = actor_ctx;
+    }
+    let resp = identity::service::delete_role(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
 pub async fn list_staff(
     State(state): State<AppState>,
     headers: HeaderMap,

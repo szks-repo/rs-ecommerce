@@ -67,7 +67,7 @@ pub async fn create_customer(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "profile is required".to_string(),
             }),
         )
@@ -97,7 +97,7 @@ pub async fn update_customer(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "profile is required".to_string(),
             }),
         )
@@ -136,7 +136,7 @@ pub async fn upsert_customer_identity(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "identity is required".to_string(),
             }),
         )
@@ -164,7 +164,7 @@ pub async fn upsert_customer_address(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "address is required".to_string(),
             }),
         )

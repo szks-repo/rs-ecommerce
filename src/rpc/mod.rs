@@ -243,6 +243,18 @@ pub fn router() -> Router<AppState> {
             post(identity::list_roles),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/ListRolesWithPermissions",
+            post(identity::list_roles_with_permissions),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/UpdateRole",
+            post(identity::update_role),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/DeleteRole",
+            post(identity::delete_role),
+        )
+        .route(
             "/rpc/ecommerce.v1.IdentityService/ListStaff",
             post(identity::list_staff),
         )

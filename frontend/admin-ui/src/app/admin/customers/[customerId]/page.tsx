@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { getCustomer, updateCustomer, upsertCustomerIdentity, upsertCustomerAddress } from "@/lib/customer";
 import type { CustomerAddress, CustomerIdentity } from "@/gen/ecommerce/v1/customer_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>();
@@ -66,11 +67,12 @@ export default function CustomerDetailPage() {
         setIdentities(resp.identities ?? []);
         setAddresses(resp.addresses ?? []);
       } catch (err) {
-        push({
-          variant: "error",
-          title: "Load failed",
-          description: err instanceof Error ? err.message : "Failed to load customer",
-        });
+        const uiError = formatConnectError(err, "Load failed", "Failed to load customer");
+      push({
+        variant: "error",
+        title: uiError.title,
+        description: uiError.description,
+      });
       } finally {
         setIsLoading(false);
       }
@@ -106,10 +108,11 @@ export default function CustomerDetailPage() {
         description: "Customer profile has been saved.",
       });
     } catch (err) {
+      const uiError = formatConnectError(err, "Update failed", "Failed to update customer");
       push({
         variant: "error",
-        title: "Update failed",
-        description: err instanceof Error ? err.message : "Failed to update customer",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSaving(false);
@@ -141,10 +144,11 @@ export default function CustomerDetailPage() {
       setIdentityVerified(false);
       await reloadCustomer();
     } catch (err) {
+      const uiError = formatConnectError(err, "Identity save failed", "Failed to save identity");
       push({
         variant: "error",
-        title: "Identity save failed",
-        description: err instanceof Error ? err.message : "Failed to save identity",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSavingIdentity(false);
@@ -186,10 +190,11 @@ export default function CustomerDetailPage() {
       setAddressPhone("");
       await reloadCustomer();
     } catch (err) {
+      const uiError = formatConnectError(err, "Address save failed", "Failed to save address");
       push({
         variant: "error",
-        title: "Address save failed",
-        description: err instanceof Error ? err.message : "Failed to save address",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSavingAddress(false);

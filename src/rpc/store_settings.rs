@@ -40,7 +40,7 @@ pub async fn update_store_settings(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "settings is required".to_string(),
             }),
         )
@@ -64,7 +64,7 @@ pub async fn initialize_store_settings(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "settings is required".to_string(),
             }),
         )
@@ -152,7 +152,7 @@ pub async fn upsert_store_location(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "location is required".to_string(),
             }),
         )
@@ -204,7 +204,7 @@ pub async fn upsert_shipping_zone(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "zone is required".to_string(),
             }),
         )
@@ -256,7 +256,7 @@ pub async fn upsert_shipping_rate(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "rate is required".to_string(),
             }),
         )
@@ -308,7 +308,7 @@ pub async fn upsert_tax_rule(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "rule is required".to_string(),
             }),
         )

@@ -20,7 +20,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "store_name is required".to_string(),
             }),
         ));
@@ -29,7 +29,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "owner_email is required".to_string(),
             }),
         ));
@@ -38,7 +38,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "owner_password is required".to_string(),
             }),
         ));
@@ -47,7 +47,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "store_code is required".to_string(),
             }),
         ));
@@ -64,7 +64,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::CONFLICT,
             Json(ConnectError {
-                code: "already_exists",
+                code: crate::rpc::json::ErrorCode::AlreadyExists,
                 message: "store already exists".to_string(),
             }),
         ));
@@ -79,7 +79,7 @@ pub async fn initialize_store(
         return Err((
             StatusCode::CONFLICT,
             Json(ConnectError {
-                code: "already_exists",
+                code: crate::rpc::json::ErrorCode::AlreadyExists,
                 message: "store_code already exists".to_string(),
             }),
         ));
@@ -117,6 +117,23 @@ pub async fn initialize_store(
     .await
     .map_err(db::error)?;
 
+    let owner_role_id = uuid::Uuid::new_v4();
+    let staff_role_id = uuid::Uuid::new_v4();
+    sqlx::query(
+        r#"
+        INSERT INTO store_roles (id, store_id, key, name, description)
+        VALUES
+          ($1, $2, 'owner', 'Owner', 'Full access owner role'),
+          ($3, $2, 'staff', 'Staff', 'Standard staff role')
+        "#,
+    )
+    .bind(owner_role_id)
+    .bind(store_id)
+    .bind(staff_role_id)
+    .execute(&mut *tx)
+    .await
+    .map_err(db::error)?;
+
     sqlx::query(
         r#"
         INSERT INTO store_sync_settings (store_id, tenant_id, customer_sync_enabled)
@@ -150,7 +167,7 @@ pub async fn initialize_store(
     let owner_staff_id = uuid::Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role, status)
+        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
         "#,
     )
@@ -160,7 +177,7 @@ pub async fn initialize_store(
     .bind(if req.owner_login_id.is_empty() { None } else { Some(req.owner_login_id.clone()) })
     .bind(Option::<String>::None)
     .bind(password_hash)
-    .bind("owner")
+    .bind(owner_role_id)
     .bind("active")
     .execute(&mut *tx)
     .await
@@ -190,7 +207,7 @@ fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ConnectErro
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(ConnectError {
-                    code: "internal",
+                    code: crate::rpc::json::ErrorCode::Internal,
                     message: "failed to hash password".to_string(),
                 }),
             )

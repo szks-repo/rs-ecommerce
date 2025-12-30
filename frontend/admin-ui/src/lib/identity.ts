@@ -9,6 +9,9 @@ import {
   IdentityListStaffRequestSchema,
   IdentityUpdateStaffRequestSchema,
   IdentityListRolesRequestSchema,
+  IdentityListRolesWithPermissionsRequestSchema,
+  IdentityUpdateRoleRequestSchema,
+  IdentityDeleteRoleRequestSchema,
   IdentityCreateRoleRequestSchema,
   IdentityAssignRoleRequestSchema,
 } from "@/gen/ecommerce/v1/identity_pb";
@@ -54,7 +57,7 @@ export async function identityCreateStaff(params: {
   loginId?: string;
   phone?: string;
   password: string;
-  role: string;
+  roleId: string;
 }) {
   return client.createStaff(
     create(IdentityCreateStaffRequestSchema, {
@@ -62,7 +65,7 @@ export async function identityCreateStaff(params: {
       loginId: params.loginId || "",
       phone: params.phone || "",
       password: params.password,
-      role: params.role,
+      roleId: params.roleId,
     })
   );
 }
@@ -75,13 +78,13 @@ export async function identityListStaff() {
 
 export async function identityUpdateStaff(params: {
   staffId: string;
-  role?: string;
+  roleId?: string;
   status?: string;
 }) {
   return client.updateStaff(
     create(IdentityUpdateStaffRequestSchema, {
       staffId: params.staffId,
-      role: params.role || "",
+      roleId: params.roleId || "",
       status: params.status || "",
     })
   );
@@ -90,6 +93,36 @@ export async function identityUpdateStaff(params: {
 export async function identityListRoles() {
   return client.listRoles(
     create(IdentityListRolesRequestSchema, {})
+  );
+}
+
+export async function identityListRolesWithPermissions() {
+  return client.listRolesWithPermissions(
+    create(IdentityListRolesWithPermissionsRequestSchema, {})
+  );
+}
+
+export async function identityUpdateRole(params: {
+  roleId: string;
+  name?: string;
+  description?: string;
+  permissionKeys: string[];
+}) {
+  return client.updateRole(
+    create(IdentityUpdateRoleRequestSchema, {
+      roleId: params.roleId,
+      name: params.name || "",
+      description: params.description || "",
+      permissionKeys: params.permissionKeys,
+    })
+  );
+}
+
+export async function identityDeleteRole(params: { roleId: string }) {
+  return client.deleteRole(
+    create(IdentityDeleteRoleRequestSchema, {
+      roleId: params.roleId,
+    })
   );
 }
 

@@ -28,6 +28,8 @@ pub enum AuditAction {
     IdentityStaffUpdate,
     IdentityRoleCreate,
     IdentityRoleAssign,
+    IdentityRoleUpdate,
+    IdentityRoleDelete,
     CustomerCreate,
     CustomerUpdate,
     CustomerIdentityUpsert,
@@ -65,6 +67,8 @@ impl AuditAction {
             AuditAction::IdentityStaffUpdate => "identity.staff_update",
             AuditAction::IdentityRoleCreate => "identity.role_create",
             AuditAction::IdentityRoleAssign => "identity.role_assign",
+            AuditAction::IdentityRoleUpdate => "identity.role_update",
+            AuditAction::IdentityRoleDelete => "identity.role_delete",
             AuditAction::CustomerCreate => "customer.create",
             AuditAction::CustomerUpdate => "customer.update",
             AuditAction::CustomerIdentityUpsert => "customer.identity_upsert",
@@ -102,6 +106,8 @@ impl AuditAction {
             AuditAction::IdentityStaffUpdate => "Staff updated",
             AuditAction::IdentityRoleCreate => "Role created",
             AuditAction::IdentityRoleAssign => "Role assigned",
+            AuditAction::IdentityRoleUpdate => "Role updated",
+            AuditAction::IdentityRoleDelete => "Role deleted",
             AuditAction::CustomerCreate => "Customer created",
             AuditAction::CustomerUpdate => "Customer updated",
             AuditAction::CustomerIdentityUpsert => "Customer identity saved",
@@ -139,6 +145,8 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::IdentityStaffUpdate,
     AuditAction::IdentityRoleCreate,
     AuditAction::IdentityRoleAssign,
+    AuditAction::IdentityRoleUpdate,
+    AuditAction::IdentityRoleDelete,
     AuditAction::CustomerCreate,
     AuditAction::CustomerUpdate,
     AuditAction::CustomerIdentityUpsert,
@@ -223,6 +231,8 @@ pub enum IdentityAuditAction {
     StaffUpdate,
     RoleCreate,
     RoleAssign,
+    RoleUpdate,
+    RoleDelete,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -348,6 +358,8 @@ impl From<IdentityAuditAction> for AuditAction {
             IdentityAuditAction::StaffUpdate => AuditAction::IdentityStaffUpdate,
             IdentityAuditAction::RoleCreate => AuditAction::IdentityRoleCreate,
             IdentityAuditAction::RoleAssign => AuditAction::IdentityRoleAssign,
+            IdentityAuditAction::RoleUpdate => AuditAction::IdentityRoleUpdate,
+            IdentityAuditAction::RoleDelete => AuditAction::IdentityRoleDelete,
         }
     }
 }

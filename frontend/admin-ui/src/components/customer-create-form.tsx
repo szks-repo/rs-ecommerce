@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { createCustomer } from "@/lib/customer";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function CustomerCreateForm() {
   const [name, setName] = useState("");
@@ -52,10 +53,11 @@ export default function CustomerCreateForm() {
       setNotes("");
       setStatus("active");
     } catch (err) {
+      const uiError = formatConnectError(err, "Create failed", "Failed to create customer");
       push({
         variant: "error",
-        title: "Create failed",
-        description: err instanceof Error ? err.message : "Failed to create customer",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

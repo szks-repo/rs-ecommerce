@@ -170,6 +170,11 @@ async fn apply_profile_sync(pool: &PgPool, event_id: uuid::Uuid, payload: Profil
     let tenant_id = uuid::Uuid::parse_str(&payload.tenant_id)?;
     let customer_id = uuid::Uuid::parse_str(&payload.customer_id)?;
     let source_store_id = payload.source_store_id.and_then(|s| uuid::Uuid::parse_str(&s).ok());
+    let name = payload.profile.name.clone();
+    let email = payload.profile.email.clone();
+    let phone = payload.profile.phone.clone();
+    let status = payload.profile.status.clone();
+    let notes = payload.profile.notes.clone();
 
     let target_rows = sqlx::query(
         r#"
@@ -219,11 +224,11 @@ async fn apply_profile_sync(pool: &PgPool, event_id: uuid::Uuid, payload: Profil
         )
         .bind(customer_id)
         .bind(store_id)
-        .bind(payload.profile.name)
-        .bind(if payload.profile.email.is_empty() { None } else { Some(payload.profile.email) })
-        .bind(if payload.profile.phone.is_empty() { None } else { Some(payload.profile.phone) })
-        .bind(if payload.profile.status.is_empty() { "active" } else { payload.profile.status.as_str() })
-        .bind(if payload.profile.notes.is_empty() { None } else { Some(payload.profile.notes) })
+        .bind(&name)
+        .bind(if email.is_empty() { None } else { Some(email.clone()) })
+        .bind(if phone.is_empty() { None } else { Some(phone.clone()) })
+        .bind(if status.is_empty() { "active" } else { status.as_str() })
+        .bind(if notes.is_empty() { None } else { Some(notes.clone()) })
         .execute(pool)
         .await?;
 

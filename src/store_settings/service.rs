@@ -1200,7 +1200,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_id does not match token".to_string(),
                         }),
                     ));
@@ -1215,7 +1215,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "tenant_id does not match token".to_string(),
                         }),
                     ));
@@ -1235,7 +1235,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_id not found".to_string(),
                 }),
             ));
@@ -1253,7 +1253,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_code not found".to_string(),
                 }),
             ));
@@ -1266,7 +1266,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_code does not match token".to_string(),
                         }),
                     ));
@@ -1286,7 +1286,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "tenant_id not found".to_string(),
                 }),
             ));
@@ -1323,7 +1323,7 @@ pub async fn resolve_store_context(
     Err((
         StatusCode::BAD_REQUEST,
         Json(ConnectError {
-            code: "invalid_argument",
+            code: crate::rpc::json::ErrorCode::InvalidArgument,
             message: "store.store_id or tenant.tenant_id is required".to_string(),
         }),
     ))
@@ -1349,7 +1349,7 @@ pub fn validate_store_settings(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "store settings required fields are missing".to_string(),
             }),
         ));
@@ -1364,7 +1364,7 @@ fn validate_store_location(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "location code/name/status are required".to_string(),
             }),
         ));
@@ -1380,7 +1380,7 @@ pub fn validate_mall_settings(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "commission_rate must be between 0 and 1".to_string(),
             }),
         ));
@@ -1396,7 +1396,7 @@ pub fn validate_shipping_rate(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "min_subtotal must be <= max_subtotal".to_string(),
                 }),
             ));
@@ -1407,7 +1407,7 @@ pub fn validate_shipping_rate(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "fee must be >= 0".to_string(),
                 }),
             ));
@@ -1424,7 +1424,7 @@ pub fn validate_shipping_zone(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: format!("invalid prefecture code: {}", pref.code),
                 }),
             ));
@@ -1449,7 +1449,7 @@ pub fn validate_tax_rule(rule: &pb::TaxRule) -> Result<(), (StatusCode, Json<Con
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "tax rate must be between 0 and 1".to_string(),
             }),
         ));

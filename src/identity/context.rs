@@ -24,7 +24,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_id does not match token".to_string(),
                         }),
                     ));
@@ -39,7 +39,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "tenant_id does not match token".to_string(),
                         }),
                     ));
@@ -59,7 +59,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_id not found".to_string(),
                 }),
             ));
@@ -77,7 +77,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_code not found".to_string(),
                 }),
             ));
@@ -90,7 +90,7 @@ pub async fn resolve_store_context(
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
-                            code: "permission_denied",
+                            code: crate::rpc::json::ErrorCode::PermissionDenied,
                             message: "store_code does not match token".to_string(),
                         }),
                     ));
@@ -115,7 +115,7 @@ pub async fn resolve_store_context(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "tenant_id not found".to_string(),
                 }),
             ));
@@ -126,7 +126,7 @@ pub async fn resolve_store_context(
     Err((
         StatusCode::BAD_REQUEST,
         Json(ConnectError {
-            code: "invalid_argument",
+            code: crate::rpc::json::ErrorCode::InvalidArgument,
             message: "store.store_id or tenant.tenant_id is required".to_string(),
         }),
     ))
@@ -148,7 +148,7 @@ pub async fn resolve_store_context_without_token_guard(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_id not found".to_string(),
                 }),
             ));
@@ -166,7 +166,7 @@ pub async fn resolve_store_context_without_token_guard(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "store_code not found".to_string(),
                 }),
             ));
@@ -186,7 +186,7 @@ pub async fn resolve_store_context_without_token_guard(
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
-                    code: "invalid_argument",
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
                     message: "tenant_id not found".to_string(),
                 }),
             ));
@@ -197,7 +197,7 @@ pub async fn resolve_store_context_without_token_guard(
     Err((
         StatusCode::BAD_REQUEST,
         Json(ConnectError {
-            code: "invalid_argument",
+            code: crate::rpc::json::ErrorCode::InvalidArgument,
             message: "store.store_id or tenant.tenant_id is required".to_string(),
         }),
     ))
@@ -208,7 +208,7 @@ pub fn parse_uuid(value: &str, field: &str) -> Result<uuid::Uuid, (StatusCode, J
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: format!("{} is invalid", field),
             }),
         )

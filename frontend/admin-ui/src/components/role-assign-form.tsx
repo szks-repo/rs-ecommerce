@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function RoleAssignForm() {
   const [staffId, setStaffId] = useState("");
@@ -34,11 +35,12 @@ export default function RoleAssignForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          push({
-            variant: "error",
-            title: "Load failed",
-            description: err instanceof Error ? err.message : "Failed to load roles",
-          });
+          const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
+      push({
+        variant: "error",
+        title: uiError.title,
+        description: uiError.description,
+      });
         }
       })
       .finally(() => {
@@ -66,10 +68,11 @@ export default function RoleAssignForm() {
       });
       setStaffId("");
     } catch (err) {
+      const uiError = formatConnectError(err, "Assign failed", "Unknown error");
       push({
         variant: "error",
-        title: "Assign failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

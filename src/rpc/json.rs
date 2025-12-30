@@ -8,9 +8,22 @@ use serde_json::Value;
 
 use crate::pb::pb;
 
+#[derive(Debug, Serialize, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum ErrorCode {
+    InvalidArgument,
+    NotFound,
+    AlreadyExists,
+    PermissionDenied,
+    Unauthenticated,
+    FailedPrecondition,
+    Internal,
+    UnsupportedMediaType,
+}
+
 #[derive(Debug, Serialize)]
 pub struct ConnectError {
-    pub code: &'static str,
+    pub code: ErrorCode,
     pub message: String,
 }
 
@@ -22,7 +35,7 @@ pub fn parse_json_body(
         return Err((
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Json(ConnectError {
-                code: "unsupported_media_type",
+                code: crate::rpc::json::ErrorCode::UnsupportedMediaType,
                 message: "content-type must be application/json".to_string(),
             }),
         ));
@@ -32,7 +45,7 @@ pub fn parse_json_body(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: format!("invalid json: {}", err),
             }),
         )
@@ -48,7 +61,7 @@ pub fn parse_request<T: DeserializeOwned>(
         (
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: format!("invalid request: {}", err),
             }),
         )
@@ -63,7 +76,7 @@ pub fn require_tenant_id(
         None => Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "tenant.tenant_id is required".to_string(),
             }),
         )),

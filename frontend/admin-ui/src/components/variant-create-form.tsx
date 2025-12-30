@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function VariantCreateForm() {
   const [productId, setProductId] = useState("");
@@ -64,10 +65,11 @@ export default function VariantCreateForm() {
       setCompareAtAmount("");
       setStatus("active");
     } catch (err) {
+      const uiError = formatConnectError(err, "Create failed", "Unknown error");
       push({
         variant: "error",
-        title: "Create failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

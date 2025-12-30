@@ -16,6 +16,7 @@ import {
 import { listStoreLocations, upsertStoreLocation } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function StoreLocationForm() {
   const [locations, setLocations] = useState<StoreLocation[]>([]);
@@ -56,10 +57,11 @@ export default function StoreLocationForm() {
       setStatus("active");
       await loadLocations();
     } catch (err) {
+      const uiError = formatConnectError(err, "Save failed", "Unknown error");
       push({
         variant: "error",
-        title: "Save failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { initializeStore } from "@/lib/setup";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function InitPage() {
   const router = useRouter();
@@ -35,10 +36,11 @@ export default function InitPage() {
       sessionStorage.setItem("store_code", data.storeCode);
       router.push("/login");
     } catch (err) {
+      const uiError = formatConnectError(err, "Init failed", "Unknown error");
       push({
         variant: "error",
-        title: "Init failed",
-        description: err instanceof Error ? err.message : "Unknown error",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsSubmitting(false);

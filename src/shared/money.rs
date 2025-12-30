@@ -9,7 +9,7 @@ pub fn money_to_parts(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "money is required".to_string(),
             }),
         ));
@@ -18,7 +18,7 @@ pub fn money_to_parts(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "money.currency is required".to_string(),
             }),
         ));
@@ -36,7 +36,7 @@ pub fn money_to_parts_opt(
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
-                code: "invalid_argument",
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
                 message: "compare_at.currency is required when compare_at is set".to_string(),
             }),
         ));

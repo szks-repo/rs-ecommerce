@@ -64,7 +64,7 @@ pub async fn record(
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(ConnectError {
-                code: "internal",
+                code: crate::rpc::json::ErrorCode::Internal,
                 message: format!("audit error: {}", err),
             }),
         )

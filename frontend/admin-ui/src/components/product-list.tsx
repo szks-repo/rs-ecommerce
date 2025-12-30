@@ -10,6 +10,7 @@ import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
+import { formatConnectError } from "@/lib/handle-error";
 
 export default function ProductList() {
   const [products, setProducts] = useState<ProductAdmin[]>([]);
@@ -31,10 +32,11 @@ export default function ProductList() {
       const data = await listProductsAdmin();
       setProducts(data.products ?? []);
     } catch (err) {
+      const uiError = formatConnectError(err, "Load failed", "Failed to load products");
       push({
         variant: "error",
-        title: "Load failed",
-        description: err instanceof Error ? err.message : "Failed to load products",
+        title: uiError.title,
+        description: uiError.description,
       });
     } finally {
       setIsLoading(false);

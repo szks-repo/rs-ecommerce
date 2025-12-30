@@ -1,6 +1,5 @@
 import StaffCreateForm from "@/components/staff-create-form";
 import StaffListForm from "@/components/staff-list-form";
-import RoleCreateForm from "@/components/role-create-form";
 
 export default function IdentityPage() {
   return (
@@ -13,8 +12,11 @@ export default function IdentityPage() {
         <StaffListForm />
       </div>
 
-      <div className="mt-8 grid gap-6">
-        <RoleCreateForm />
+      <div className="mt-8 rounded-lg border border-neutral-200 bg-white p-6 text-sm text-neutral-600">
+        Manage roles in the Identity section.{" "}
+        <a className="font-medium text-neutral-900 underline" href="/admin/identity/roles">
+          Open roles
+        </a>
       </div>
     </div>
   );
