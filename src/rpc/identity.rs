@@ -1,16 +1,15 @@
 use axum::{
     Json,
     body::Bytes,
-    http::{HeaderMap, StatusCode},
-    extract::State,
     extract::Extension,
+    extract::State,
+    http::{HeaderMap, StatusCode},
 };
 
 use crate::{
-    AppState,
+    AppState, identity,
     pb::pb,
     rpc::json::{ConnectError, parse_request},
-    identity,
 };
 
 pub async fn sign_in(
@@ -102,7 +101,13 @@ pub async fn list_roles_with_permissions(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityListRolesWithPermissionsResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<
+    (
+        StatusCode,
+        Json<pb::IdentityListRolesWithPermissionsResponse>,
+    ),
+    (StatusCode, Json<ConnectError>),
+> {
     let req = parse_request::<pb::IdentityListRolesWithPermissionsRequest>(&headers, body)?;
     let resp = identity::service::list_roles_with_permissions(&state, req)
         .await
@@ -191,7 +196,8 @@ pub async fn transfer_owner(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityTransferOwnerResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::IdentityTransferOwnerResponse>), (StatusCode, Json<ConnectError>)>
+{
     let mut req = parse_request::<pb::IdentityTransferOwnerRequest>(&headers, body)?;
     if req.actor.is_none() {
         req.actor = actor_ctx;

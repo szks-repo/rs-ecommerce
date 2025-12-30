@@ -1,16 +1,12 @@
+use axum::Json;
 use axum::{
     body::Body,
     http::StatusCode,
     middleware::Next,
     response::{IntoResponse, Response},
 };
-use axum::Json;
 
-use crate::{
-    AppState,
-    rpc::json::ConnectError,
-    rpc::actor::AuthContext,
-};
+use crate::{AppState, rpc::actor::AuthContext, rpc::json::ConnectError};
 
 pub async fn require_permission(
     req: axum::http::Request<Body>,

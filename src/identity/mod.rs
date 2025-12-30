@@ -7,7 +7,7 @@
 //!
 //! 統合方針は `docs/architecture/identity.md` を参照。
 
-pub mod service;
 pub mod context;
 pub mod error;
 pub mod repository;
+pub mod service;

@@ -1,6 +1,6 @@
 use crate::pb::pb;
-use axum::{Json, http::StatusCode};
 use crate::rpc::json::ConnectError;
+use axum::{Json, http::StatusCode};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ProductStatus {
@@ -179,7 +179,9 @@ pub fn payment_method_from_string(method: String) -> i32 {
 }
 
 pub fn payment_method_to_string(method: i32) -> Option<&'static str> {
-    PaymentMethod::from_pb(method).ok().map(|value| value.as_str())
+    PaymentMethod::from_pb(method)
+        .ok()
+        .map(|value| value.as_str())
 }
 
 pub fn shipment_status_to_string(status: i32) -> &'static str {

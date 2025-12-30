@@ -1,9 +1,9 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use rs_common::{env, telemetry};
 use sqlx::{PgPool, Row, postgres::PgPoolOptions};
 use tracing::info;
-use rs_common::{telemetry, env};
 
 #[derive(Debug)]
 struct ReservationRequest {
@@ -33,17 +33,15 @@ async fn main() -> Result<()> {
     let oneshot = env::env_bool("INVENTORY_WORKER_ONESHOT", false);
 
     loop {
-        let (hot_done, hot_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
-        let (normal_done, normal_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
+        let (hot_done, hot_failed) =
+            process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
+        let (normal_done, normal_failed) =
+            process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
         let released = release_expired_reservations(&pool, batch_size).await?;
 
         info!(
             hot_done,
-            hot_failed,
-            normal_done,
-            normal_failed,
-            released,
-            "inventory worker batch completed"
+            hot_failed, normal_done, normal_failed, released, "inventory worker batch completed"
         );
 
         if oneshot {

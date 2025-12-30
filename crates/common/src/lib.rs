@@ -1,2 +1,2 @@
-pub mod telemetry;
 pub mod env;
+pub mod telemetry;

@@ -2,7 +2,11 @@ use axum::{Json, http::StatusCode};
 use serde_json::Value;
 use sqlx::{Postgres, Transaction};
 
-use crate::{AppState, rpc::{json::ConnectError, request_context}, shared::audit_action::AuditAction};
+use crate::{
+    AppState,
+    rpc::{json::ConnectError, request_context},
+    shared::audit_action::AuditAction,
+};
 
 pub struct AuditInput {
     pub tenant_id: String,

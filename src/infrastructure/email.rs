@@ -1,9 +1,9 @@
-use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 use lettre::message::Mailbox;
+use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
 use crate::rpc::json::ConnectError;
-use axum::http::StatusCode;
 use axum::Json;
+use axum::http::StatusCode;
 
 #[derive(Clone, Debug)]
 pub struct EmailConfig {
@@ -21,7 +21,8 @@ impl EmailConfig {
             .and_then(|v| v.parse().ok())
             .unwrap_or(1025);
         let from = std::env::var("SMTP_FROM").unwrap_or_else(|_| "no-reply@local.test".to_string());
-        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let base_url =
+            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
         Self {
             smtp_host,
             smtp_port,
@@ -31,7 +32,11 @@ impl EmailConfig {
     }
 
     pub fn invite_url(&self, token: &str) -> String {
-        format!("{}/identity/accept-invite?token={}", self.base_url.trim_end_matches('/'), token)
+        format!(
+            "{}/identity/accept-invite?token={}",
+            self.base_url.trim_end_matches('/'),
+            token
+        )
     }
 }
 

@@ -27,11 +27,21 @@ pub fn audit_input(
 }
 
 fn actor_fields(actor: Option<pb::ActorContext>) -> (Option<String>, String) {
-    let actor_id = actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let actor_type = actor
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type)
+            }
+        })
         .unwrap_or_else(|| "system".to_string());
     (actor_id, actor_type)
 }

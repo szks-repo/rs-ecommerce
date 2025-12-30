@@ -20,7 +20,15 @@ pub struct Variant {
 pub struct SkuCode(String);
 
 impl SkuCode {
-    pub fn parse(value: &str) -> Result<Self, (axum::http::StatusCode, axum::Json<crate::rpc::json::ConnectError>)> {
+    pub fn parse(
+        value: &str,
+    ) -> Result<
+        Self,
+        (
+            axum::http::StatusCode,
+            axum::Json<crate::rpc::json::ConnectError>,
+        ),
+    > {
         let normalized = value.trim();
         if normalized.is_empty() {
             return Err((

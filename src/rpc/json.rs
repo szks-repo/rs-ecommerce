@@ -71,7 +71,13 @@ pub fn parse_request<T: DeserializeOwned>(
 pub fn require_tenant_id(
     tenant: Option<pb::TenantContext>,
 ) -> Result<String, (StatusCode, Json<ConnectError>)> {
-    match tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
+    match tenant.and_then(|t| {
+        if t.tenant_id.is_empty() {
+            None
+        } else {
+            Some(t.tenant_id)
+        }
+    }) {
         Some(id) => Ok(id),
         None => Err((
             StatusCode::BAD_REQUEST,

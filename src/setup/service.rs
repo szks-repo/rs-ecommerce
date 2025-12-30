@@ -1,16 +1,12 @@
-use axum::{Json, http::StatusCode};
+use crate::{
+    AppState, infrastructure::db, pb::pb, rpc::json::ConnectError, shared::validation::StoreCode,
+};
 use argon2::{
     Argon2,
     password_hash::{PasswordHasher, SaltString},
 };
+use axum::{Json, http::StatusCode};
 use rand_core::OsRng;
-use crate::{
-    AppState,
-    pb::pb,
-    infrastructure::db,
-    rpc::json::ConnectError,
-    shared::validation::StoreCode,
-};
 
 pub async fn initialize_store(
     state: &AppState,

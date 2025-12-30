@@ -3,15 +3,15 @@ use sqlx::Row;
 
 use crate::{
     AppState,
-    pb::pb,
-    infrastructure::{audit, outbox},
     customer::error::{CustomerError, CustomerResult},
+    infrastructure::{audit, outbox},
+    pb::pb,
     shared::validation::{Email, Phone},
     shared::{
-        ids::{parse_uuid, StoreId, TenantId},
-        audit_helpers::{audit_input, to_json_opt},
-        time::chrono_to_timestamp,
         audit_action::CustomerAuditAction,
+        audit_helpers::{audit_input, to_json_opt},
+        ids::{StoreId, TenantId, parse_uuid},
+        time::chrono_to_timestamp,
     },
 };
 
@@ -85,7 +85,9 @@ pub async fn list_customers(
             email: row.get::<Option<String>, _>("email").unwrap_or_default(),
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
             status: row.get("status"),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         })
         .collect();
 
@@ -97,7 +99,12 @@ pub async fn get_customer(
     store_id: String,
     tenant_id: String,
     customer_id: String,
-) -> CustomerResult<(pb::Customer, pb::CustomerProfile, Vec<pb::CustomerIdentity>, Vec<pb::CustomerAddress>)> {
+) -> CustomerResult<(
+    pb::Customer,
+    pb::CustomerProfile,
+    Vec<pb::CustomerIdentity>,
+    Vec<pb::CustomerAddress>,
+)> {
     let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
     let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
@@ -151,8 +158,12 @@ pub async fn get_customer(
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
             status: row.get("status"),
             notes: row.get::<Option<String>, _>("notes").unwrap_or_default(),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
+            updated_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+            )),
         }
     } else {
         pb::CustomerProfile {
@@ -194,7 +205,9 @@ pub async fn get_customer(
             identity_value: row.get("identity_value"),
             verified: row.get("verified"),
             source: row.get("source"),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         })
         .collect();
 
@@ -226,8 +239,12 @@ pub async fn get_customer(
             line1: row.get("line1"),
             line2: row.get::<Option<String>, _>("line2").unwrap_or_default(),
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
+            updated_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+            )),
         })
         .collect();
 
@@ -256,7 +273,8 @@ pub async fn create_customer(
 
     let mut identity_inputs = normalize_identities(&profile, identities);
     for identity in &mut identity_inputs {
-        identity.identity_value = normalize_identity(&identity.identity_type, &identity.identity_value);
+        identity.identity_value =
+            normalize_identity(&identity.identity_type, &identity.identity_value);
     }
     let mut matched_customer_id: Option<String> = None;
 
@@ -344,10 +362,26 @@ pub async fn create_customer(
     .bind(parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?)
     .bind(store_uuid.as_uuid())
     .bind(profile.name)
-    .bind(if profile.email.is_empty() { None } else { Some(profile.email) })
-    .bind(if profile.phone.is_empty() { None } else { Some(profile.phone) })
-    .bind(if profile.status.is_empty() { DEFAULT_PROFILE_STATUS } else { profile.status.as_str() })
-    .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
+    .bind(if profile.email.is_empty() {
+        None
+    } else {
+        Some(profile.email)
+    })
+    .bind(if profile.phone.is_empty() {
+        None
+    } else {
+        Some(profile.phone)
+    })
+    .bind(if profile.status.is_empty() {
+        DEFAULT_PROFILE_STATUS
+    } else {
+        profile.status.as_str()
+    })
+    .bind(if profile.notes.is_empty() {
+        None
+    } else {
+        Some(profile.notes)
+    })
     .fetch_one(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
@@ -385,12 +419,22 @@ pub async fn create_customer(
         customer_id: profile_row.get("customer_id"),
         store_id: profile_row.get("store_id"),
         name: profile_row.get("name"),
-        email: profile_row.get::<Option<String>, _>("email").unwrap_or_default(),
-        phone: profile_row.get::<Option<String>, _>("phone").unwrap_or_default(),
+        email: profile_row
+            .get::<Option<String>, _>("email")
+            .unwrap_or_default(),
+        phone: profile_row
+            .get::<Option<String>, _>("phone")
+            .unwrap_or_default(),
         status: profile_row.get("status"),
-        notes: profile_row.get::<Option<String>, _>("notes").unwrap_or_default(),
-        created_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-        updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+        notes: profile_row
+            .get::<Option<String>, _>("notes")
+            .unwrap_or_default(),
+        created_at: chrono_to_timestamp(Some(
+            profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
+        )),
+        updated_at: chrono_to_timestamp(Some(
+            profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+        )),
     };
 
     let _ = audit::record_tx(
@@ -517,10 +561,26 @@ pub async fn update_customer(
     .bind(customer_uuid)
     .bind(store_uuid.as_uuid())
     .bind(profile.name)
-    .bind(if profile.email.is_empty() { None } else { Some(profile.email) })
-    .bind(if profile.phone.is_empty() { None } else { Some(profile.phone) })
-    .bind(if profile.status.is_empty() { DEFAULT_PROFILE_STATUS } else { profile.status.as_str() })
-    .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
+    .bind(if profile.email.is_empty() {
+        None
+    } else {
+        Some(profile.email)
+    })
+    .bind(if profile.phone.is_empty() {
+        None
+    } else {
+        Some(profile.phone)
+    })
+    .bind(if profile.status.is_empty() {
+        DEFAULT_PROFILE_STATUS
+    } else {
+        profile.status.as_str()
+    })
+    .bind(if profile.notes.is_empty() {
+        None
+    } else {
+        Some(profile.notes)
+    })
     .fetch_one(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
@@ -542,20 +602,34 @@ pub async fn update_customer(
         id: customer_row.get("id"),
         tenant_id: customer_row.get("tenant_id"),
         status: customer_row.get("status"),
-        created_at: chrono_to_timestamp(Some(customer_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-        updated_at: chrono_to_timestamp(Some(customer_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+        created_at: chrono_to_timestamp(Some(
+            customer_row.get::<chrono::DateTime<Utc>, _>("created_at"),
+        )),
+        updated_at: chrono_to_timestamp(Some(
+            customer_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+        )),
     };
     let profile = pb::CustomerProfile {
         id: profile_row.get("id"),
         customer_id: profile_row.get("customer_id"),
         store_id: profile_row.get("store_id"),
         name: profile_row.get("name"),
-        email: profile_row.get::<Option<String>, _>("email").unwrap_or_default(),
-        phone: profile_row.get::<Option<String>, _>("phone").unwrap_or_default(),
+        email: profile_row
+            .get::<Option<String>, _>("email")
+            .unwrap_or_default(),
+        phone: profile_row
+            .get::<Option<String>, _>("phone")
+            .unwrap_or_default(),
         status: profile_row.get("status"),
-        notes: profile_row.get::<Option<String>, _>("notes").unwrap_or_default(),
-        created_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-        updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+        notes: profile_row
+            .get::<Option<String>, _>("notes")
+            .unwrap_or_default(),
+        created_at: chrono_to_timestamp(Some(
+            profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
+        )),
+        updated_at: chrono_to_timestamp(Some(
+            profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+        )),
     };
 
     let _ = audit::record_tx(
@@ -646,7 +720,11 @@ pub async fn upsert_customer_identity(
             "#,
         )
         .bind(identity.verified)
-        .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
+        .bind(if identity.source.is_empty() {
+            "admin"
+        } else {
+            identity.source.as_str()
+        })
         .bind(parse_uuid(&row.get::<String, _>("id"), "identity_id").map_err(CustomerError::from)?)
         .execute(tx.as_mut())
         .await
@@ -660,7 +738,9 @@ pub async fn upsert_customer_identity(
             identity_value: normalized_value,
             verified: identity.verified,
             source: row.get::<String, _>("source"),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         };
 
         let _ = audit::record_tx(
@@ -723,7 +803,11 @@ pub async fn upsert_customer_identity(
     .bind(&identity.identity_type)
     .bind(&normalized_value)
     .bind(identity.verified)
-    .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
+    .bind(if identity.source.is_empty() {
+        "admin"
+    } else {
+        identity.source.as_str()
+    })
     .execute(tx.as_mut())
     .await
     .map_err(CustomerError::from)?;
@@ -735,7 +819,11 @@ pub async fn upsert_customer_identity(
         identity_type: identity.identity_type,
         identity_value: normalized_value,
         verified: identity.verified,
-        source: if identity.source.is_empty() { "admin".to_string() } else { identity.source },
+        source: if identity.source.is_empty() {
+            "admin".to_string()
+        } else {
+            identity.source
+        },
         created_at: chrono_to_timestamp(Some(Utc::now())),
     };
 
@@ -822,8 +910,16 @@ pub async fn upsert_customer_address(
         .bind(&address.prefecture)
         .bind(&address.city)
         .bind(&address.line1)
-        .bind(if address.line2.is_empty() { None } else { Some(address.line2.clone()) })
-        .bind(if address.phone.is_empty() { None } else { Some(address.phone.clone()) })
+        .bind(if address.line2.is_empty() {
+            None
+        } else {
+            Some(address.line2.clone())
+        })
+        .bind(if address.phone.is_empty() {
+            None
+        } else {
+            Some(address.phone.clone())
+        })
         .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
@@ -842,8 +938,16 @@ pub async fn upsert_customer_address(
         .bind(&address.prefecture)
         .bind(&address.city)
         .bind(&address.line1)
-        .bind(if address.line2.is_empty() { None } else { Some(address.line2.clone()) })
-        .bind(if address.phone.is_empty() { None } else { Some(address.phone.clone()) })
+        .bind(if address.line2.is_empty() {
+            None
+        } else {
+            Some(address.line2.clone())
+        })
+        .bind(if address.phone.is_empty() {
+            None
+        } else {
+            Some(address.phone.clone())
+        })
         .bind(address_id)
         .bind(customer_uuid)
         .execute(tx.as_mut())
@@ -917,7 +1021,8 @@ fn validate_customer_profile(
     profile: &pb::CustomerProfileInput,
     identities: &Vec<pb::CustomerIdentityInput>,
 ) -> CustomerResult<()> {
-    let has_identifier = !profile.email.is_empty() || !profile.phone.is_empty() || !identities.is_empty();
+    let has_identifier =
+        !profile.email.is_empty() || !profile.phone.is_empty() || !identities.is_empty();
     if profile.name.is_empty() && !has_identifier {
         return Err(CustomerError::InvalidArgument(
             "customer name or identity is required".to_string(),

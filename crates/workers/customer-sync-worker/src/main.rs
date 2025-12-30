@@ -1,10 +1,10 @@
 use std::time::Duration;
 
 use anyhow::Result;
+use rs_common::{env, telemetry};
 use serde::Deserialize;
 use sqlx::{PgPool, Row, postgres::PgPoolOptions};
 use tracing::{info, warn};
-use rs_common::{telemetry, env};
 
 #[derive(Debug)]
 struct OutboxEvent {
@@ -166,10 +166,16 @@ async fn handle_event(pool: &PgPool, event: &OutboxEvent) -> Result<()> {
     Ok(())
 }
 
-async fn apply_profile_sync(pool: &PgPool, event_id: uuid::Uuid, payload: ProfilePayload) -> Result<()> {
+async fn apply_profile_sync(
+    pool: &PgPool,
+    event_id: uuid::Uuid,
+    payload: ProfilePayload,
+) -> Result<()> {
     let tenant_id = uuid::Uuid::parse_str(&payload.tenant_id)?;
     let customer_id = uuid::Uuid::parse_str(&payload.customer_id)?;
-    let source_store_id = payload.source_store_id.and_then(|s| uuid::Uuid::parse_str(&s).ok());
+    let source_store_id = payload
+        .source_store_id
+        .and_then(|s| uuid::Uuid::parse_str(&s).ok());
     let name = payload.profile.name.clone();
     let email = payload.profile.email.clone();
     let phone = payload.profile.phone.clone();
@@ -238,10 +244,17 @@ async fn apply_profile_sync(pool: &PgPool, event_id: uuid::Uuid, payload: Profil
     Ok(())
 }
 
-async fn apply_identity_sync(pool: &PgPool, event_id: uuid::Uuid, payload: IdentityPayload) -> Result<()> {
+async fn apply_identity_sync(
+    pool: &PgPool,
+    event_id: uuid::Uuid,
+    payload: IdentityPayload,
+) -> Result<()> {
     let tenant_id = uuid::Uuid::parse_str(&payload.tenant_id)?;
     let customer_id = uuid::Uuid::parse_str(&payload.customer_id)?;
-    let identity_value = normalize_identity(&payload.identity.identity_type, &payload.identity.identity_value);
+    let identity_value = normalize_identity(
+        &payload.identity.identity_type,
+        &payload.identity.identity_value,
+    );
 
     sqlx::query(
         r#"
@@ -259,17 +272,29 @@ async fn apply_identity_sync(pool: &PgPool, event_id: uuid::Uuid, payload: Ident
     .bind(&payload.identity.identity_type)
     .bind(identity_value)
     .bind(payload.identity.verified)
-    .bind(if payload.identity.source.is_empty() { "admin" } else { payload.identity.source.as_str() })
+    .bind(if payload.identity.source.is_empty() {
+        "admin"
+    } else {
+        payload.identity.source.as_str()
+    })
     .execute(pool)
     .await?;
 
-    if let Some(source_store_id) = payload.source_store_id.and_then(|s| uuid::Uuid::parse_str(&s).ok()) {
+    if let Some(source_store_id) = payload
+        .source_store_id
+        .and_then(|s| uuid::Uuid::parse_str(&s).ok())
+    {
         mark_processed(pool, tenant_id, event_id, source_store_id).await?;
     }
     Ok(())
 }
 
-async fn already_processed(pool: &PgPool, tenant_id: uuid::Uuid, event_id: uuid::Uuid, store_id: uuid::Uuid) -> Result<bool> {
+async fn already_processed(
+    pool: &PgPool,
+    tenant_id: uuid::Uuid,
+    event_id: uuid::Uuid,
+    store_id: uuid::Uuid,
+) -> Result<bool> {
     let row = sqlx::query(
         "SELECT 1 FROM processed_events WHERE tenant_id = $1 AND event_id = $2 AND store_id = $3",
     )
@@ -281,7 +306,12 @@ async fn already_processed(pool: &PgPool, tenant_id: uuid::Uuid, event_id: uuid:
     Ok(row.is_some())
 }
 
-async fn mark_processed(pool: &PgPool, tenant_id: uuid::Uuid, event_id: uuid::Uuid, store_id: uuid::Uuid) -> Result<()> {
+async fn mark_processed(
+    pool: &PgPool,
+    tenant_id: uuid::Uuid,
+    event_id: uuid::Uuid,
+    store_id: uuid::Uuid,
+) -> Result<()> {
     sqlx::query(
         r#"
         INSERT INTO processed_events (tenant_id, store_id, event_id)

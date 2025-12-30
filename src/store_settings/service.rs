@@ -1,24 +1,23 @@
 use axum::{Json, http::StatusCode};
 
+use crate::rpc::request_context;
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::{audit, db},
+    pb::pb,
     rpc::json::ConnectError,
-    store_settings::{
-        repository::{PgStoreSettingsRepository, StoreSettingsRepository},
-        locations,
-        shipping,
-        tax,
-    },
     shared::{
-        audit_action::{StoreSettingsAuditAction, MallSettingsAuditAction},
+        audit_action::{MallSettingsAuditAction, StoreSettingsAuditAction},
         audit_helpers::{audit_input, to_json_opt},
         ids::{StoreId, TenantId},
         money::{money_from_parts, money_to_parts},
     },
+    store_settings::{
+        locations,
+        repository::{PgStoreSettingsRepository, StoreSettingsRepository},
+        shipping, tax,
+    },
 };
-use crate::rpc::request_context;
 
 pub struct StoreSettingsService<'a> {
     state: &'a AppState,
@@ -334,7 +333,9 @@ pub async fn update_store_settings(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     validate_store_settings(&settings)?;
-    let before = get_store_settings(state, store_id.clone(), tenant_id.clone()).await.ok();
+    let before = get_store_settings(state, store_id.clone(), tenant_id.clone())
+        .await
+        .ok();
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
@@ -407,8 +408,13 @@ pub async fn initialize_store_settings(
     )
     .await?;
 
-    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
-        .await?;
+    repo.upsert_mall_settings_tx(
+        &mut tx,
+        &tenant_uuid.as_uuid(),
+        &store_uuid.as_uuid(),
+        &mall,
+    )
+    .await?;
 
     audit::record_tx(
         &mut tx,
@@ -496,13 +502,20 @@ pub async fn update_mall_settings(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     validate_mall_settings(&mall)?;
-    let before = get_mall_settings(state, store_id.clone(), tenant_id.clone()).await.ok();
+    let before = get_mall_settings(state, store_id.clone(), tenant_id.clone())
+        .await
+        .ok();
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
     let mut tx = state.db.begin().await.map_err(db::error)?;
-    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
-        .await?;
+    repo.upsert_mall_settings_tx(
+        &mut tx,
+        &tenant_uuid.as_uuid(),
+        &store_uuid.as_uuid(),
+        &mall,
+    )
+    .await?;
 
     audit::record_tx(
         &mut tx,
@@ -611,9 +624,13 @@ pub async fn resolve_store_context(
 ) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
     if let Some(ctx) = request_context::current() {
         if let Some(auth_store) = ctx.store_id.as_deref() {
-            if let Some(store_id) =
-                store.as_ref().and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.as_str()) })
-            {
+            if let Some(store_id) = store.as_ref().and_then(|s| {
+                if s.store_id.is_empty() {
+                    None
+                } else {
+                    Some(s.store_id.as_str())
+                }
+            }) {
                 if store_id != auth_store {
                     return Err((
                         StatusCode::FORBIDDEN,
@@ -626,9 +643,13 @@ pub async fn resolve_store_context(
             }
         }
         if let Some(auth_tenant) = ctx.tenant_id.as_deref() {
-            if let Some(tenant_id) =
-                tenant.as_ref().and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id.as_str()) })
-            {
+            if let Some(tenant_id) = tenant.as_ref().and_then(|t| {
+                if t.tenant_id.is_empty() {
+                    None
+                } else {
+                    Some(t.tenant_id.as_str())
+                }
+            }) {
                 if tenant_id != auth_tenant {
                     return Err((
                         StatusCode::FORBIDDEN,
@@ -642,12 +663,16 @@ pub async fn resolve_store_context(
         }
     }
 
-    if let Some(store_id) = store.as_ref().and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.as_str()) }) {
+    if let Some(store_id) = store.as_ref().and_then(|s| {
+        if s.store_id.is_empty() {
+            None
+        } else {
+            Some(s.store_id.as_str())
+        }
+    }) {
         let store_uuid = StoreId::parse(store_id)?;
         let repo = PgStoreSettingsRepository::new(&state.db);
-        let tenant_id = repo
-            .tenant_id_by_store_id(&store_uuid.as_uuid())
-            .await?;
+        let tenant_id = repo.tenant_id_by_store_id(&store_uuid.as_uuid()).await?;
         let Some(tenant_id) = tenant_id else {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -659,7 +684,13 @@ pub async fn resolve_store_context(
         };
         return Ok((store_id.to_string(), tenant_id));
     }
-    if let Some(store_code) = store.as_ref().and_then(|s| if s.store_code.is_empty() { None } else { Some(s.store_code.as_str()) }) {
+    if let Some(store_code) = store.as_ref().and_then(|s| {
+        if s.store_code.is_empty() {
+            None
+        } else {
+            Some(s.store_code.as_str())
+        }
+    }) {
         let repo = PgStoreSettingsRepository::new(&state.db);
         let row = repo.store_by_code(store_code).await?;
         let Some(row) = row else {
@@ -688,12 +719,16 @@ pub async fn resolve_store_context(
         }
         return Ok((store_id, tenant_id));
     }
-    if let Some(tenant_id) = tenant.and_then(|t| if t.tenant_id.is_empty() { None } else { Some(t.tenant_id) }) {
+    if let Some(tenant_id) = tenant.and_then(|t| {
+        if t.tenant_id.is_empty() {
+            None
+        } else {
+            Some(t.tenant_id)
+        }
+    }) {
         let tenant_uuid = TenantId::parse(&tenant_id)?;
         let repo = PgStoreSettingsRepository::new(&state.db);
-        let store_id = repo
-            .first_store_by_tenant(&tenant_uuid.as_uuid())
-            .await?;
+        let store_id = repo.first_store_by_tenant(&tenant_uuid.as_uuid()).await?;
         let Some(store_id) = store_id else {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -709,9 +744,7 @@ pub async fn resolve_store_context(
         if let Some(store_id) = ctx.store_id {
             let store_uuid = StoreId::parse(&store_id)?;
             let repo = PgStoreSettingsRepository::new(&state.db);
-            let tenant_id = repo
-                .tenant_id_by_store_id(&store_uuid.as_uuid())
-                .await?;
+            let tenant_id = repo.tenant_id_by_store_id(&store_uuid.as_uuid()).await?;
             if let Some(tenant_id) = tenant_id {
                 return Ok((store_id, tenant_id));
             }
@@ -719,9 +752,7 @@ pub async fn resolve_store_context(
         if let Some(tenant_id) = ctx.tenant_id {
             let tenant_uuid = TenantId::parse(&tenant_id)?;
             let repo = PgStoreSettingsRepository::new(&state.db);
-            let store_id = repo
-                .first_store_by_tenant(&tenant_uuid.as_uuid())
-                .await?;
+            let store_id = repo.first_store_by_tenant(&tenant_uuid.as_uuid()).await?;
             if let Some(store_id) = store_id {
                 return Ok((store_id, tenant_id));
             }

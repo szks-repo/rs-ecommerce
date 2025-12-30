@@ -1,17 +1,16 @@
 use axum::{
     Json,
     body::Bytes,
-    http::{HeaderMap, StatusCode},
-    extract::State,
     extract::Extension,
+    extract::State,
+    http::{HeaderMap, StatusCode},
 };
 
 use crate::{
-    AppState,
+    AppState, customer,
+    identity::context::resolve_store_context,
     pb::pb,
     rpc::json::{ConnectError, parse_request},
-    customer,
-    identity::context::resolve_store_context,
 };
 
 pub async fn list_customers(
@@ -77,10 +76,16 @@ pub async fn create_customer(
         )
     })?;
     let actor = req.actor.or(actor_ctx);
-    let (customer, profile, matched_existing) =
-        customer::service::create_customer(&state, store_id, tenant_id, profile, req.identities, actor)
-            .await
-            .map_err(|err| err.into_connect())?;
+    let (customer, profile, matched_existing) = customer::service::create_customer(
+        &state,
+        store_id,
+        tenant_id,
+        profile,
+        req.identities,
+        actor,
+    )
+    .await
+    .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::CreateCustomerResponse {
@@ -109,18 +114,17 @@ pub async fn update_customer(
         )
     })?;
     let actor = req.actor.or(actor_ctx);
-    let (customer, profile) =
-        customer::service::update_customer(
-            &state,
-            store_id,
-            tenant_id,
-            req.customer_id,
-            profile,
-            req.customer_status,
-            actor,
-        )
-            .await
-            .map_err(|err| err.into_connect())?;
+    let (customer, profile) = customer::service::update_customer(
+        &state,
+        store_id,
+        tenant_id,
+        req.customer_id,
+        profile,
+        req.customer_status,
+        actor,
+    )
+    .await
+    .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpdateCustomerResponse {
@@ -135,7 +139,8 @@ pub async fn upsert_customer_identity(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::UpsertCustomerIdentityResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::UpsertCustomerIdentityResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::UpsertCustomerIdentityRequest>(&headers, body)?;
     let (_store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);
@@ -148,10 +153,15 @@ pub async fn upsert_customer_identity(
             }),
         )
     })?;
-    let identity =
-        customer::service::upsert_customer_identity(&state, tenant_id, req.customer_id, identity, actor)
-            .await
-            .map_err(|err| err.into_connect())?;
+    let identity = customer::service::upsert_customer_identity(
+        &state,
+        tenant_id,
+        req.customer_id,
+        identity,
+        actor,
+    )
+    .await
+    .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpsertCustomerIdentityResponse {
@@ -165,7 +175,8 @@ pub async fn upsert_customer_address(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::UpsertCustomerAddressResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::UpsertCustomerAddressResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::UpsertCustomerAddressRequest>(&headers, body)?;
     let (_store_id, _tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);

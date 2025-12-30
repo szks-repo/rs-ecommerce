@@ -1,28 +1,28 @@
 use argon2::{
-    Argon2,
-    PasswordHash,
-    PasswordVerifier,
+    Argon2, PasswordHash, PasswordVerifier,
     password_hash::{PasswordHasher, SaltString},
 };
+use chrono::{Duration, Utc};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use rand_core::OsRng;
 use serde::Serialize;
-use chrono::{Duration, Utc};
 use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
     AppState,
-    pb::pb,
-    infrastructure::{audit, email},
+    identity::context::{
+        parse_uuid, resolve_store_context, resolve_store_context_without_token_guard,
+    },
     identity::error::{IdentityError, IdentityResult},
     identity::repository::{IdentityRepository, PgIdentityRepository},
+    infrastructure::{audit, email},
+    pb::pb,
     shared::validation::{Email, Phone},
     shared::{
-        time::chrono_to_timestamp,
         audit_action::IdentityAuditAction,
         ids::{StoreId, TenantId},
+        time::chrono_to_timestamp,
     },
-    identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
 };
 
 pub struct IdentityService<'a> {
@@ -277,7 +277,10 @@ pub async fn update_staff(
 
     let Some(row) = updated else {
         tx.commit().await.map_err(IdentityError::from)?;
-        return Ok(pb::IdentityUpdateStaffResponse { updated: false, staff: None });
+        return Ok(pb::IdentityUpdateStaffResponse {
+            updated: false,
+            staff: None,
+        });
     };
 
     let role_key = if row.role_id.is_empty() {
@@ -310,17 +313,26 @@ pub async fn update_staff(
         display_name: row.display_name.unwrap_or_default(),
     };
 
-    let actor_id = req
-        .actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = req.actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     if actor_id.is_none() {
         return Err(IdentityError::permission_denied("actor_id is required"));
     }
     let actor_type = req
         .actor
         .as_ref()
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.clone())
+            }
+        })
         .unwrap_or_else(|| "staff".to_string());
 
     let _ = audit::record_tx(
@@ -396,10 +408,13 @@ pub async fn invite_staff(
         return Err(IdentityError::already_exists("invite already exists"));
     }
 
-    let actor_id = req
-        .actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = req.actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let created_by = match actor_id.as_ref() {
         Some(id) => Some(parse_uuid(id, "actor_id")?),
         None => None,
@@ -443,7 +458,13 @@ pub async fn invite_staff(
             actor_type: req
                 .actor
                 .as_ref()
-                .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+                .and_then(|a| {
+                    if a.actor_type.is_empty() {
+                        None
+                    } else {
+                        Some(a.actor_type.clone())
+                    }
+                })
                 .unwrap_or_else(|| "staff".to_string()),
             action: IdentityAuditAction::StaffInvite.into(),
             target_type: Some("store_staff_invite".to_string()),
@@ -499,15 +520,16 @@ pub async fn transfer_owner(
 
     let store_uuid = StoreId::parse(&store_id)?;
     let new_owner_uuid = parse_uuid(&req.new_owner_staff_id, "new_owner_staff_id")?;
-    let actor_id = req
-        .actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = req.actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
 
     let repo = PgIdentityRepository::new(&state.db);
-    let current_owner_id = repo
-        .current_owner_id(&store_uuid.as_uuid())
-        .await?;
+    let current_owner_id = repo.current_owner_id(&store_uuid.as_uuid()).await?;
     let Some(current_owner_id) = current_owner_id else {
         return Err(IdentityError::not_found("owner not found"));
     };
@@ -532,9 +554,7 @@ pub async fn transfer_owner(
         return Err(IdentityError::not_found("new owner staff not found"));
     };
     if target_status != "active" {
-        return Err(IdentityError::invalid_argument(
-            "new owner must be active",
-        ));
+        return Err(IdentityError::invalid_argument("new owner must be active"));
     }
 
     let owner_role_id = repo
@@ -547,11 +567,21 @@ pub async fn transfer_owner(
         .ok_or_else(|| IdentityError::not_found("staff role not found"))?;
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
-    repo.update_staff_role_tx(tx.as_mut(), &new_owner_uuid, &store_uuid.as_uuid(), &owner_role_id)
-        .await?;
+    repo.update_staff_role_tx(
+        tx.as_mut(),
+        &new_owner_uuid,
+        &store_uuid.as_uuid(),
+        &owner_role_id,
+    )
+    .await?;
     let current_owner_uuid = parse_uuid(&current_owner_id, "current_owner_id")?;
-    repo.update_staff_role_tx(tx.as_mut(), &current_owner_uuid, &store_uuid.as_uuid(), &staff_role_id)
-        .await?;
+    repo.update_staff_role_tx(
+        tx.as_mut(),
+        &current_owner_uuid,
+        &store_uuid.as_uuid(),
+        &staff_role_id,
+    )
+    .await?;
 
     let _ = audit::record_tx(
         &mut tx,
@@ -561,7 +591,13 @@ pub async fn transfer_owner(
             actor_type: req
                 .actor
                 .as_ref()
-                .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+                .and_then(|a| {
+                    if a.actor_type.is_empty() {
+                        None
+                    } else {
+                        Some(a.actor_type.clone())
+                    }
+                })
                 .unwrap_or_else(|| "staff".to_string()),
             action: IdentityAuditAction::OwnerTransfer.into(),
             target_type: Some("store".to_string()),
@@ -578,8 +614,10 @@ pub async fn transfer_owner(
 
     tx.commit().await.map_err(IdentityError::from)?;
 
-    let new_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
-    let previous_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
+    let new_owner =
+        fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
+    let previous_owner =
+        fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
 
     Ok(pb::IdentityTransferOwnerResponse {
         transferred: true,
@@ -594,10 +632,22 @@ pub async fn sign_out(
     actor: Option<pb::ActorContext>,
 ) -> IdentityResult<pb::IdentitySignOutResponse> {
     let (_store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
-    let actor_id = actor.as_ref().and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let actor_type = actor
         .as_ref()
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.clone())
+            }
+        })
         .unwrap_or_else(|| "staff".to_string());
 
     let _ = audit::record(
@@ -621,7 +671,6 @@ pub async fn sign_out(
 
     Ok(pb::IdentitySignOutResponse { signed_out: true })
 }
-
 
 pub async fn create_staff(
     state: &AppState,
@@ -651,12 +700,22 @@ pub async fn create_staff(
     )
     .await?;
 
-    let actor_id = actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let actor_type = actor
         .as_ref()
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.clone())
+            }
+        })
         .unwrap_or_else(|| "staff".to_string());
 
     let _ = audit::record_tx(
@@ -698,7 +757,6 @@ pub async fn create_staff(
     })
 }
 
-
 pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
@@ -725,12 +783,22 @@ pub async fn create_role(
     .await?;
 
     if let Some(role) = resp.role.as_ref() {
-        let actor_id = actor
-            .as_ref()
-            .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+        let actor_id = actor.as_ref().and_then(|a| {
+            if a.actor_id.is_empty() {
+                None
+            } else {
+                Some(a.actor_id.clone())
+            }
+        });
         let actor_type = actor
             .as_ref()
-            .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+            .and_then(|a| {
+                if a.actor_type.is_empty() {
+                    None
+                } else {
+                    Some(a.actor_type.clone())
+                }
+            })
             .unwrap_or_else(|| "staff".to_string());
         let tenant_id = resolve_store_context(state, req.store, req.tenant)
             .await
@@ -770,7 +838,6 @@ pub async fn create_role(
         }),
     })
 }
-
 
 pub async fn assign_role_to_staff(
     state: &AppState,
@@ -812,14 +879,23 @@ pub async fn assign_role_to_staff(
     repo.update_staff_role_tx(tx.as_mut(), &staff_uuid, &store_uuid.as_uuid(), &role_uuid)
         .await?;
 
-    let actor_id = req
-        .actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = req.actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let actor_type = req
         .actor
         .as_ref()
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.clone())
+            }
+        })
         .unwrap_or_else(|| "staff".to_string());
 
     let _ = audit::record_tx(
@@ -847,7 +923,6 @@ pub async fn assign_role_to_staff(
 
     Ok(pb::IdentityAssignRoleResponse { assigned: true })
 }
-
 
 pub async fn list_roles(
     state: &AppState,
@@ -929,7 +1004,13 @@ pub async fn update_role(
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     let repo = PgIdentityRepository::new(&state.db);
     let updated = repo
-        .update_role_tx(tx.as_mut(), &store_uuid.as_uuid(), &role_uuid, &req.name, &req.description)
+        .update_role_tx(
+            tx.as_mut(),
+            &store_uuid.as_uuid(),
+            &role_uuid,
+            &req.name,
+            &req.description,
+        )
         .await?;
 
     let Some(row) = updated else {
@@ -939,7 +1020,8 @@ pub async fn update_role(
         });
     };
 
-    repo.delete_role_permissions_tx(tx.as_mut(), &role_uuid).await?;
+    repo.delete_role_permissions_tx(tx.as_mut(), &role_uuid)
+        .await?;
 
     for (permission_id, _key) in rows {
         let permission_uuid = parse_uuid(&permission_id, "permission_id")?;
@@ -955,14 +1037,23 @@ pub async fn update_role(
         permission_keys,
     };
 
-    let actor_id = req
-        .actor
-        .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+    let actor_id = req.actor.as_ref().and_then(|a| {
+        if a.actor_id.is_empty() {
+            None
+        } else {
+            Some(a.actor_id.clone())
+        }
+    });
     let actor_type = req
         .actor
         .as_ref()
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.clone())
+            }
+        })
         .unwrap_or_else(|| "staff".to_string());
 
     let _ = audit::record_tx(
@@ -1022,14 +1113,23 @@ pub async fn delete_role(
         .await?;
 
     if let Some(row) = deleted {
-        let actor_id = req
-            .actor
-            .as_ref()
-            .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
+        let actor_id = req.actor.as_ref().and_then(|a| {
+            if a.actor_id.is_empty() {
+                None
+            } else {
+                Some(a.actor_id.clone())
+            }
+        });
         let actor_type = req
             .actor
             .as_ref()
-            .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.clone()) })
+            .and_then(|a| {
+                if a.actor_type.is_empty() {
+                    None
+                } else {
+                    Some(a.actor_type.clone())
+                }
+            })
             .unwrap_or_else(|| "staff".to_string());
 
         let _ = audit::record_tx(
@@ -1063,7 +1163,6 @@ pub async fn delete_role(
     Ok(pb::IdentityDeleteRoleResponse { deleted: false })
 }
 
-
 struct SignInCoreResult {
     access_token: String,
     store_id: String,
@@ -1093,7 +1192,8 @@ async fn sign_in_core(
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
 
-    let (store_id, tenant_id) = resolve_store_context_without_token_guard(state, store, tenant).await?;
+    let (store_id, tenant_id) =
+        resolve_store_context_without_token_guard(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
@@ -1220,10 +1320,26 @@ async fn create_staff_core(
         ));
     }
 
-    let email_value = if email.is_empty() { None } else { Some(email.as_str()) };
-    let login_id_value = if login_id.is_empty() { None } else { Some(login_id.as_str()) };
-    let phone_value = if phone.is_empty() { None } else { Some(phone.as_str()) };
-    let display_name_value = if display_name.is_empty() { None } else { Some(display_name.as_str()) };
+    let email_value = if email.is_empty() {
+        None
+    } else {
+        Some(email.as_str())
+    };
+    let login_id_value = if login_id.is_empty() {
+        None
+    } else {
+        Some(login_id.as_str())
+    };
+    let phone_value = if phone.is_empty() {
+        None
+    } else {
+        Some(phone.as_str())
+    };
+    let display_name_value = if display_name.is_empty() {
+        None
+    } else {
+        Some(display_name.as_str())
+    };
     repo.insert_staff_tx(
         tx.as_mut(),
         &staff_id,
@@ -1250,12 +1366,16 @@ async fn create_staff_core(
 
 fn require_owner(actor: Option<&pb::ActorContext>) -> IdentityResult<()> {
     let actor_type = actor
-        .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.as_str()) })
+        .and_then(|a| {
+            if a.actor_type.is_empty() {
+                None
+            } else {
+                Some(a.actor_type.as_str())
+            }
+        })
         .unwrap_or("");
     if actor_type != "owner" {
-        return Err(IdentityError::permission_denied(
-            "owner role is required",
-        ));
+        return Err(IdentityError::permission_denied("owner role is required"));
     }
     Ok(())
 }
@@ -1317,15 +1437,20 @@ async fn create_role_core(
     let store_uuid = StoreId::parse(&store_id)?;
 
     if key.is_empty() || name.is_empty() {
-        return Err(IdentityError::invalid_argument(
-            "key and name are required",
-        ));
+        return Err(IdentityError::invalid_argument("key and name are required"));
     }
 
     let role_id = uuid::Uuid::new_v4();
     let repo = PgIdentityRepository::new(&state.db);
-    repo.insert_role_tx(tx.as_mut(), &store_uuid.as_uuid(), &role_id, &key, &name, &description)
-        .await?;
+    repo.insert_role_tx(
+        tx.as_mut(),
+        &store_uuid.as_uuid(),
+        &role_id,
+        &key,
+        &name,
+        &description,
+    )
+    .await?;
 
     if !permission_keys.is_empty() {
         let rows = repo.permissions_by_keys(&permission_keys).await?;

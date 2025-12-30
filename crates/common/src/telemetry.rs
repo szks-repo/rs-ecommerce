@@ -5,8 +5,8 @@ use opentelemetry_sdk::{Resource, trace as sdktrace};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 pub fn init_tracing(service_name: &str) {
-    let registry = tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::from_default_env());
+    let registry =
+        tracing_subscriber::registry().with(tracing_subscriber::EnvFilter::from_default_env());
 
     let use_json = std::env::var("LOG_FORMAT").ok().as_deref() == Some("json");
 
@@ -21,9 +21,10 @@ pub fn init_tracing(service_name: &str) {
                     .with_endpoint(endpoint),
             )
             .with_trace_config(
-                sdktrace::Config::default().with_resource(Resource::new(vec![
-                    KeyValue::new("service.name", service_name.to_string()),
-                ])),
+                sdktrace::Config::default().with_resource(Resource::new(vec![KeyValue::new(
+                    "service.name",
+                    service_name.to_string(),
+                )])),
             )
             .install_batch(opentelemetry_sdk::runtime::Tokio)
             .expect("otel tracer provider");

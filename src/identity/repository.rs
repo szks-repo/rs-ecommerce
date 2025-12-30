@@ -40,17 +40,29 @@ pub struct RoleDetailRow {
 pub trait IdentityRepository {
     /// list_staff
     async fn list_staff(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<StaffSummaryRow>>;
-    
-    /// staff_role_key
-    async fn staff_role_key(&self, store_uuid: &uuid::Uuid, staff_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
-    
-    /// role_by_id
-    async fn role_by_id(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>>;
-    
-    /// role_key_by_id
-    async fn role_key_by_id(&self, store_uuid: &uuid::Uuid, role_id: &str) -> IdentityResult<Option<String>>;
 
-     /// role_store_id
+    /// staff_role_key
+    async fn staff_role_key(
+        &self,
+        store_uuid: &uuid::Uuid,
+        staff_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Option<String>>;
+
+    /// role_by_id
+    async fn role_by_id(
+        &self,
+        store_uuid: &uuid::Uuid,
+        role_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Option<RoleRow>>;
+
+    /// role_key_by_id
+    async fn role_key_by_id(
+        &self,
+        store_uuid: &uuid::Uuid,
+        role_id: &str,
+    ) -> IdentityResult<Option<String>>;
+
+    /// role_store_id
     async fn role_store_id(&self, role_id: &str) -> IdentityResult<Option<String>>;
 
     /// update_staff
@@ -84,7 +96,7 @@ pub trait IdentityRepository {
     ) -> IdentityResult<Option<StaffSummaryRow>>;
 
     async fn store_name(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
-    
+
     async fn role_id_by_key(
         &self,
         store_uuid: &uuid::Uuid,
@@ -92,25 +104,40 @@ pub trait IdentityRepository {
     ) -> IdentityResult<Option<uuid::Uuid>>;
 
     async fn list_roles(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<RoleDetailRow>>;
-    
-    async fn list_role_permissions(&self, role_ids: &[uuid::Uuid]) -> IdentityResult<Vec<(String, String)>>;
-    
+
+    async fn list_role_permissions(
+        &self,
+        role_ids: &[uuid::Uuid],
+    ) -> IdentityResult<Vec<(String, String)>>;
+
     async fn permissions_by_keys(&self, keys: &[String]) -> IdentityResult<Vec<(String, String)>>;
-    
+
     async fn role_attached(&self, role_uuid: &uuid::Uuid) -> IdentityResult<bool>;
-    
-    async fn delete_role(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>>;
-    
+
+    async fn delete_role(
+        &self,
+        store_uuid: &uuid::Uuid,
+        role_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Option<RoleRow>>;
+
     async fn update_staff_role(
         &self,
         staff_uuid: &uuid::Uuid,
         store_uuid: &uuid::Uuid,
         role_uuid: &uuid::Uuid,
     ) -> IdentityResult<()>;
-    
-    async fn store_staff_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool>;
 
-    async fn invite_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool>;
+    async fn store_staff_exists_by_email(
+        &self,
+        store_uuid: &uuid::Uuid,
+        email: &str,
+    ) -> IdentityResult<bool>;
+
+    async fn invite_exists_by_email(
+        &self,
+        store_uuid: &uuid::Uuid,
+        email: &str,
+    ) -> IdentityResult<bool>;
 
     async fn insert_staff_invite_tx<'e, E>(
         &self,
@@ -127,24 +154,21 @@ pub trait IdentityRepository {
     ) -> IdentityResult<()>
     where
         for<'c> &'c mut E: Executor<'c, Database = Postgres>;
-    
-    async fn current_owner_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>>;
-    
+
+    async fn current_owner_id(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
+
     async fn staff_status(
         &self,
         store_uuid: &uuid::Uuid,
         staff_uuid: &uuid::Uuid,
     ) -> IdentityResult<Option<String>>;
-    
+
     async fn fetch_active_staff_by_email(
         &self,
         store_uuid: &uuid::Uuid,
         email: &str,
     ) -> IdentityResult<Option<StaffAuthRow>>;
-    
+
     async fn fetch_active_staff_by_login_id(
         &self,
         store_uuid: &uuid::Uuid,
@@ -439,10 +463,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
             .collect())
     }
 
-    async fn permissions_by_keys(
-        &self,
-        keys: &[String],
-    ) -> IdentityResult<Vec<(String, String)>> {
+    async fn permissions_by_keys(&self, keys: &[String]) -> IdentityResult<Vec<(String, String)>> {
         let rows = sqlx::query(
             r#"
             SELECT id::text as id, key
@@ -613,10 +634,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(())
     }
 
-    async fn current_owner_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>> {
+    async fn current_owner_id(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Option<String>> {
         let row = sqlx::query(
             r#"
             SELECT ss.id::text as staff_id

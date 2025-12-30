@@ -1,15 +1,15 @@
 use axum::{
     Json,
     body::Bytes,
-    http::{HeaderMap, StatusCode},
-    extract::State,
     extract::Extension,
+    extract::State,
+    http::{HeaderMap, StatusCode},
 };
 
 use crate::{
-    AppState,
+    AppState, order,
     pb::pb,
-    product, order, promotion,
+    product, promotion,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
 };
 
@@ -40,7 +40,8 @@ pub async fn list_variants(
 ) -> Result<(StatusCode, Json<pb::ListVariantsAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListVariantsAdminRequest>(&headers, body)?;
     let variants =
-        product::service::list_variants_admin(&state, req.tenant, req.store, req.product_id).await?;
+        product::service::list_variants_admin(&state, req.tenant, req.store, req.product_id)
+            .await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListVariantsAdminResponse {
@@ -61,7 +62,12 @@ pub async fn create_product(
     let req = parse_request::<pb::CreateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let product = product::service::create_product(&state, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::CreateProductResponse { product: Some(product) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateProductResponse {
+            product: Some(product),
+        }),
+    ))
 }
 
 pub async fn update_product(
@@ -73,7 +79,12 @@ pub async fn update_product(
     let req = parse_request::<pb::UpdateProductRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let product = product::service::update_product(&state, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::UpdateProductResponse { product: Some(product) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateProductResponse {
+            product: Some(product),
+        }),
+    ))
 }
 
 pub async fn create_variant(
@@ -85,7 +96,12 @@ pub async fn create_variant(
     let req = parse_request::<pb::CreateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let variant = product::service::create_variant(&state, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::CreateVariantResponse { variant: Some(variant) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateVariantResponse {
+            variant: Some(variant),
+        }),
+    ))
 }
 
 pub async fn update_variant(
@@ -97,7 +113,12 @@ pub async fn update_variant(
     let req = parse_request::<pb::UpdateVariantRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let variant = product::service::update_variant(&state, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::UpdateVariantResponse { variant: Some(variant) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateVariantResponse {
+            variant: Some(variant),
+        }),
+    ))
 }
 
 pub async fn set_inventory(
@@ -109,7 +130,12 @@ pub async fn set_inventory(
     let req = parse_request::<pb::SetInventoryRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let inventory = product::service::set_inventory(&state, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::SetInventoryResponse { inventory: Some(inventory) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::SetInventoryResponse {
+            inventory: Some(inventory),
+        }),
+    ))
 }
 
 pub async fn list_orders(
@@ -146,7 +172,10 @@ pub async fn update_order_status(
     let order = order::service::update_order_status(&state, tenant_id, req, actor)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((StatusCode::OK, Json(pb::UpdateOrderStatusResponse { order: Some(order) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateOrderStatusResponse { order: Some(order) }),
+    ))
 }
 
 pub async fn create_shipment(
@@ -160,7 +189,12 @@ pub async fn create_shipment(
     let shipment = order::service::create_shipment(&state, req, actor)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((StatusCode::OK, Json(pb::CreateShipmentResponse { shipment: Some(shipment) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateShipmentResponse {
+            shipment: Some(shipment),
+        }),
+    ))
 }
 
 pub async fn update_shipment_status(
@@ -168,13 +202,19 @@ pub async fn update_shipment_status(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::UpdateShipmentStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let shipment = order::service::update_shipment_status(&state, req, actor)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((StatusCode::OK, Json(pb::UpdateShipmentStatusResponse { shipment: Some(shipment) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateShipmentStatusResponse {
+            shipment: Some(shipment),
+        }),
+    ))
 }
 
 pub async fn create_promotion(
@@ -187,7 +227,12 @@ pub async fn create_promotion(
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
     let promotion = promotion::service::create_promotion(&state, tenant_id, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::CreatePromotionResponse { promotion: Some(promotion) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreatePromotionResponse {
+            promotion: Some(promotion),
+        }),
+    ))
 }
 
 pub async fn update_promotion(
@@ -200,5 +245,10 @@ pub async fn update_promotion(
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
     let promotion = promotion::service::update_promotion(&state, tenant_id, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::UpdatePromotionResponse { promotion: Some(promotion) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdatePromotionResponse {
+            promotion: Some(promotion),
+        }),
+    ))
 }

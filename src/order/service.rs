@@ -2,14 +2,17 @@ use sqlx::Row;
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::audit,
     order::error::{OrderError, OrderResult},
+    pb::pb,
     shared::{
         audit_action::{OrderAuditAction, ShipmentAuditAction},
         audit_helpers::{audit_input, to_json_opt},
-        ids::{parse_uuid, nullable_uuid},
-        status::{order_status_from_string, order_status_to_string, shipment_status_to_string, PaymentMethod},
+        ids::{nullable_uuid, parse_uuid},
+        status::{
+            PaymentMethod, order_status_from_string, order_status_to_string,
+            shipment_status_to_string,
+        },
     },
 };
 
@@ -56,15 +59,19 @@ pub async fn list_orders(
         .into_iter()
         .map(|row| pb::OrderAdmin {
             id: row.get::<String, _>("id"),
-            customer_id: row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
+            customer_id: row
+                .get::<Option<String>, _>("customer_id")
+                .unwrap_or_default(),
             status: order_status_from_string(row.get::<String, _>("status")),
             total: Some(pb::Money {
                 amount: row.get::<i64, _>("total_amount"),
                 currency: row.get::<String, _>("currency"),
             }),
-            payment_method: PaymentMethod::from_str(row.get::<String, _>("payment_method").as_str())
-                .map(|value| value.to_pb())
-                .unwrap_or(pb::PaymentMethod::Unspecified as i32),
+            payment_method: PaymentMethod::from_str(
+                row.get::<String, _>("payment_method").as_str(),
+            )
+            .map(|value| value.to_pb())
+            .unwrap_or(pb::PaymentMethod::Unspecified as i32),
             created_at: None,
         })
         .collect())
@@ -236,11 +243,7 @@ pub async fn update_shipment_status(
     Ok(shipment)
 }
 
-
-async fn tenant_id_for_order(
-    state: &AppState,
-    order_id: &str,
-) -> OrderResult<String> {
+async fn tenant_id_for_order(state: &AppState, order_id: &str) -> OrderResult<String> {
     let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM orders WHERE id = $1")
         .bind(parse_uuid(order_id, "order_id")?)
         .fetch_one(&state.db)
@@ -249,10 +252,7 @@ async fn tenant_id_for_order(
     Ok(row.get("tenant_id"))
 }
 
-async fn tenant_id_for_shipment(
-    state: &AppState,
-    shipment_id: &str,
-) -> OrderResult<String> {
+async fn tenant_id_for_shipment(state: &AppState, shipment_id: &str) -> OrderResult<String> {
     let row = sqlx::query(
         r#"
         SELECT o.tenant_id::text as tenant_id

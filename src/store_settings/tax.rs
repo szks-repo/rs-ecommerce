@@ -2,12 +2,12 @@ use axum::{Json, http::StatusCode};
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::audit,
+    pb::pb,
     rpc::json::ConnectError,
     shared::{
         audit_action::TaxRuleAuditAction,
-        ids::{parse_uuid, StoreId, TenantId},
+        ids::{StoreId, TenantId, parse_uuid},
     },
     store_settings::repository::{PgStoreSettingsRepository, StoreSettingsRepository},
 };
@@ -49,7 +49,11 @@ pub async fn upsert_tax_rule(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     if rule.id.is_empty() {
         repo.insert_tax_rule_tx(
             &mut tx,
@@ -85,7 +89,9 @@ pub async fn upsert_tax_rule(
     )
     .await?;
 
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -99,7 +105,11 @@ pub async fn delete_tax_rule(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     let rows = repo
         .delete_tax_rule_tx(
             &mut tx,
@@ -123,7 +133,9 @@ pub async fn delete_tax_rule(
         )
         .await?;
     }
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

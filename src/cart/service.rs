@@ -3,8 +3,8 @@ use sqlx::Row;
 
 use crate::{
     AppState,
-    pb::pb,
     cart::error::{CartError, CartResult},
+    pb::pb,
     shared::ids::{CartId, CartItemId, CustomerId, LocationId, SkuId, StoreId, parse_uuid},
     shared::status::{CartItemStatus, CartStatus, PaymentMethod},
     shared::time::chrono_to_timestamp,
@@ -18,19 +18,14 @@ fn cart_ttl_days() -> i64 {
         .unwrap_or(30)
 }
 
-async fn resolve_store_id(
-    state: &AppState,
-    store: Option<pb::StoreContext>,
-) -> CartResult<String> {
+async fn resolve_store_id(state: &AppState, store: Option<pb::StoreContext>) -> CartResult<String> {
     let (store_id, _tenant_id) =
-        crate::identity::context::resolve_store_context_without_token_guard(state, store, None).await?;
+        crate::identity::context::resolve_store_context_without_token_guard(state, store, None)
+            .await?;
     Ok(store_id)
 }
 
-pub async fn create_cart(
-    state: &AppState,
-    req: pb::CreateCartRequest,
-) -> CartResult<pb::Cart> {
+pub async fn create_cart(state: &AppState, req: pb::CreateCartRequest) -> CartResult<pb::Cart> {
     let cart_id = uuid::Uuid::new_v4();
     let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
@@ -65,10 +60,7 @@ pub async fn create_cart(
     })
 }
 
-pub async fn add_cart_item(
-    state: &AppState,
-    req: pb::AddCartItemRequest,
-) -> CartResult<pb::Cart> {
+pub async fn add_cart_item(state: &AppState, req: pb::AddCartItemRequest) -> CartResult<pb::Cart> {
     if req.quantity <= 0 {
         return Err(CartError::invalid_argument(
             "quantity must be greater than 0",
@@ -86,14 +78,13 @@ pub async fn add_cart_item(
     };
 
     // Validate cart ownership.
-    let cart_exists = sqlx::query(
-        "SELECT id, expires_at FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1",
-    )
-    .bind(cart_uuid.as_uuid())
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(CartError::from)?;
+    let cart_exists =
+        sqlx::query("SELECT id, expires_at FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1")
+            .bind(cart_uuid.as_uuid())
+            .bind(store_uuid.as_uuid())
+            .fetch_optional(&state.db)
+            .await
+            .map_err(CartError::from)?;
     let Some(cart_row) = cart_exists else {
         return Err(CartError::not_found("cart not found"));
     };
@@ -466,10 +457,7 @@ pub async fn update_cart_item(
     })
 }
 
-pub async fn get_cart(
-    state: &AppState,
-    req: pb::GetCartRequest,
-) -> CartResult<pb::Cart> {
+pub async fn get_cart(state: &AppState, req: pb::GetCartRequest) -> CartResult<pb::Cart> {
     let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let cart_uuid = CartId::parse(&req.cart_id)?;
@@ -528,7 +516,9 @@ pub async fn get_cart(
             pb::CartItem {
                 id: row.get("id"),
                 sku_id: row.get("sku_id"),
-                location_id: row.get::<Option<String>, _>("location_id").unwrap_or_default(),
+                location_id: row
+                    .get::<Option<String>, _>("location_id")
+                    .unwrap_or_default(),
                 unit_price: Some(pb::Money {
                     amount: price_amount,
                     currency: price_currency,
@@ -552,7 +542,9 @@ pub async fn get_cart(
     Ok(pb::Cart {
         id: cart_uuid.to_string(),
         store_id,
-        customer_id: cart_row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
+        customer_id: cart_row
+            .get::<Option<String>, _>("customer_id")
+            .unwrap_or_default(),
         items: cart_items,
         total,
         status: cart_row.get("status"),
@@ -777,7 +769,9 @@ pub async fn checkout(
 
     Ok(pb::Order {
         id: order_id.to_string(),
-        customer_id: cart_row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
+        customer_id: cart_row
+            .get::<Option<String>, _>("customer_id")
+            .unwrap_or_default(),
         status: match status {
             "pending_payment" => pb::OrderStatus::PendingPayment as i32,
             "pending_shipment" => pb::OrderStatus::PendingShipment as i32,

@@ -2,12 +2,12 @@ use axum::{Json, http::StatusCode};
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::audit,
+    pb::pb,
     rpc::json::ConnectError,
     shared::{
         audit_action::StoreLocationAuditAction,
-        ids::{parse_uuid, StoreId, TenantId},
+        ids::{StoreId, TenantId, parse_uuid},
     },
     store_settings::repository::{PgStoreSettingsRepository, StoreSettingsRepository},
 };
@@ -49,7 +49,11 @@ pub async fn upsert_store_location(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     if location.id.is_empty() {
         repo.insert_store_location_tx(
             &mut tx,
@@ -60,13 +64,8 @@ pub async fn upsert_store_location(
         )
         .await?;
     } else {
-        repo.update_store_location_tx(
-            &mut tx,
-            &location_id,
-            &store_uuid.as_uuid(),
-            &location,
-        )
-        .await?;
+        repo.update_store_location_tx(&mut tx, &location_id, &store_uuid.as_uuid(), &location)
+            .await?;
     }
 
     let updated = pb::StoreLocation {
@@ -90,7 +89,9 @@ pub async fn upsert_store_location(
     )
     .await?;
 
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -104,7 +105,11 @@ pub async fn delete_store_location(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     let rows = repo
         .delete_store_location_tx(
             &mut tx,
@@ -128,7 +133,9 @@ pub async fn delete_store_location(
         )
         .await?;
     }
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

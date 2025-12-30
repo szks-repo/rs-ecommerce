@@ -1,12 +1,12 @@
+use axum::http::HeaderValue;
 use axum::{
     body::Body,
     http::{HeaderMap, Request},
     middleware::Next,
     response::Response,
 };
-use axum::http::HeaderValue;
-use tracing::info;
 use opentelemetry::trace::{TraceContextExt, TraceId};
+use tracing::info;
 use tracing_opentelemetry::OpenTelemetrySpanExt;
 
 #[derive(Clone, Default)]
@@ -23,7 +23,10 @@ tokio::task_local! {
 }
 
 pub async fn inject_request_context(req: Request<Body>, next: Next) -> Response {
-    let auth_ctx = req.extensions().get::<Option<crate::rpc::actor::AuthContext>>().and_then(|v| v.clone());
+    let auth_ctx = req
+        .extensions()
+        .get::<Option<crate::rpc::actor::AuthContext>>()
+        .and_then(|v| v.clone());
     let ctx = RequestContext {
         request_id: extract_request_id(req.headers()),
         ip_address: extract_ip_address(req.headers()),

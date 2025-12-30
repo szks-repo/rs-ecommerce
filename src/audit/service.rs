@@ -1,12 +1,15 @@
 use axum::{Json, http::StatusCode};
-use sqlx::{Row, QueryBuilder};
+use sqlx::{QueryBuilder, Row};
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::db,
+    pb::pb,
     rpc::json::ConnectError,
-    shared::{ids::parse_uuid, time::{timestamp_to_chrono, chrono_to_timestamp}},
+    shared::{
+        ids::parse_uuid,
+        time::{chrono_to_timestamp, timestamp_to_chrono},
+    },
 };
 
 const DEFAULT_PAGE_SIZE: i64 = 50;
@@ -75,11 +78,7 @@ pub async fn list_audit_logs(
     qb.push(" LIMIT ").push_bind(limit + 1);
     qb.push(" OFFSET ").push_bind(offset);
 
-    let rows = qb
-        .build()
-        .fetch_all(&state.db)
-        .await
-        .map_err(db::error)?;
+    let rows = qb.build().fetch_all(&state.db).await.map_err(db::error)?;
 
     let mut logs = Vec::new();
     for row in rows.into_iter() {
@@ -88,11 +87,21 @@ pub async fn list_audit_logs(
             actor_id: row.get::<Option<String>, _>("actor_id").unwrap_or_default(),
             actor_type: row.get("actor_type"),
             action: row.get("action"),
-            target_type: row.get::<Option<String>, _>("target_type").unwrap_or_default(),
-            target_id: row.get::<Option<String>, _>("target_id").unwrap_or_default(),
-            request_id: row.get::<Option<String>, _>("request_id").unwrap_or_default(),
-            ip_address: row.get::<Option<String>, _>("ip_address").unwrap_or_default(),
-            user_agent: row.get::<Option<String>, _>("user_agent").unwrap_or_default(),
+            target_type: row
+                .get::<Option<String>, _>("target_type")
+                .unwrap_or_default(),
+            target_id: row
+                .get::<Option<String>, _>("target_id")
+                .unwrap_or_default(),
+            request_id: row
+                .get::<Option<String>, _>("request_id")
+                .unwrap_or_default(),
+            ip_address: row
+                .get::<Option<String>, _>("ip_address")
+                .unwrap_or_default(),
+            user_agent: row
+                .get::<Option<String>, _>("user_agent")
+                .unwrap_or_default(),
             before_json: row
                 .get::<Option<serde_json::Value>, _>("before_json")
                 .map(|v| v.to_string())
@@ -105,7 +114,9 @@ pub async fn list_audit_logs(
                 .get::<Option<serde_json::Value>, _>("metadata_json")
                 .map(|v| v.to_string())
                 .unwrap_or_default(),
-            created_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at")),
+            created_at: chrono_to_timestamp(
+                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
+            ),
         });
     }
 
@@ -115,12 +126,7 @@ pub async fn list_audit_logs(
         next_page_token = (offset + limit).to_string();
     }
 
-    Ok((
-        logs,
-        pb::PageResult {
-            next_page_token,
-        },
-    ))
+    Ok((logs, pb::PageResult { next_page_token }))
 }
 
 fn page_params(page: Option<pb::PageInfo>) -> (i64, i64) {

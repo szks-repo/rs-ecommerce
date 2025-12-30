@@ -1,7 +1,7 @@
 use axum::{Json, http::StatusCode};
 use sqlx::{Postgres, Row, Transaction};
 
-use crate::{rpc::json::ConnectError, infrastructure::db};
+use crate::{infrastructure::db, rpc::json::ConnectError};
 
 pub struct PgStoreSettingsRepository<'a> {
     db: &'a sqlx::PgPool,
@@ -1578,9 +1578,9 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         let res = sqlx::query("DELETE FROM tax_rules WHERE id = $1 AND store_id = $2")
             .bind(rule_id)
             .bind(store_uuid)
-        .execute(self.db)
-        .await
-        .map_err(db::error)?;
+            .execute(self.db)
+            .await
+            .map_err(db::error)?;
         Ok(res.rows_affected())
     }
 
@@ -1615,12 +1615,13 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         &self,
         store_code: &str,
     ) -> Result<Option<StoreLookupRecord>, (StatusCode, Json<ConnectError>)> {
-        let row =
-            sqlx::query("SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1")
-                .bind(store_code)
-                .fetch_optional(self.db)
-                .await
-                .map_err(db::error)?;
+        let row = sqlx::query(
+            "SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1",
+        )
+        .bind(store_code)
+        .fetch_optional(self.db)
+        .await
+        .map_err(db::error)?;
         Ok(row.map(|row| StoreLookupRecord {
             store_id: row.get("id"),
             tenant_id: row.get("tenant_id"),

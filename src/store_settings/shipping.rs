@@ -2,12 +2,12 @@ use axum::{Json, http::StatusCode};
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::audit,
+    pb::pb,
     rpc::json::ConnectError,
     shared::{
         audit_action::{ShippingRateAuditAction, ShippingZoneAuditAction},
-        ids::{parse_uuid, StoreId, TenantId},
+        ids::{StoreId, TenantId, parse_uuid},
         money::{money_from_parts, money_to_parts},
     },
     store_settings::repository::{PgStoreSettingsRepository, StoreSettingsRepository},
@@ -60,7 +60,11 @@ pub async fn upsert_shipping_zone(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     if zone.id.is_empty() {
         repo.insert_shipping_zone_tx(
             &mut tx,
@@ -77,7 +81,8 @@ pub async fn upsert_shipping_zone(
     }
 
     for pref in &zone.prefectures {
-        repo.insert_zone_prefecture_tx(&mut tx, &zone_id, pref).await?;
+        repo.insert_zone_prefecture_tx(&mut tx, &zone_id, pref)
+            .await?;
     }
 
     let updated = pb::ShippingZone {
@@ -101,7 +106,9 @@ pub async fn upsert_shipping_zone(
     )
     .await?;
 
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -116,7 +123,11 @@ pub async fn delete_shipping_zone(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     repo.delete_zone_prefectures_tx(&mut tx, &zone_uuid).await?;
     let rows = repo
         .delete_shipping_zone_tx(&mut tx, &zone_uuid, &store_uuid.as_uuid())
@@ -137,7 +148,9 @@ pub async fn delete_shipping_zone(
         )
         .await?;
     }
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 
@@ -189,7 +202,11 @@ pub async fn upsert_shipping_rate(
     let min = rate.min_subtotal.clone().map(|m| m.amount);
     let max = rate.max_subtotal.clone().map(|m| m.amount);
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     if rate.id.is_empty() {
         let zone_uuid = parse_uuid(&rate.zone_id, "zone_id")?;
         repo.insert_shipping_rate_tx(
@@ -240,7 +257,9 @@ pub async fn upsert_shipping_rate(
     )
     .await?;
 
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -254,7 +273,11 @@ pub async fn delete_shipping_rate(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
+    let mut tx = state
+        .db
+        .begin()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     let rows = repo
         .delete_shipping_rate_tx(
             &mut tx,
@@ -278,7 +301,9 @@ pub async fn delete_shipping_rate(
         )
         .await?;
     }
-    tx.commit().await.map_err(crate::infrastructure::db::error)?;
+    tx.commit()
+        .await
+        .map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 

@@ -5,7 +5,6 @@ use crate::rpc::json::ConnectError;
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct StoreCode(String);
 
-
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Email(String);
 
@@ -52,7 +51,6 @@ impl StoreCode {
         &self.0
     }
 }
-
 
 impl Email {
     pub fn parse(value: &str) -> Result<Self, (StatusCode, Json<ConnectError>)> {
