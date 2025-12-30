@@ -8,11 +8,11 @@ use rs_common::{telemetry, env};
 #[derive(Debug)]
 struct ReservationRequest {
     id: uuid::Uuid,
-    tenant_id: uuid::Uuid,
     store_id: uuid::Uuid,
     cart_id: uuid::Uuid,
     cart_item_id: Option<uuid::Uuid>,
-    variant_id: uuid::Uuid,
+    sku_id: uuid::Uuid,
+    location_id: Option<uuid::Uuid>,
     quantity: i32,
 }
 
@@ -101,7 +101,7 @@ async fn process_queue_batch(
         SET status = 'processing', updated_at = now()
         FROM cte
         WHERE r.id = cte.id
-        RETURNING r.id, r.tenant_id, r.store_id, r.cart_id, r.cart_item_id, r.variant_id, r.quantity
+        RETURNING r.id, r.store_id, r.cart_id, r.cart_item_id, r.sku_id, r.location_id, r.quantity
         "#,
     )
     .bind(is_hot)
@@ -113,11 +113,11 @@ async fn process_queue_batch(
     for row in rows {
         let request = ReservationRequest {
             id: row.get("id"),
-            tenant_id: row.get("tenant_id"),
             store_id: row.get("store_id"),
             cart_id: row.get("cart_id"),
             cart_item_id: row.get("cart_item_id"),
-            variant_id: row.get("variant_id"),
+            sku_id: row.get("sku_id"),
+            location_id: row.get("location_id"),
             quantity: row.get("quantity"),
         };
         if process_request(pool, request, ttl_seconds).await? {
@@ -135,6 +135,22 @@ async fn process_request(
     request: ReservationRequest,
     ttl_seconds: i64,
 ) -> Result<bool> {
+    let Some(location_id) = request.location_id else {
+        let mut tx = pool.begin().await?;
+        sqlx::query(
+            r#"
+            UPDATE inventory_reservation_requests
+            SET status = 'failed', updated_at = now()
+            WHERE id = $1
+            "#,
+        )
+        .bind(request.id)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        return Ok(false);
+    };
+
     let mut tx = pool.begin().await?;
     let updated = sqlx::query(
         r#"
@@ -142,11 +158,15 @@ async fn process_request(
         SET reserved = reserved + $1,
             updated_at = now()
         WHERE variant_id = $2
+          AND location_id = $3
+          AND store_id = $4
           AND stock - reserved >= $1
         "#,
     )
     .bind(request.quantity)
-    .bind(request.variant_id)
+    .bind(request.sku_id)
+    .bind(location_id)
+    .bind(request.store_id)
     .execute(&mut *tx)
     .await?;
 
@@ -155,18 +175,18 @@ async fn process_request(
         sqlx::query(
             r#"
             INSERT INTO inventory_reservations (
-                id, tenant_id, store_id, cart_id, cart_item_id, variant_id,
+                id, store_id, cart_id, cart_item_id, sku_id, location_id,
                 quantity, status, expires_at, created_at, updated_at
             )
             VALUES ($1,$2,$3,$4,$5,$6,$7,'active',$8,now(),now())
             "#,
         )
         .bind(uuid::Uuid::new_v4())
-        .bind(request.tenant_id)
         .bind(request.store_id)
         .bind(request.cart_id)
         .bind(request.cart_item_id)
-        .bind(request.variant_id)
+        .bind(request.sku_id)
+        .bind(location_id)
         .bind(request.quantity)
         .bind(expires_at)
         .execute(&mut *tx)
@@ -204,7 +224,7 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
     let rows = sqlx::query(
         r#"
         WITH cte AS (
-            SELECT id, variant_id, quantity
+            SELECT id, store_id, sku_id, location_id, quantity
             FROM inventory_reservations
             WHERE status = 'active' AND expires_at < now()
             ORDER BY expires_at ASC
@@ -215,7 +235,7 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
         SET status = 'expired', updated_at = now()
         FROM cte
         WHERE r.id = cte.id
-        RETURNING cte.variant_id, cte.quantity
+        RETURNING cte.store_id, cte.sku_id, cte.location_id, cte.quantity
         "#,
     )
     .bind(batch_size)
@@ -224,20 +244,28 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
 
     let released = rows.len();
     for row in rows {
-        let variant_id: uuid::Uuid = row.get("variant_id");
+        let store_id: uuid::Uuid = row.get("store_id");
+        let sku_id: uuid::Uuid = row.get("sku_id");
+        let location_id: Option<uuid::Uuid> = row.get("location_id");
         let quantity: i32 = row.get("quantity");
-        sqlx::query(
-            r#"
-            UPDATE inventory_stocks
-            SET reserved = GREATEST(reserved - $1, 0),
-                updated_at = now()
-            WHERE variant_id = $2
-            "#,
-        )
-        .bind(quantity)
-        .bind(variant_id)
-        .execute(&mut *tx)
-        .await?;
+        if let Some(location_id) = location_id {
+            sqlx::query(
+                r#"
+                UPDATE inventory_stocks
+                SET reserved = GREATEST(reserved - $1, 0),
+                    updated_at = now()
+                WHERE variant_id = $2
+                  AND location_id = $3
+                  AND store_id = $4
+                "#,
+            )
+            .bind(quantity)
+            .bind(sku_id)
+            .bind(location_id)
+            .bind(store_id)
+            .execute(&mut *tx)
+            .await?;
+        }
     }
 
     tx.commit().await?;

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identityInviteStaff, identityListRoles } from "@/lib/identity";
 import { formatConnectError } from "@/lib/handle-error";
+import { formatDateWithStoreTz } from "@/lib/time";
 import {
   Select,
   SelectContent,
@@ -72,7 +73,11 @@ export default function StaffInviteForm() {
         displayName,
       });
       setInviteToken(resp.inviteToken || "");
-      setExpiresAt(resp.expiresAt?.seconds ? new Date(Number(resp.expiresAt.seconds) * 1000).toLocaleString("ja-JP") : "");
+      setExpiresAt(
+        resp.expiresAt?.seconds
+          ? formatDateWithStoreTz(new Date(Number(resp.expiresAt.seconds) * 1000))
+          : ""
+      );
       push({
         variant: "success",
         title: "Invite created",

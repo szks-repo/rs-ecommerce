@@ -37,6 +37,7 @@ export async function updateStoreSettings(params: {
     primaryDomain?: string;
     subdomain?: string;
     httpsEnabled: boolean;
+    timeZone: string;
     currency: string;
     taxMode: string;
     taxRounding: string;
@@ -69,6 +70,7 @@ export async function updateStoreSettings(params: {
     primaryDomain: params.settings.primaryDomain || "",
     subdomain: params.settings.subdomain || "",
     httpsEnabled: params.settings.httpsEnabled,
+    timeZone: params.settings.timeZone || "Asia/Tokyo",
     currency: params.settings.currency,
     taxMode: params.settings.taxMode,
     taxRounding: params.settings.taxRounding,

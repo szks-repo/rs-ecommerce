@@ -17,6 +17,7 @@ import { listAuditActions, listAuditLogs } from "@/lib/audit";
 import { identityListStaff } from "@/lib/identity";
 import { formatConnectError } from "@/lib/handle-error";
 import { getActiveAccessToken } from "@/lib/auth";
+import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
 
 type AuditActionItem = {
@@ -35,15 +36,7 @@ type StaffOption = {
 };
 
 function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: number }) {
-  if (!ts || ts.seconds == null) {
-    return "-";
-  }
-  const seconds = typeof ts.seconds === "bigint" ? Number(ts.seconds) : Number(ts.seconds);
-  if (!Number.isFinite(seconds)) {
-    return "-";
-  }
-  const date = new Date(seconds * 1000);
-  return date.toLocaleString("ja-JP");
+  return formatTimestampWithStoreTz(ts?.seconds, ts?.nanos);
 }
 
 function formatJsonPreview(value?: string) {

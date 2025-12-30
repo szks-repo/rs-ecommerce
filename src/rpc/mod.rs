@@ -63,6 +63,10 @@ pub fn router() -> Router<AppState> {
             post(storefront::remove_cart_item),
         )
         .route(
+            "/rpc/ecommerce.v1.StorefrontService/GetCart",
+            post(storefront::get_cart),
+        )
+        .route(
             "/rpc/ecommerce.v1.StorefrontService/Checkout",
             post(storefront::checkout),
         )

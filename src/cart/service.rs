@@ -1,4 +1,5 @@
 use axum::{Json, http::StatusCode};
+use chrono::{Duration, Utc};
 use sqlx::Row;
 
 use crate::{
@@ -8,40 +9,62 @@ use crate::{
     rpc::json::ConnectError,
     shared::ids::parse_uuid,
     shared::status::payment_method_to_string,
+    shared::time::chrono_to_timestamp,
 };
+
+fn cart_ttl_days() -> i64 {
+    std::env::var("CART_TTL_DAYS")
+        .ok()
+        .and_then(|value| value.parse::<i64>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(30)
+}
+
+async fn resolve_store_id(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+) -> Result<String, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) =
+        crate::identity::context::resolve_store_context_without_token_guard(state, store, None).await?;
+    Ok(store_id)
+}
 
 pub async fn create_cart(
     state: &AppState,
-    tenant_id: String,
     req: pb::CreateCartRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     let cart_id = uuid::Uuid::new_v4();
+    let store_id = resolve_store_id(state, req.store.clone()).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let expires_at = Utc::now() + Duration::days(cart_ttl_days());
     sqlx::query(
         r#"
-        INSERT INTO carts (id, tenant_id, customer_id, status)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO carts (id, store_id, customer_id, status, expires_at)
+        VALUES ($1, $2, $3, $4, $5)
         "#,
     )
     .bind(cart_id)
-    .bind(&tenant_id)
+    .bind(store_uuid)
     .bind(parse_uuid(&req.customer_id, "customer_id").ok())
     .bind("active")
+    .bind(expires_at)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
 
     Ok(pb::Cart {
         id: cart_id.to_string(),
-        customer_id: String::new(),
+        store_id,
+        customer_id: req.customer_id,
         items: Vec::new(),
         total: None,
         status: "active".to_string(),
+        expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
 
 pub async fn add_cart_item(
     state: &AppState,
-    tenant_id: String,
     req: pb::AddCartItemRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     if req.quantity <= 0 {
@@ -54,29 +77,26 @@ pub async fn add_cart_item(
         ));
     }
 
-    let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
-    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
-    let variant_uuid = parse_uuid(&req.variant_id, "variant_id")?;
-
-    // Resolve store_id for the tenant (single-brand default store).
-    let store_row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
-        .bind(tenant_uuid)
-        .fetch_one(&state.db)
-        .await
-        .map_err(db::error)?;
-    let store_id: String = store_row.get("id");
+    let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
+    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let location_uuid = if req.location_id.is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.location_id, "location_id")?)
+    };
 
     // Validate cart ownership.
     let cart_exists = sqlx::query(
-        "SELECT id FROM carts WHERE id = $1 AND tenant_id = $2 LIMIT 1",
+        "SELECT id, expires_at FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1",
     )
     .bind(cart_uuid)
-    .bind(tenant_uuid)
+    .bind(store_uuid)
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
-    if cart_exists.is_none() {
+    let Some(cart_row) = cart_exists else {
         return Err((
             StatusCode::NOT_FOUND,
             Json(ConnectError {
@@ -84,19 +104,21 @@ pub async fn add_cart_item(
                 message: "cart not found".to_string(),
             }),
         ));
-    }
+    };
+    let expires_at: chrono::DateTime<Utc> = cart_row.get("expires_at");
 
-    // Fetch variant price + vendor_id via product.
+    // Fetch SKU price + fulfillment type via product.
     let row = sqlx::query(
         r#"
-        SELECT p.vendor_id, v.price_amount, v.price_currency
+        SELECT v.price_amount, v.price_currency, v.fulfillment_type
         FROM variants v
         JOIN products p ON p.id = v.product_id
-        WHERE v.id = $1
+        WHERE v.id = $1 AND p.store_id = $2
         LIMIT 1
         "#,
     )
-    .bind(variant_uuid)
+    .bind(sku_uuid)
+    .bind(store_uuid)
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -110,92 +132,113 @@ pub async fn add_cart_item(
         ));
     };
 
-    let vendor_id: Option<uuid::Uuid> = row.try_get("vendor_id").ok();
     let price_amount: i64 = row.get("price_amount");
     let price_currency: String = row.get("price_currency");
+    let fulfillment_type: String = row.get("fulfillment_type");
+    let is_physical = fulfillment_type == "physical";
+    if is_physical && location_uuid.is_none() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "location_id is required for physical SKU".to_string(),
+            }),
+        ));
+    }
 
     let cart_item_id = uuid::Uuid::new_v4();
     sqlx::query(
         r#"
-        INSERT INTO cart_items (id, cart_id, vendor_id, variant_id, price_amount, price_currency, quantity)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
+        INSERT INTO cart_items (
+            id, cart_id, sku_id, location_id, unit_price_amount, unit_price_currency,
+            quantity, fulfillment_type, status
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active')
         "#,
     )
     .bind(cart_item_id)
     .bind(cart_uuid)
-    .bind(vendor_id)
-    .bind(variant_uuid)
+    .bind(sku_uuid)
+    .bind(location_uuid)
     .bind(price_amount)
     .bind(&price_currency)
     .bind(req.quantity)
+    .bind(&fulfillment_type)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
 
-    // Enqueue reservation request (async worker).
-    let request_id = uuid::Uuid::new_v4();
-    sqlx::query(
-        r#"
-        INSERT INTO inventory_reservation_requests (
-            id, tenant_id, store_id, cart_id, cart_item_id, variant_id, quantity, status, is_hot
+    // Enqueue reservation request (async worker) for physical items only.
+    if is_physical {
+        let request_id = uuid::Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO inventory_reservation_requests (
+                id, store_id, cart_id, cart_item_id, sku_id, location_id, quantity, status, is_hot
+            )
+            VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',false)
+            "#,
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',false)
-        "#,
-    )
-    .bind(request_id)
-    .bind(tenant_uuid)
-    .bind(store_uuid)
-    .bind(cart_uuid)
-    .bind(cart_item_id)
-    .bind(variant_uuid)
-    .bind(req.quantity)
-    .execute(&state.db)
-    .await
-    .map_err(db::error)?;
+        .bind(request_id)
+        .bind(store_uuid)
+        .bind(cart_uuid)
+        .bind(cart_item_id)
+        .bind(sku_uuid)
+        .bind(location_uuid)
+        .bind(req.quantity)
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    }
 
     Ok(pb::Cart {
         id: cart_uuid.to_string(),
+        store_id,
         customer_id: String::new(),
         items: vec![pb::CartItem {
             id: cart_item_id.to_string(),
-            vendor_id: vendor_id.map(|id| id.to_string()).unwrap_or_default(),
-            variant_id: variant_uuid.to_string(),
-            price: Some(pb::Money {
+            sku_id: sku_uuid.to_string(),
+            location_id: location_uuid.map(|id| id.to_string()).unwrap_or_default(),
+            unit_price: Some(pb::Money {
                 amount: price_amount,
                 currency: price_currency.clone(),
             }),
             quantity: req.quantity,
+            fulfillment_type: fulfillment_type.clone(),
+            status: "active".to_string(),
         }],
         total: Some(pb::Money {
             amount: price_amount.saturating_mul(req.quantity as i64),
             currency: price_currency,
         }),
         status: "active".to_string(),
+        expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
 
 pub async fn remove_cart_item(
     state: &AppState,
-    tenant_id: String,
     req: pb::RemoveCartItemRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
-    let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
+    let store_id = resolve_store_id(state, req.store.clone()).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
     let cart_item_uuid = parse_uuid(&req.cart_item_id, "cart_item_id")?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
 
     let row = sqlx::query(
         r#"
-        SELECT c.id::text as cart_id, ci.variant_id::text as variant_id, ci.quantity
+        SELECT c.id::text as cart_id, c.expires_at, ci.sku_id::text as sku_id, ci.location_id::text as location_id,
+               ci.quantity, ci.fulfillment_type
         FROM cart_items ci
         JOIN carts c ON c.id = ci.cart_id
-        WHERE ci.id = $1 AND c.tenant_id = $2
+        WHERE ci.id = $1 AND c.store_id = $2
         LIMIT 1
         FOR UPDATE
         "#,
     )
     .bind(cart_item_uuid)
-    .bind(tenant_uuid)
+    .bind(store_uuid)
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -211,36 +254,49 @@ pub async fn remove_cart_item(
     };
 
     let cart_id: String = row.get("cart_id");
-    let variant_id: String = row.get("variant_id");
+    let sku_id: String = row.get("sku_id");
+    let location_id: Option<String> = row.try_get("location_id").ok();
     let quantity: i32 = row.get("quantity");
+    let fulfillment_type: String = row.get("fulfillment_type");
+    let expires_at: chrono::DateTime<Utc> = row.get("expires_at");
 
-    sqlx::query(
-        r#"
-        UPDATE inventory_reservations
-        SET status = 'released', updated_at = now()
-        WHERE cart_item_id = $1 AND status = 'active'
-        "#,
-    )
-    .bind(cart_item_uuid)
-    .execute(&mut *tx)
-    .await
-    .map_err(db::error)?;
+    if fulfillment_type == "physical" {
+        sqlx::query(
+            r#"
+            UPDATE inventory_reservations
+            SET status = 'released', updated_at = now()
+            WHERE cart_item_id = $1 AND status = 'active'
+            "#,
+        )
+        .bind(cart_item_uuid)
+        .execute(&mut *tx)
+        .await
+        .map_err(db::error)?;
 
-    sqlx::query(
-        r#"
-        UPDATE inventory_stocks
-        SET reserved = GREATEST(reserved - $1, 0),
-            updated_at = now()
-        WHERE variant_id = $2
-        "#,
-    )
-    .bind(quantity)
-    .bind(parse_uuid(&variant_id, "variant_id")?)
-    .execute(&mut *tx)
-    .await
-    .map_err(db::error)?;
+        let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
+        let location_uuid = location_id
+            .as_deref()
+            .map(|value| parse_uuid(value, "location_id"))
+            .transpose()?;
+        if let Some(location_uuid) = location_uuid {
+            sqlx::query(
+                r#"
+                UPDATE inventory_stocks
+                SET reserved = GREATEST(reserved - $1, 0),
+                    updated_at = now()
+                WHERE variant_id = $2 AND location_id = $3
+                "#,
+            )
+            .bind(quantity)
+            .bind(sku_uuid)
+            .bind(location_uuid)
+            .execute(&mut *tx)
+            .await
+            .map_err(db::error)?;
+        }
+    }
 
-    sqlx::query("DELETE FROM cart_items WHERE id = $1")
+    sqlx::query("UPDATE cart_items SET status = 'removed', updated_at = now() WHERE id = $1")
         .bind(cart_item_uuid)
         .execute(&mut *tx)
         .await
@@ -250,16 +306,17 @@ pub async fn remove_cart_item(
 
     Ok(pb::Cart {
         id: cart_id,
+        store_id,
         customer_id: String::new(),
         items: Vec::new(),
         total: None,
         status: "active".to_string(),
+        expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
 
 pub async fn update_cart_item(
     state: &AppState,
-    tenant_id: String,
     req: pb::UpdateCartItemRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     if req.quantity <= 0 {
@@ -272,22 +329,24 @@ pub async fn update_cart_item(
         ));
     }
 
-    let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
+    let store_id = resolve_store_id(state, req.store.clone()).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
     let cart_item_uuid = parse_uuid(&req.cart_item_id, "cart_item_id")?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
     let row = sqlx::query(
         r#"
-        SELECT c.id::text as cart_id, ci.variant_id::text as variant_id, ci.quantity
+        SELECT c.id::text as cart_id, c.expires_at, ci.sku_id::text as sku_id, ci.location_id::text as location_id,
+               ci.quantity, ci.fulfillment_type
         FROM cart_items ci
         JOIN carts c ON c.id = ci.cart_id
-        WHERE ci.id = $1 AND c.tenant_id = $2
+        WHERE ci.id = $1 AND c.store_id = $2
         LIMIT 1
         FOR UPDATE
         "#,
     )
     .bind(cart_item_uuid)
-    .bind(tenant_uuid)
+    .bind(store_uuid)
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -303,21 +362,26 @@ pub async fn update_cart_item(
     };
 
     let cart_id: String = row.get("cart_id");
-    let variant_id: String = row.get("variant_id");
+    let sku_id: String = row.get("sku_id");
+    let location_id: Option<String> = row.try_get("location_id").ok();
     let current_qty: i32 = row.get("quantity");
+    let fulfillment_type: String = row.get("fulfillment_type");
+    let expires_at: chrono::DateTime<Utc> = row.get("expires_at");
 
     if req.quantity == current_qty {
         tx.commit().await.map_err(db::error)?;
         return Ok(pb::Cart {
             id: cart_id,
+            store_id,
             customer_id: String::new(),
             items: Vec::new(),
             total: None,
             status: "active".to_string(),
+            expires_at: chrono_to_timestamp(Some(expires_at)),
         });
     }
 
-    sqlx::query("UPDATE cart_items SET quantity = $1 WHERE id = $2")
+    sqlx::query("UPDATE cart_items SET quantity = $1, updated_at = now() WHERE id = $2")
         .bind(req.quantity)
         .bind(cart_item_uuid)
         .execute(&mut *tx)
@@ -325,110 +389,212 @@ pub async fn update_cart_item(
         .map_err(db::error)?;
 
     let delta = req.quantity - current_qty;
-    if delta > 0 {
-        // Enqueue additional reservation for the delta.
-        let store_row = sqlx::query(
-            "SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1",
-        )
-        .bind(tenant_uuid)
-        .fetch_one(&mut *tx)
-        .await
-        .map_err(db::error)?;
-        let store_id: String = store_row.get("id");
-        let store_uuid = parse_uuid(&store_id, "store_id")?;
-
-        let request_id = uuid::Uuid::new_v4();
-        sqlx::query(
-            r#"
-            INSERT INTO inventory_reservation_requests (
-                id, tenant_id, store_id, cart_id, cart_item_id, variant_id, quantity, status, is_hot
-            )
-            VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',false)
-            "#,
-        )
-        .bind(request_id)
-        .bind(tenant_uuid)
-        .bind(store_uuid)
-        .bind(parse_uuid(&cart_id, "cart_id")?)
-        .bind(cart_item_uuid)
-        .bind(parse_uuid(&variant_id, "variant_id")?)
-        .bind(delta)
-        .execute(&mut *tx)
-        .await
-        .map_err(db::error)?;
-    } else {
-        let release_qty = -delta;
-        // Reduce active reservation quantity if present.
-        let reservation = sqlx::query(
-            r#"
-            SELECT id::text as id, quantity
-            FROM inventory_reservations
-            WHERE cart_item_id = $1 AND status = 'active'
-            LIMIT 1
-            FOR UPDATE
-            "#,
-        )
-        .bind(cart_item_uuid)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(db::error)?;
-
-        if let Some(reservation) = reservation {
-            let reservation_id: String = reservation.get("id");
-            let reserved_qty: i32 = reservation.get("quantity");
-            let new_reserved = (reserved_qty - release_qty).max(0);
-
-            if new_reserved == 0 {
+    if fulfillment_type == "physical" {
+        let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
+        let location_uuid = location_id
+            .as_deref()
+            .map(|value| parse_uuid(value, "location_id"))
+            .transpose()?;
+        if delta > 0 {
+            if let Some(location_uuid) = location_uuid {
+                let request_id = uuid::Uuid::new_v4();
                 sqlx::query(
                     r#"
-                    UPDATE inventory_reservations
-                    SET status = 'released', updated_at = now()
-                    WHERE id = $1
+                    INSERT INTO inventory_reservation_requests (
+                        id, store_id, cart_id, cart_item_id, sku_id, location_id, quantity, status, is_hot
+                    )
+                    VALUES ($1,$2,$3,$4,$5,$6,$7,'queued',false)
                     "#,
                 )
-                .bind(parse_uuid(&reservation_id, "reservation_id")?)
+                .bind(request_id)
+                .bind(store_uuid)
+                .bind(parse_uuid(&cart_id, "cart_id")?)
+                .bind(cart_item_uuid)
+                .bind(sku_uuid)
+                .bind(location_uuid)
+                .bind(delta)
                 .execute(&mut *tx)
                 .await
                 .map_err(db::error)?;
-            } else {
+            }
+        } else {
+            let release_qty = -delta;
+            let reservation = sqlx::query(
+                r#"
+                SELECT id::text as id, quantity
+                FROM inventory_reservations
+                WHERE cart_item_id = $1 AND status = 'active'
+                LIMIT 1
+                FOR UPDATE
+                "#,
+            )
+            .bind(cart_item_uuid)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(db::error)?;
+
+            if let Some(reservation) = reservation {
+                let reservation_id: String = reservation.get("id");
+                let reserved_qty: i32 = reservation.get("quantity");
+                let new_reserved = (reserved_qty - release_qty).max(0);
+
+                if new_reserved == 0 {
+                    sqlx::query(
+                        r#"
+                        UPDATE inventory_reservations
+                        SET status = 'released', updated_at = now()
+                        WHERE id = $1
+                        "#,
+                    )
+                    .bind(parse_uuid(&reservation_id, "reservation_id")?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(db::error)?;
+                } else {
+                    sqlx::query(
+                        r#"
+                        UPDATE inventory_reservations
+                        SET quantity = $1, updated_at = now()
+                        WHERE id = $2
+                        "#,
+                    )
+                    .bind(new_reserved)
+                    .bind(parse_uuid(&reservation_id, "reservation_id")?)
+                    .execute(&mut *tx)
+                    .await
+                    .map_err(db::error)?;
+                }
+            }
+
+            if let Some(location_uuid) = location_uuid {
                 sqlx::query(
                     r#"
-                    UPDATE inventory_reservations
-                    SET quantity = $1, updated_at = now()
-                    WHERE id = $2
+                    UPDATE inventory_stocks
+                    SET reserved = GREATEST(reserved - $1, 0),
+                        updated_at = now()
+                    WHERE variant_id = $2 AND location_id = $3
                     "#,
                 )
-                .bind(new_reserved)
-                .bind(parse_uuid(&reservation_id, "reservation_id")?)
+                .bind(release_qty)
+                .bind(sku_uuid)
+                .bind(location_uuid)
                 .execute(&mut *tx)
                 .await
                 .map_err(db::error)?;
             }
         }
-
-        sqlx::query(
-            r#"
-            UPDATE inventory_stocks
-            SET reserved = GREATEST(reserved - $1, 0),
-                updated_at = now()
-            WHERE variant_id = $2
-            "#,
-        )
-        .bind(release_qty)
-        .bind(parse_uuid(&variant_id, "variant_id")?)
-        .execute(&mut *tx)
-        .await
-        .map_err(db::error)?;
     }
 
     tx.commit().await.map_err(db::error)?;
 
     Ok(pb::Cart {
         id: cart_id,
+        store_id,
         customer_id: String::new(),
         items: Vec::new(),
         total: None,
         status: "active".to_string(),
+        expires_at: chrono_to_timestamp(Some(expires_at)),
+    })
+}
+
+pub async fn get_cart(
+    state: &AppState,
+    req: pb::GetCartRequest,
+) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+    let store_id = resolve_store_id(state, req.store.clone()).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
+
+    let cart_row = sqlx::query(
+        r#"
+        SELECT customer_id::text as customer_id, status, expires_at
+        FROM carts
+        WHERE id = $1 AND store_id = $2
+        LIMIT 1
+        "#,
+    )
+    .bind(cart_uuid)
+    .bind(store_uuid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    let Some(cart_row) = cart_row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "cart not found".to_string(),
+            }),
+        ));
+    };
+
+    let items = sqlx::query(
+        r#"
+        SELECT id::text as id, sku_id::text as sku_id, location_id::text as location_id,
+               unit_price_amount, unit_price_currency, quantity, fulfillment_type, status
+        FROM cart_items
+        WHERE cart_id = $1 AND status = 'active'
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(cart_uuid)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    let mut total_amount: i64 = 0;
+    let mut currency: Option<String> = None;
+    let mut has_mixed_currency = false;
+
+    let cart_items = items
+        .into_iter()
+        .map(|row| {
+            let price_amount: i64 = row.get("unit_price_amount");
+            let price_currency: String = row.get("unit_price_currency");
+            let quantity: i32 = row.get("quantity");
+
+            if let Some(curr) = &currency {
+                if curr != &price_currency {
+                    has_mixed_currency = true;
+                }
+            } else {
+                currency = Some(price_currency.clone());
+            }
+            total_amount = total_amount.saturating_add(price_amount * (quantity as i64));
+
+            pb::CartItem {
+                id: row.get("id"),
+                sku_id: row.get("sku_id"),
+                location_id: row.get::<Option<String>, _>("location_id").unwrap_or_default(),
+                unit_price: Some(pb::Money {
+                    amount: price_amount,
+                    currency: price_currency,
+                }),
+                quantity,
+                fulfillment_type: row.get("fulfillment_type"),
+                status: row.get("status"),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let total = if has_mixed_currency || currency.is_none() {
+        None
+    } else {
+        Some(pb::Money {
+            amount: total_amount,
+            currency: currency.unwrap(),
+        })
+    };
+
+    Ok(pb::Cart {
+        id: cart_uuid.to_string(),
+        store_id,
+        customer_id: cart_row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
+        items: cart_items,
+        total,
+        status: cart_row.get("status"),
+        expires_at: chrono_to_timestamp(Some(cart_row.get("expires_at"))),
     })
 }
 
@@ -450,11 +616,30 @@ pub async fn checkout(
     })?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
+    let store_row = sqlx::query(
+        "SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1",
+    )
+    .bind(tenant_uuid)
+    .fetch_optional(&mut *tx)
+    .await
+    .map_err(db::error)?;
+    let Some(store_row) = store_row else {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "tenant_id not found".to_string(),
+            }),
+        ));
+    };
+    let store_id: String = store_row.get("id");
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
+
     let cart_row = sqlx::query(
-        "SELECT customer_id::text as customer_id FROM carts WHERE id = $1 AND tenant_id = $2 LIMIT 1 FOR UPDATE",
+        "SELECT customer_id::text as customer_id FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1 FOR UPDATE",
     )
     .bind(cart_uuid)
-    .bind(tenant_uuid)
+    .bind(store_uuid)
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -470,8 +655,9 @@ pub async fn checkout(
 
     let items = sqlx::query(
         r#"
-        SELECT id::text as cart_item_id, variant_id::text as variant_id,
-               vendor_id::text as vendor_id, price_amount, price_currency, quantity
+        SELECT id::text as cart_item_id, sku_id::text as sku_id,
+               location_id::text as location_id, unit_price_amount, unit_price_currency,
+               quantity, fulfillment_type
         FROM cart_items
         WHERE cart_id = $1
         FOR UPDATE
@@ -497,10 +683,13 @@ pub async fn checkout(
 
     for item in &items {
         let cart_item_id: String = item.get("cart_item_id");
-        let variant_id: String = item.get("variant_id");
+        let sku_id: String = item.get("sku_id");
+        let location_id: Option<String> = item.try_get("location_id").ok();
         let quantity: i32 = item.get("quantity");
-        let price_amount: i64 = item.get("price_amount");
-        let price_currency: String = item.get("price_currency");
+        let price_amount: i64 = item.get("unit_price_amount");
+        let price_currency: String = item.get("unit_price_currency");
+        let fulfillment_type: String = item.get("fulfillment_type");
+        let is_physical = fulfillment_type == "physical";
 
         if let Some(curr) = &currency {
             if curr != &price_currency {
@@ -516,78 +705,89 @@ pub async fn checkout(
             currency = Some(price_currency.clone());
         }
 
-        let reservation = sqlx::query(
-            r#"
-            SELECT id::text as id, quantity
-            FROM inventory_reservations
-            WHERE cart_item_id = $1 AND status = 'active'
-            LIMIT 1
-            FOR UPDATE
-            "#,
-        )
-        .bind(parse_uuid(&cart_item_id, "cart_item_id")?)
-        .fetch_optional(&mut *tx)
-        .await
-        .map_err(db::error)?;
+        if is_physical {
+            let reservation = sqlx::query(
+                r#"
+                SELECT id::text as id, quantity
+                FROM inventory_reservations
+                WHERE cart_item_id = $1 AND status = 'active'
+                LIMIT 1
+                FOR UPDATE
+                "#,
+            )
+            .bind(parse_uuid(&cart_item_id, "cart_item_id")?)
+            .fetch_optional(&mut *tx)
+            .await
+            .map_err(db::error)?;
 
-        let Some(reservation) = reservation else {
-            return Err((
-                StatusCode::CONFLICT,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                    message: "inventory reservation not ready".to_string(),
-                }),
-            ));
-        };
-        let reserved_qty: i32 = reservation.get("quantity");
-        if reserved_qty < quantity {
-            return Err((
-                StatusCode::CONFLICT,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                    message: "reserved quantity is insufficient".to_string(),
-                }),
-            ));
+            let Some(reservation) = reservation else {
+                return Err((
+                    StatusCode::CONFLICT,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::FailedPrecondition,
+                        message: "inventory reservation not ready".to_string(),
+                    }),
+                ));
+            };
+            let reserved_qty: i32 = reservation.get("quantity");
+            if reserved_qty < quantity {
+                return Err((
+                    StatusCode::CONFLICT,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::FailedPrecondition,
+                        message: "reserved quantity is insufficient".to_string(),
+                    }),
+                ));
+            }
+
+            let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
+            let location_uuid = location_id
+                .as_deref()
+                .map(|value| parse_uuid(value, "location_id"))
+                .transpose()?;
+            if let Some(location_uuid) = location_uuid {
+                let updated = sqlx::query(
+                    r#"
+                    UPDATE inventory_stocks
+                    SET stock = stock - $1,
+                        reserved = reserved - $1,
+                        updated_at = now()
+                    WHERE variant_id = $2
+                      AND location_id = $3
+                      AND stock >= $1
+                      AND reserved >= $1
+                    "#,
+                )
+                .bind(quantity)
+                .bind(sku_uuid)
+                .bind(location_uuid)
+                .execute(&mut *tx)
+                .await
+                .map_err(db::error)?;
+                if updated.rows_affected() != 1 {
+                    return Err((
+                        StatusCode::CONFLICT,
+                        Json(ConnectError {
+                            code: crate::rpc::json::ErrorCode::FailedPrecondition,
+                            message: "inventory stock is insufficient".to_string(),
+                        }),
+                    ));
+                }
+            }
+
+            let reservation_id: String = reservation.get("id");
+            sqlx::query(
+                r#"
+                UPDATE inventory_reservations
+                SET status = 'consumed', updated_at = now()
+                WHERE id = $1
+                "#,
+            )
+            .bind(parse_uuid(&reservation_id, "reservation_id")?)
+            .execute(&mut *tx)
+            .await
+            .map_err(db::error)?;
         }
-
-        let updated = sqlx::query(
-            r#"
-            UPDATE inventory_stocks
-            SET stock = stock - $1,
-                reserved = reserved - $1,
-                updated_at = now()
-            WHERE variant_id = $2
-              AND stock >= $1
-              AND reserved >= $1
-            "#,
-        )
-        .bind(quantity)
-        .bind(parse_uuid(&variant_id, "variant_id")?)
-        .execute(&mut *tx)
-        .await
-        .map_err(db::error)?;
-        if updated.rows_affected() != 1 {
-            return Err((
-                StatusCode::CONFLICT,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                    message: "inventory stock is insufficient".to_string(),
-                }),
-            ));
-        }
-
-        let reservation_id: String = reservation.get("id");
-        sqlx::query(
-            r#"
-            UPDATE inventory_reservations
-            SET status = 'consumed', updated_at = now()
-            WHERE id = $1
-            "#,
-        )
-        .bind(parse_uuid(&reservation_id, "reservation_id")?)
-        .execute(&mut *tx)
-        .await
-        .map_err(db::error)?;
 
         total_amount = total_amount.saturating_add(price_amount * (quantity as i64));
     }
@@ -617,11 +817,11 @@ pub async fn checkout(
 
     for item in &items {
         let cart_item_id: String = item.get("cart_item_id");
-        let variant_id: String = item.get("variant_id");
-        let vendor_id: Option<String> = item.try_get("vendor_id").ok();
+        let sku_id: String = item.get("sku_id");
+        let vendor_id: Option<String> = None;
         let quantity: i32 = item.get("quantity");
-        let price_amount: i64 = item.get("price_amount");
-        let price_currency: String = item.get("price_currency");
+        let price_amount: i64 = item.get("unit_price_amount");
+        let price_currency: String = item.get("unit_price_currency");
 
         sqlx::query(
             r#"
@@ -631,8 +831,8 @@ pub async fn checkout(
         )
         .bind(uuid::Uuid::new_v4())
         .bind(order_id)
-    .bind(vendor_id.as_deref().and_then(|id| parse_uuid(id, "vendor_id").ok()))
-        .bind(parse_uuid(&variant_id, "variant_id")?)
+        .bind(vendor_id.as_deref().and_then(|id| parse_uuid(id, "vendor_id").ok()))
+        .bind(parse_uuid(&sku_id, "sku_id")?)
         .bind(price_amount)
         .bind(price_currency)
         .bind(quantity)

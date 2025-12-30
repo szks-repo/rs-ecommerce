@@ -36,7 +36,7 @@ pub async fn get_store_settings(
                currency, tax_mode, tax_rounding, order_initial_status,
                cod_enabled, cod_fee_amount, cod_fee_currency,
                bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
-               theme, brand_color, logo_url, favicon_url
+               theme, brand_color, logo_url, favicon_url, time_zone
         FROM store_settings
         WHERE store_id = $1
         "#,
@@ -79,6 +79,7 @@ pub async fn get_store_settings(
             brand_color: row.get("brand_color"),
             logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
             favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
+            time_zone: row.get("time_zone"),
         });
     }
 
@@ -91,7 +92,7 @@ pub async fn get_store_settings(
                currency, tax_mode, tax_rounding, order_initial_status,
                cod_enabled, cod_fee_amount, cod_fee_currency,
                bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
-               theme, brand_color, logo_url, favicon_url
+               theme, brand_color, logo_url, favicon_url, time_zone
         FROM store_settings
         WHERE tenant_id = $1
         "#,
@@ -134,6 +135,7 @@ pub async fn get_store_settings(
             brand_color: row.get("brand_color"),
             logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
             favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
+            time_zone: row.get("time_zone"),
         });
     }
 
@@ -178,6 +180,7 @@ fn default_store_settings(store_name: String) -> pb::StoreSettings {
         brand_color: "#111827".to_string(),
         logo_url: "".to_string(),
         favicon_url: "".to_string(),
+        time_zone: "Asia/Tokyo".to_string(),
     }
 }
 
@@ -209,13 +212,13 @@ pub async fn update_store_settings(
             legal_notice, default_language, primary_domain, subdomain, https_enabled,
             currency, tax_mode, tax_rounding, order_initial_status, cod_enabled,
             cod_fee_amount, cod_fee_currency, bank_name, bank_branch, bank_account_type,
-            bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url
+            bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url, time_zone
         )
         VALUES (
             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
             $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
             $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
-            $31
+            $31,$32
         )
         ON CONFLICT (tenant_id)
         DO UPDATE SET store_id = EXCLUDED.store_id,
@@ -248,6 +251,7 @@ pub async fn update_store_settings(
                       brand_color = EXCLUDED.brand_color,
                       logo_url = EXCLUDED.logo_url,
                       favicon_url = EXCLUDED.favicon_url,
+                      time_zone = EXCLUDED.time_zone,
                       updated_at = now()
         "#,
     )
@@ -282,6 +286,7 @@ pub async fn update_store_settings(
     .bind(&settings.brand_color)
     .bind(&settings.logo_url)
     .bind(&settings.favicon_url)
+    .bind(&settings.time_zone)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -324,12 +329,12 @@ pub async fn initialize_store_settings(
             default_language, primary_domain, subdomain, https_enabled, currency,
             tax_mode, tax_rounding, order_initial_status, cod_enabled,
             cod_fee_amount, cod_fee_currency, bank_name, bank_branch, bank_account_type,
-            bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url
+            bank_account_number, bank_account_name, theme, brand_color, logo_url, favicon_url, time_zone
         ) VALUES (
             $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,
             $11,$12,$13,$14,$15,$16,$17,$18,$19,$20,
             $21,$22,$23,$24,$25,$26,$27,$28,$29,$30,
-            $31
+            $31,$32
         )
         ON CONFLICT (tenant_id) DO NOTHING
         "#,
@@ -365,6 +370,7 @@ pub async fn initialize_store_settings(
     .bind(&settings.brand_color)
     .bind(&settings.logo_url)
     .bind(&settings.favicon_url)
+    .bind(&settings.time_zone)
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -1345,6 +1351,7 @@ pub fn validate_store_settings(
         || settings.tax_mode.is_empty()
         || settings.tax_rounding.is_empty()
         || settings.order_initial_status.is_empty()
+        || settings.time_zone.is_empty()
     {
         return Err((
             StatusCode::BAD_REQUEST,

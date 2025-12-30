@@ -58,6 +58,7 @@ message StoreSettings {
   string brand_color = 26;
   string logo_url = 27;
   string favicon_url = 28;
+  string time_zone = 29;
 }
 
 message MallSettings {

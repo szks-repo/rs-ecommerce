@@ -48,6 +48,7 @@ export default function StoreSettingsForm({
   const [primaryDomain, setPrimaryDomain] = useState("");
   const [subdomain, setSubdomain] = useState("");
   const [httpsEnabled, setHttpsEnabled] = useState(false);
+  const [timeZone, setTimeZone] = useState("Asia/Tokyo");
   const [currency, setCurrency] = useState("JPY");
   const [taxMode, setTaxMode] = useState("inclusive");
   const [taxRounding, setTaxRounding] = useState("round");
@@ -92,6 +93,8 @@ export default function StoreSettingsForm({
         setPrimaryDomain(settings.primaryDomain || "");
         setSubdomain(settings.subdomain || "");
         setHttpsEnabled(Boolean(settings.httpsEnabled));
+        setTimeZone(settings.timeZone || "Asia/Tokyo");
+        window.sessionStorage.setItem("store_time_zone", settings.timeZone || "Asia/Tokyo");
         setCurrency(settings.currency || "JPY");
         setTaxMode(settings.taxMode || "inclusive");
         setTaxRounding(settings.taxRounding || "round");
@@ -148,6 +151,7 @@ export default function StoreSettingsForm({
           primaryDomain,
           subdomain,
           httpsEnabled,
+          timeZone,
           currency,
           taxMode,
           taxRounding,
@@ -171,6 +175,7 @@ export default function StoreSettingsForm({
         title: "Settings updated",
         description: "Store settings have been updated.",
       });
+      window.sessionStorage.setItem("store_time_zone", timeZone || "Asia/Tokyo");
     } catch (err) {
       const uiError = formatConnectError(err, "Update failed", "Unknown error");
       push({
@@ -239,6 +244,20 @@ export default function StoreSettingsForm({
                 <SelectContent>
                   <SelectItem value="ja">Japanese (ja)</SelectItem>
                   <SelectItem value="en">English (en)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="timeZone">Time Zone</Label>
+              <Select value={timeZone} onValueChange={setTimeZone}>
+                <SelectTrigger id="timeZone" className="bg-white">
+                  <SelectValue placeholder="Select time zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Asia/Tokyo">Asia/Tokyo</SelectItem>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                  <SelectItem value="America/New_York">America/New_York</SelectItem>
+                  <SelectItem value="Europe/London">Europe/London</SelectItem>
                 </SelectContent>
               </Select>
             </div>

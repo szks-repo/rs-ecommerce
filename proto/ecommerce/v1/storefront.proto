@@ -14,6 +14,7 @@ service StorefrontService {
   rpc AddCartItem(AddCartItemRequest) returns (AddCartItemResponse);
   rpc UpdateCartItem(UpdateCartItemRequest) returns (UpdateCartItemResponse);
   rpc RemoveCartItem(RemoveCartItemRequest) returns (RemoveCartItemResponse);
+  rpc GetCart(GetCartRequest) returns (GetCartResponse);
   rpc Checkout(CheckoutRequest) returns (CheckoutResponse);
 
   rpc GetOrder(GetOrderRequest) returns (GetOrderResponse);
@@ -40,18 +41,22 @@ message Variant {
 
 message Cart {
   string id = 1;
-  string customer_id = 2;
-  repeated CartItem items = 3;
-  Money total = 4;
-  string status = 5;
+  string store_id = 2;
+  string customer_id = 3;
+  repeated CartItem items = 4;
+  Money total = 5;
+  string status = 6;
+  google.protobuf.Timestamp expires_at = 7;
 }
 
 message CartItem {
   string id = 1;
-  string vendor_id = 2;
-  string variant_id = 3;
-  Money price = 4;
+  string sku_id = 2;
+  string location_id = 3;
+  Money unit_price = 4;
   int32 quantity = 5;
+  string fulfillment_type = 6; // physical | digital
+  string status = 7; // active | removed
 }
 
 message Order {
@@ -96,7 +101,7 @@ message SearchProductsResponse {
 }
 
 message CreateCartRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
   string customer_id = 2; // optional for guest
 }
 
@@ -105,10 +110,11 @@ message CreateCartResponse {
 }
 
 message AddCartItemRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
   string cart_id = 2;
-  string variant_id = 3;
-  int32 quantity = 4;
+  string sku_id = 3;
+  string location_id = 4;
+  int32 quantity = 5;
 }
 
 message AddCartItemResponse {
@@ -116,7 +122,7 @@ message AddCartItemResponse {
 }
 
 message UpdateCartItemRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
   string cart_item_id = 2;
   int32 quantity = 3;
 }
@@ -126,11 +132,20 @@ message UpdateCartItemResponse {
 }
 
 message RemoveCartItemRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
   string cart_item_id = 2;
 }
 
 message RemoveCartItemResponse {
+  Cart cart = 1;
+}
+
+message GetCartRequest {
+  StoreContext store = 1;
+  string cart_id = 2;
+}
+
+message GetCartResponse {
   Cart cart = 1;
 }
 

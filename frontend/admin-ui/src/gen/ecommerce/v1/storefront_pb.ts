@@ -6,7 +6,7 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Address, Money, OrderStatus, PageInfo, PageResult, PaymentMethod, TenantContext } from "./common_pb";
+import type { Address, Money, OrderStatus, PageInfo, PageResult, PaymentMethod, StoreContext, TenantContext } from "./common_pb";
 import { file_ecommerce_v1_common } from "./common_pb";
 import type { Message } from "@bufbuild/protobuf";
 
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/storefront.proto.
  */
 export const file_ecommerce_v1_storefront: GenFile = /*@__PURE__*/
-  fileDesc("Ch1lY29tbWVyY2UvdjEvc3RvcmVmcm9udC5wcm90bxIMZWNvbW1lcmNlLnYxIsoBCgdQcm9kdWN0EgoKAmlkGAEgASgJEhEKCXZlbmRvcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZzdGF0dXMYBSABKAkSJwoIdmFyaWFudHMYBiADKAsyFS5lY29tbWVyY2UudjEuVmFyaWFudBIuCgp1cGRhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgt0YXhfcnVsZV9pZBgIIAEoCSJ/CgdWYXJpYW50EgoKAmlkGAEgASgJEgsKA3NrdRgCIAEoCRIiCgVwcmljZRgDIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgFIAEoCSKCAQoEQ2FydBIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIlCgVpdGVtcxgDIAMoCzIWLmVjb21tZXJjZS52MS5DYXJ0SXRlbRIiCgV0b3RhbBgEIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIOCgZzdGF0dXMYBSABKAkicwoIQ2FydEl0ZW0SCgoCaWQYASABKAkSEQoJdmVuZG9yX2lkGAIgASgJEhIKCnZhcmlhbnRfaWQYAyABKAkSIgoFcHJpY2UYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSEAoIcXVhbnRpdHkYBSABKAUivQIKBU9yZGVyEgoKAmlkGAEgASgJEhMKC2N1c3RvbWVyX2lkGAIgASgJEikKBnN0YXR1cxgDIAEoDjIZLmVjb21tZXJjZS52MS5PcmRlclN0YXR1cxIiCgV0b3RhbBgEIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIzCg5wYXltZW50X21ldGhvZBgFIAEoDjIbLmVjb21tZXJjZS52MS5QYXltZW50TWV0aG9kEi8KEHNoaXBwaW5nX2FkZHJlc3MYBiABKAsyFS5lY29tbWVyY2UudjEuQWRkcmVzcxIuCg9iaWxsaW5nX2FkZHJlc3MYByABKAsyFS5lY29tbWVyY2UudjEuQWRkcmVzcxIuCgpjcmVhdGVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJoChNMaXN0UHJvZHVjdHNSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EiQKBHBhZ2UYAiABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8iZwoUTGlzdFByb2R1Y3RzUmVzcG9uc2USJwoIcHJvZHVjdHMYASADKAsyFS5lY29tbWVyY2UudjEuUHJvZHVjdBImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQiVAoRR2V0UHJvZHVjdFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKcHJvZHVjdF9pZBgCIAEoCSI8ChJHZXRQcm9kdWN0UmVzcG9uc2USJgoHcHJvZHVjdBgBIAEoCzIVLmVjb21tZXJjZS52MS5Qcm9kdWN0InkKFVNlYXJjaFByb2R1Y3RzUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBINCgVxdWVyeRgCIAEoCRIkCgRwYWdlGAMgASgLMhYuZWNvbW1lcmNlLnYxLlBhZ2VJbmZvImkKFlNlYXJjaFByb2R1Y3RzUmVzcG9uc2USJwoIcHJvZHVjdHMYASADKAsyFS5lY29tbWVyY2UudjEuUHJvZHVjdBImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQiVQoRQ3JlYXRlQ2FydFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEwoLY3VzdG9tZXJfaWQYAiABKAkiNgoSQ3JlYXRlQ2FydFJlc3BvbnNlEiAKBGNhcnQYASABKAsyEi5lY29tbWVyY2UudjEuQ2FydCJ4ChJBZGRDYXJ0SXRlbVJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDwoHY2FydF9pZBgCIAEoCRISCgp2YXJpYW50X2lkGAMgASgJEhAKCHF1YW50aXR5GAQgASgFIjcKE0FkZENhcnRJdGVtUmVzcG9uc2USIAoEY2FydBgBIAEoCzISLmVjb21tZXJjZS52MS5DYXJ0ImwKFVVwZGF0ZUNhcnRJdGVtUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIUCgxjYXJ0X2l0ZW1faWQYAiABKAkSEAoIcXVhbnRpdHkYAyABKAUiOgoWVXBkYXRlQ2FydEl0ZW1SZXNwb25zZRIgCgRjYXJ0GAEgASgLMhIuZWNvbW1lcmNlLnYxLkNhcnQiWgoVUmVtb3ZlQ2FydEl0ZW1SZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhQKDGNhcnRfaXRlbV9pZBgCIAEoCSI6ChZSZW1vdmVDYXJ0SXRlbVJlc3BvbnNlEiAKBGNhcnQYASABKAsyEi5lY29tbWVyY2UudjEuQ2FydCLlAQoPQ2hlY2tvdXRSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg8KB2NhcnRfaWQYAiABKAkSMwoOcGF5bWVudF9tZXRob2QYAyABKA4yGy5lY29tbWVyY2UudjEuUGF5bWVudE1ldGhvZBIvChBzaGlwcGluZ19hZGRyZXNzGAQgASgLMhUuZWNvbW1lcmNlLnYxLkFkZHJlc3MSLgoPYmlsbGluZ19hZGRyZXNzGAUgASgLMhUuZWNvbW1lcmNlLnYxLkFkZHJlc3MiNgoQQ2hlY2tvdXRSZXNwb25zZRIiCgVvcmRlchgBIAEoCzITLmVjb21tZXJjZS52MS5PcmRlciJQCg9HZXRPcmRlclJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEAoIb3JkZXJfaWQYAiABKAkiNgoQR2V0T3JkZXJSZXNwb25zZRIiCgVvcmRlchgBIAEoCzITLmVjb21tZXJjZS52MS5PcmRlcjKNBgoRU3RvcmVmcm9udFNlcnZpY2USVQoMTGlzdFByb2R1Y3RzEiEuZWNvbW1lcmNlLnYxLkxpc3RQcm9kdWN0c1JlcXVlc3QaIi5lY29tbWVyY2UudjEuTGlzdFByb2R1Y3RzUmVzcG9uc2USTwoKR2V0UHJvZHVjdBIfLmVjb21tZXJjZS52MS5HZXRQcm9kdWN0UmVxdWVzdBogLmVjb21tZXJjZS52MS5HZXRQcm9kdWN0UmVzcG9uc2USWwoOU2VhcmNoUHJvZHVjdHMSIy5lY29tbWVyY2UudjEuU2VhcmNoUHJvZHVjdHNSZXF1ZXN0GiQuZWNvbW1lcmNlLnYxLlNlYXJjaFByb2R1Y3RzUmVzcG9uc2USTwoKQ3JlYXRlQ2FydBIfLmVjb21tZXJjZS52MS5DcmVhdGVDYXJ0UmVxdWVzdBogLmVjb21tZXJjZS52MS5DcmVhdGVDYXJ0UmVzcG9uc2USUgoLQWRkQ2FydEl0ZW0SIC5lY29tbWVyY2UudjEuQWRkQ2FydEl0ZW1SZXF1ZXN0GiEuZWNvbW1lcmNlLnYxLkFkZENhcnRJdGVtUmVzcG9uc2USWwoOVXBkYXRlQ2FydEl0ZW0SIy5lY29tbWVyY2UudjEuVXBkYXRlQ2FydEl0ZW1SZXF1ZXN0GiQuZWNvbW1lcmNlLnYxLlVwZGF0ZUNhcnRJdGVtUmVzcG9uc2USWwoOUmVtb3ZlQ2FydEl0ZW0SIy5lY29tbWVyY2UudjEuUmVtb3ZlQ2FydEl0ZW1SZXF1ZXN0GiQuZWNvbW1lcmNlLnYxLlJlbW92ZUNhcnRJdGVtUmVzcG9uc2USSQoIQ2hlY2tvdXQSHS5lY29tbWVyY2UudjEuQ2hlY2tvdXRSZXF1ZXN0Gh4uZWNvbW1lcmNlLnYxLkNoZWNrb3V0UmVzcG9uc2USSQoIR2V0T3JkZXISHS5lY29tbWVyY2UudjEuR2V0T3JkZXJSZXF1ZXN0Gh4uZWNvbW1lcmNlLnYxLkdldE9yZGVyUmVzcG9uc2ViBnByb3RvMw", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
+  fileDesc("Ch1lY29tbWVyY2UvdjEvc3RvcmVmcm9udC5wcm90bxIMZWNvbW1lcmNlLnYxIsoBCgdQcm9kdWN0EgoKAmlkGAEgASgJEhEKCXZlbmRvcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZzdGF0dXMYBSABKAkSJwoIdmFyaWFudHMYBiADKAsyFS5lY29tbWVyY2UudjEuVmFyaWFudBIuCgp1cGRhdGVkX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgt0YXhfcnVsZV9pZBgIIAEoCSJ/CgdWYXJpYW50EgoKAmlkGAEgASgJEgsKA3NrdRgCIAEoCRIiCgVwcmljZRgDIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgFIAEoCSLEAQoEQ2FydBIKCgJpZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRITCgtjdXN0b21lcl9pZBgDIAEoCRIlCgVpdGVtcxgEIAMoCzIWLmVjb21tZXJjZS52MS5DYXJ0SXRlbRIiCgV0b3RhbBgFIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIOCgZzdGF0dXMYBiABKAkSLgoKZXhwaXJlc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAioAEKCENhcnRJdGVtEgoKAmlkGAEgASgJEg4KBnNrdV9pZBgCIAEoCRITCgtsb2NhdGlvbl9pZBgDIAEoCRInCgp1bml0X3ByaWNlGAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EhAKCHF1YW50aXR5GAUgASgFEhgKEGZ1bGZpbGxtZW50X3R5cGUYBiABKAkSDgoGc3RhdHVzGAcgASgJIr0CCgVPcmRlchIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS5lY29tbWVyY2UudjEuT3JkZXJTdGF0dXMSIgoFdG90YWwYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSMwoOcGF5bWVudF9tZXRob2QYBSABKA4yGy5lY29tbWVyY2UudjEuUGF5bWVudE1ldGhvZBIvChBzaGlwcGluZ19hZGRyZXNzGAYgASgLMhUuZWNvbW1lcmNlLnYxLkFkZHJlc3MSLgoPYmlsbGluZ19hZGRyZXNzGAcgASgLMhUuZWNvbW1lcmNlLnYxLkFkZHJlc3MSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiaAoTTGlzdFByb2R1Y3RzUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIkCgRwYWdlGAIgASgLMhYuZWNvbW1lcmNlLnYxLlBhZ2VJbmZvImcKFExpc3RQcm9kdWN0c1Jlc3BvbnNlEicKCHByb2R1Y3RzGAEgAygLMhUuZWNvbW1lcmNlLnYxLlByb2R1Y3QSJgoEcGFnZRgCIAEoCzIYLmVjb21tZXJjZS52MS5QYWdlUmVzdWx0IlQKEUdldFByb2R1Y3RSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhIKCnByb2R1Y3RfaWQYAiABKAkiPAoSR2V0UHJvZHVjdFJlc3BvbnNlEiYKB3Byb2R1Y3QYASABKAsyFS5lY29tbWVyY2UudjEuUHJvZHVjdCJ5ChVTZWFyY2hQcm9kdWN0c1JlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDQoFcXVlcnkYAiABKAkSJAoEcGFnZRgDIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJpChZTZWFyY2hQcm9kdWN0c1Jlc3BvbnNlEicKCHByb2R1Y3RzGAEgAygLMhUuZWNvbW1lcmNlLnYxLlByb2R1Y3QSJgoEcGFnZRgCIAEoCzIYLmVjb21tZXJjZS52MS5QYWdlUmVzdWx0IlMKEUNyZWF0ZUNhcnRSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBITCgtjdXN0b21lcl9pZBgCIAEoCSI2ChJDcmVhdGVDYXJ0UmVzcG9uc2USIAoEY2FydBgBIAEoCzISLmVjb21tZXJjZS52MS5DYXJ0IocBChJBZGRDYXJ0SXRlbVJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0Eg8KB2NhcnRfaWQYAiABKAkSDgoGc2t1X2lkGAMgASgJEhMKC2xvY2F0aW9uX2lkGAQgASgJEhAKCHF1YW50aXR5GAUgASgFIjcKE0FkZENhcnRJdGVtUmVzcG9uc2USIAoEY2FydBgBIAEoCzISLmVjb21tZXJjZS52MS5DYXJ0ImoKFVVwZGF0ZUNhcnRJdGVtUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSFAoMY2FydF9pdGVtX2lkGAIgASgJEhAKCHF1YW50aXR5GAMgASgFIjoKFlVwZGF0ZUNhcnRJdGVtUmVzcG9uc2USIAoEY2FydBgBIAEoCzISLmVjb21tZXJjZS52MS5DYXJ0IlgKFVJlbW92ZUNhcnRJdGVtUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSFAoMY2FydF9pdGVtX2lkGAIgASgJIjoKFlJlbW92ZUNhcnRJdGVtUmVzcG9uc2USIAoEY2FydBgBIAEoCzISLmVjb21tZXJjZS52MS5DYXJ0IkwKDkdldENhcnRSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIPCgdjYXJ0X2lkGAIgASgJIjMKD0dldENhcnRSZXNwb25zZRIgCgRjYXJ0GAEgASgLMhIuZWNvbW1lcmNlLnYxLkNhcnQi5QEKD0NoZWNrb3V0UmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIPCgdjYXJ0X2lkGAIgASgJEjMKDnBheW1lbnRfbWV0aG9kGAMgASgOMhsuZWNvbW1lcmNlLnYxLlBheW1lbnRNZXRob2QSLwoQc2hpcHBpbmdfYWRkcmVzcxgEIAEoCzIVLmVjb21tZXJjZS52MS5BZGRyZXNzEi4KD2JpbGxpbmdfYWRkcmVzcxgFIAEoCzIVLmVjb21tZXJjZS52MS5BZGRyZXNzIjYKEENoZWNrb3V0UmVzcG9uc2USIgoFb3JkZXIYASABKAsyEy5lY29tbWVyY2UudjEuT3JkZXIiUAoPR2V0T3JkZXJSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhAKCG9yZGVyX2lkGAIgASgJIjYKEEdldE9yZGVyUmVzcG9uc2USIgoFb3JkZXIYASABKAsyEy5lY29tbWVyY2UudjEuT3JkZXIy1QYKEVN0b3JlZnJvbnRTZXJ2aWNlElUKDExpc3RQcm9kdWN0cxIhLmVjb21tZXJjZS52MS5MaXN0UHJvZHVjdHNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkxpc3RQcm9kdWN0c1Jlc3BvbnNlEk8KCkdldFByb2R1Y3QSHy5lY29tbWVyY2UudjEuR2V0UHJvZHVjdFJlcXVlc3QaIC5lY29tbWVyY2UudjEuR2V0UHJvZHVjdFJlc3BvbnNlElsKDlNlYXJjaFByb2R1Y3RzEiMuZWNvbW1lcmNlLnYxLlNlYXJjaFByb2R1Y3RzUmVxdWVzdBokLmVjb21tZXJjZS52MS5TZWFyY2hQcm9kdWN0c1Jlc3BvbnNlEk8KCkNyZWF0ZUNhcnQSHy5lY29tbWVyY2UudjEuQ3JlYXRlQ2FydFJlcXVlc3QaIC5lY29tbWVyY2UudjEuQ3JlYXRlQ2FydFJlc3BvbnNlElIKC0FkZENhcnRJdGVtEiAuZWNvbW1lcmNlLnYxLkFkZENhcnRJdGVtUmVxdWVzdBohLmVjb21tZXJjZS52MS5BZGRDYXJ0SXRlbVJlc3BvbnNlElsKDlVwZGF0ZUNhcnRJdGVtEiMuZWNvbW1lcmNlLnYxLlVwZGF0ZUNhcnRJdGVtUmVxdWVzdBokLmVjb21tZXJjZS52MS5VcGRhdGVDYXJ0SXRlbVJlc3BvbnNlElsKDlJlbW92ZUNhcnRJdGVtEiMuZWNvbW1lcmNlLnYxLlJlbW92ZUNhcnRJdGVtUmVxdWVzdBokLmVjb21tZXJjZS52MS5SZW1vdmVDYXJ0SXRlbVJlc3BvbnNlEkYKB0dldENhcnQSHC5lY29tbWVyY2UudjEuR2V0Q2FydFJlcXVlc3QaHS5lY29tbWVyY2UudjEuR2V0Q2FydFJlc3BvbnNlEkkKCENoZWNrb3V0Eh0uZWNvbW1lcmNlLnYxLkNoZWNrb3V0UmVxdWVzdBoeLmVjb21tZXJjZS52MS5DaGVja291dFJlc3BvbnNlEkkKCEdldE9yZGVyEh0uZWNvbW1lcmNlLnYxLkdldE9yZGVyUmVxdWVzdBoeLmVjb21tZXJjZS52MS5HZXRPcmRlclJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
 
 /**
  * @generated from message ecommerce.v1.Product
@@ -115,24 +115,34 @@ export type Cart = Message<"ecommerce.v1.Cart"> & {
   id: string;
 
   /**
-   * @generated from field: string customer_id = 2;
+   * @generated from field: string store_id = 2;
+   */
+  storeId: string;
+
+  /**
+   * @generated from field: string customer_id = 3;
    */
   customerId: string;
 
   /**
-   * @generated from field: repeated ecommerce.v1.CartItem items = 3;
+   * @generated from field: repeated ecommerce.v1.CartItem items = 4;
    */
   items: CartItem[];
 
   /**
-   * @generated from field: ecommerce.v1.Money total = 4;
+   * @generated from field: ecommerce.v1.Money total = 5;
    */
   total?: Money;
 
   /**
-   * @generated from field: string status = 5;
+   * @generated from field: string status = 6;
    */
   status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp expires_at = 7;
+   */
+  expiresAt?: Timestamp;
 };
 
 /**
@@ -152,24 +162,38 @@ export type CartItem = Message<"ecommerce.v1.CartItem"> & {
   id: string;
 
   /**
-   * @generated from field: string vendor_id = 2;
+   * @generated from field: string sku_id = 2;
    */
-  vendorId: string;
+  skuId: string;
 
   /**
-   * @generated from field: string variant_id = 3;
+   * @generated from field: string location_id = 3;
    */
-  variantId: string;
+  locationId: string;
 
   /**
-   * @generated from field: ecommerce.v1.Money price = 4;
+   * @generated from field: ecommerce.v1.Money unit_price = 4;
    */
-  price?: Money;
+  unitPrice?: Money;
 
   /**
    * @generated from field: int32 quantity = 5;
    */
   quantity: number;
+
+  /**
+   * physical | digital
+   *
+   * @generated from field: string fulfillment_type = 6;
+   */
+  fulfillmentType: string;
+
+  /**
+   * active | removed
+   *
+   * @generated from field: string status = 7;
+   */
+  status: string;
 };
 
 /**
@@ -368,9 +392,9 @@ export const SearchProductsResponseSchema: GenMessage<SearchProductsResponse> = 
  */
 export type CreateCartRequest = Message<"ecommerce.v1.CreateCartRequest"> & {
   /**
-   * @generated from field: ecommerce.v1.TenantContext tenant = 1;
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
    */
-  tenant?: TenantContext;
+  store?: StoreContext;
 
   /**
    * optional for guest
@@ -409,9 +433,9 @@ export const CreateCartResponseSchema: GenMessage<CreateCartResponse> = /*@__PUR
  */
 export type AddCartItemRequest = Message<"ecommerce.v1.AddCartItemRequest"> & {
   /**
-   * @generated from field: ecommerce.v1.TenantContext tenant = 1;
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
    */
-  tenant?: TenantContext;
+  store?: StoreContext;
 
   /**
    * @generated from field: string cart_id = 2;
@@ -419,12 +443,17 @@ export type AddCartItemRequest = Message<"ecommerce.v1.AddCartItemRequest"> & {
   cartId: string;
 
   /**
-   * @generated from field: string variant_id = 3;
+   * @generated from field: string sku_id = 3;
    */
-  variantId: string;
+  skuId: string;
 
   /**
-   * @generated from field: int32 quantity = 4;
+   * @generated from field: string location_id = 4;
+   */
+  locationId: string;
+
+  /**
+   * @generated from field: int32 quantity = 5;
    */
   quantity: number;
 };
@@ -458,9 +487,9 @@ export const AddCartItemResponseSchema: GenMessage<AddCartItemResponse> = /*@__P
  */
 export type UpdateCartItemRequest = Message<"ecommerce.v1.UpdateCartItemRequest"> & {
   /**
-   * @generated from field: ecommerce.v1.TenantContext tenant = 1;
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
    */
-  tenant?: TenantContext;
+  store?: StoreContext;
 
   /**
    * @generated from field: string cart_item_id = 2;
@@ -502,9 +531,9 @@ export const UpdateCartItemResponseSchema: GenMessage<UpdateCartItemResponse> = 
  */
 export type RemoveCartItemRequest = Message<"ecommerce.v1.RemoveCartItemRequest"> & {
   /**
-   * @generated from field: ecommerce.v1.TenantContext tenant = 1;
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
    */
-  tenant?: TenantContext;
+  store?: StoreContext;
 
   /**
    * @generated from field: string cart_item_id = 2;
@@ -535,6 +564,45 @@ export type RemoveCartItemResponse = Message<"ecommerce.v1.RemoveCartItemRespons
  */
 export const RemoveCartItemResponseSchema: GenMessage<RemoveCartItemResponse> = /*@__PURE__*/
   messageDesc(file_ecommerce_v1_storefront, 18);
+
+/**
+ * @generated from message ecommerce.v1.GetCartRequest
+ */
+export type GetCartRequest = Message<"ecommerce.v1.GetCartRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: string cart_id = 2;
+   */
+  cartId: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.GetCartRequest.
+ * Use `create(GetCartRequestSchema)` to create a new message.
+ */
+export const GetCartRequestSchema: GenMessage<GetCartRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_storefront, 19);
+
+/**
+ * @generated from message ecommerce.v1.GetCartResponse
+ */
+export type GetCartResponse = Message<"ecommerce.v1.GetCartResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.Cart cart = 1;
+   */
+  cart?: Cart;
+};
+
+/**
+ * Describes the message ecommerce.v1.GetCartResponse.
+ * Use `create(GetCartResponseSchema)` to create a new message.
+ */
+export const GetCartResponseSchema: GenMessage<GetCartResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_storefront, 20);
 
 /**
  * @generated from message ecommerce.v1.CheckoutRequest
@@ -571,7 +639,7 @@ export type CheckoutRequest = Message<"ecommerce.v1.CheckoutRequest"> & {
  * Use `create(CheckoutRequestSchema)` to create a new message.
  */
 export const CheckoutRequestSchema: GenMessage<CheckoutRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_storefront, 19);
+  messageDesc(file_ecommerce_v1_storefront, 21);
 
 /**
  * @generated from message ecommerce.v1.CheckoutResponse
@@ -588,7 +656,7 @@ export type CheckoutResponse = Message<"ecommerce.v1.CheckoutResponse"> & {
  * Use `create(CheckoutResponseSchema)` to create a new message.
  */
 export const CheckoutResponseSchema: GenMessage<CheckoutResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_storefront, 20);
+  messageDesc(file_ecommerce_v1_storefront, 22);
 
 /**
  * @generated from message ecommerce.v1.GetOrderRequest
@@ -610,7 +678,7 @@ export type GetOrderRequest = Message<"ecommerce.v1.GetOrderRequest"> & {
  * Use `create(GetOrderRequestSchema)` to create a new message.
  */
 export const GetOrderRequestSchema: GenMessage<GetOrderRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_storefront, 21);
+  messageDesc(file_ecommerce_v1_storefront, 23);
 
 /**
  * @generated from message ecommerce.v1.GetOrderResponse
@@ -627,7 +695,7 @@ export type GetOrderResponse = Message<"ecommerce.v1.GetOrderResponse"> & {
  * Use `create(GetOrderResponseSchema)` to create a new message.
  */
 export const GetOrderResponseSchema: GenMessage<GetOrderResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_storefront, 22);
+  messageDesc(file_ecommerce_v1_storefront, 24);
 
 /**
  * @generated from service ecommerce.v1.StorefrontService
@@ -688,6 +756,14 @@ export const StorefrontService: GenService<{
     methodKind: "unary";
     input: typeof RemoveCartItemRequestSchema;
     output: typeof RemoveCartItemResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.StorefrontService.GetCart
+   */
+  getCart: {
+    methodKind: "unary";
+    input: typeof GetCartRequestSchema;
+    output: typeof GetCartResponseSchema;
   },
   /**
    * @generated from rpc ecommerce.v1.StorefrontService.Checkout
