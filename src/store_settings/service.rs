@@ -6,6 +6,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
+    store_settings::repository::{PgStoreSettingsRepository, StoreSettingsRepository},
     shared::{
         audit_action::{
             AuditAction,
@@ -22,129 +23,265 @@ use crate::{
 };
 use crate::rpc::request_context;
 
+pub struct StoreSettingsService<'a> {
+    state: &'a AppState,
+}
+
+impl<'a> StoreSettingsService<'a> {
+    pub fn new(state: &'a AppState) -> Self {
+        Self { state }
+    }
+
+    pub async fn get_store_settings(
+        &self,
+        store_id: String,
+        tenant_id: String,
+    ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
+        get_store_settings(self.state, store_id, tenant_id).await
+    }
+
+    pub async fn update_store_settings(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        settings: pb::StoreSettings,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
+        update_store_settings(self.state, store_id, tenant_id, settings, actor).await
+    }
+
+    pub async fn initialize_store_settings(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        settings: pb::StoreSettings,
+        mall: pb::MallSettings,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<(pb::StoreSettings, pb::MallSettings), (StatusCode, Json<ConnectError>)> {
+        initialize_store_settings(self.state, store_id, tenant_id, settings, mall, actor).await
+    }
+
+    pub async fn get_mall_settings(
+        &self,
+        store_id: String,
+        tenant_id: String,
+    ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
+        get_mall_settings(self.state, store_id, tenant_id).await
+    }
+
+    pub async fn list_store_locations(
+        &self,
+        store_id: String,
+    ) -> Result<Vec<pb::StoreLocation>, (StatusCode, Json<ConnectError>)> {
+        list_store_locations(self.state, store_id).await
+    }
+
+    pub async fn upsert_store_location(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        location: pb::StoreLocation,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::StoreLocation, (StatusCode, Json<ConnectError>)> {
+        upsert_store_location(self.state, store_id, tenant_id, location, actor).await
+    }
+
+    pub async fn delete_store_location(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        location_id: String,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+        delete_store_location(self.state, store_id, tenant_id, location_id, actor).await
+    }
+
+    pub async fn update_mall_settings(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        settings: pb::MallSettings,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
+        update_mall_settings(self.state, store_id, tenant_id, settings, actor).await
+    }
+
+    pub async fn list_shipping_zones(
+        &self,
+        store_id: String,
+    ) -> Result<Vec<pb::ShippingZone>, (StatusCode, Json<ConnectError>)> {
+        list_shipping_zones(self.state, store_id).await
+    }
+
+    pub async fn upsert_shipping_zone(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        zone: pb::ShippingZone,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::ShippingZone, (StatusCode, Json<ConnectError>)> {
+        upsert_shipping_zone(self.state, store_id, tenant_id, zone, actor).await
+    }
+
+    pub async fn delete_shipping_zone(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        zone_id: String,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+        delete_shipping_zone(self.state, store_id, tenant_id, zone_id, actor).await
+    }
+
+    pub async fn list_shipping_rates(
+        &self,
+        store_id: String,
+        zone_id: String,
+    ) -> Result<Vec<pb::ShippingRate>, (StatusCode, Json<ConnectError>)> {
+        list_shipping_rates(self.state, store_id, zone_id).await
+    }
+
+    pub async fn upsert_shipping_rate(
+        &self,
+        store_id: String,
+        zone_id: String,
+        rate: pb::ShippingRate,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::ShippingRate, (StatusCode, Json<ConnectError>)> {
+        upsert_shipping_rate(self.state, store_id, zone_id, rate, actor).await
+    }
+
+    pub async fn delete_shipping_rate(
+        &self,
+        store_id: String,
+        zone_id: String,
+        rate_id: String,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+        delete_shipping_rate(self.state, store_id, zone_id, rate_id, actor).await
+    }
+
+    pub async fn list_tax_rules(
+        &self,
+        store_id: String,
+    ) -> Result<Vec<pb::TaxRule>, (StatusCode, Json<ConnectError>)> {
+        list_tax_rules(self.state, store_id).await
+    }
+
+    pub async fn upsert_tax_rule(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        rule: pb::TaxRule,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<pb::TaxRule, (StatusCode, Json<ConnectError>)> {
+        upsert_tax_rule(self.state, store_id, tenant_id, rule, actor).await
+    }
+
+    pub async fn delete_tax_rule(
+        &self,
+        store_id: String,
+        tenant_id: String,
+        rule_id: String,
+        actor: Option<pb::ActorContext>,
+    ) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+        delete_tax_rule(self.state, store_id, tenant_id, rule_id, actor).await
+    }
+}
+
 pub async fn get_store_settings(
     state: &AppState,
     store_id: String,
     tenant_id: String,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
-    let row = sqlx::query(
-        r#"
-        SELECT store_name, legal_name, contact_email, contact_phone,
-               address_prefecture, address_city, address_line1, address_line2,
-               legal_notice, default_language, primary_domain, subdomain, https_enabled,
-               currency, tax_mode, tax_rounding, order_initial_status,
-               cod_enabled, cod_fee_amount, cod_fee_currency,
-               bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
-               theme, brand_color, logo_url, favicon_url, time_zone
-        FROM store_settings
-        WHERE store_id = $1
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+    let repo = PgStoreSettingsRepository::new(&state.db);
+    let row = repo
+        .fetch_store_settings_by_store(&store_uuid.as_uuid())
+        .await?;
 
     if let Some(row) = row {
         return Ok(pb::StoreSettings {
-            store_name: row.get("store_name"),
-            legal_name: row.get("legal_name"),
-            contact_email: row.get("contact_email"),
-            contact_phone: row.get("contact_phone"),
-            address_prefecture: row.get("address_prefecture"),
-            address_city: row.get("address_city"),
-            address_line1: row.get("address_line1"),
-            address_line2: row.get::<Option<String>, _>("address_line2").unwrap_or_default(),
-            legal_notice: row.get("legal_notice"),
-            default_language: row.get("default_language"),
-            primary_domain: row.get::<Option<String>, _>("primary_domain").unwrap_or_default(),
-            subdomain: row.get::<Option<String>, _>("subdomain").unwrap_or_default(),
-            https_enabled: row.get("https_enabled"),
-            currency: row.get("currency"),
-            tax_mode: row.get("tax_mode"),
-            tax_rounding: row.get("tax_rounding"),
-            order_initial_status: row.get("order_initial_status"),
-            cod_enabled: row.get("cod_enabled"),
+            store_name: row.store_name,
+            legal_name: row.legal_name,
+            contact_email: row.contact_email,
+            contact_phone: row.contact_phone,
+            address_prefecture: row.address_prefecture,
+            address_city: row.address_city,
+            address_line1: row.address_line1,
+            address_line2: row.address_line2.unwrap_or_default(),
+            legal_notice: row.legal_notice,
+            default_language: row.default_language,
+            primary_domain: row.primary_domain.unwrap_or_default(),
+            subdomain: row.subdomain.unwrap_or_default(),
+            https_enabled: row.https_enabled,
+            currency: row.currency,
+            tax_mode: row.tax_mode,
+            tax_rounding: row.tax_rounding,
+            order_initial_status: row.order_initial_status,
+            cod_enabled: row.cod_enabled,
             cod_fee: Some(money_from_parts(
-                row.get::<i64, _>("cod_fee_amount"),
-                row.get::<String, _>("cod_fee_currency"),
+                row.cod_fee_amount.unwrap_or_default(),
+                row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
             )),
-            bank_name: row.get("bank_name"),
-            bank_branch: row.get("bank_branch"),
-            bank_account_type: row.get("bank_account_type"),
-            bank_account_number: row.get("bank_account_number"),
-            bank_account_name: row.get("bank_account_name"),
-            theme: row.get("theme"),
-            brand_color: row.get("brand_color"),
-            logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
-            favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
-            time_zone: row.get("time_zone"),
+            bank_name: row.bank_name,
+            bank_branch: row.bank_branch,
+            bank_account_type: row.bank_account_type,
+            bank_account_number: row.bank_account_number,
+            bank_account_name: row.bank_account_name,
+            theme: row.theme,
+            brand_color: row.brand_color,
+            logo_url: row.logo_url.unwrap_or_default(),
+            favicon_url: row.favicon_url.unwrap_or_default(),
+            time_zone: row.time_zone,
         });
     }
 
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let fallback_row = sqlx::query(
-        r#"
-        SELECT store_name, legal_name, contact_email, contact_phone,
-               address_prefecture, address_city, address_line1, address_line2,
-               legal_notice, default_language, primary_domain, subdomain, https_enabled,
-               currency, tax_mode, tax_rounding, order_initial_status,
-               cod_enabled, cod_fee_amount, cod_fee_currency,
-               bank_name, bank_branch, bank_account_type, bank_account_number, bank_account_name,
-               theme, brand_color, logo_url, favicon_url, time_zone
-        FROM store_settings
-        WHERE tenant_id = $1
-        "#,
-    )
-    .bind(tenant_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+    let fallback_row = repo
+        .fetch_store_settings_by_tenant(&tenant_uuid.as_uuid())
+        .await?;
 
     if let Some(row) = fallback_row {
         return Ok(pb::StoreSettings {
-            store_name: row.get("store_name"),
-            legal_name: row.get("legal_name"),
-            contact_email: row.get("contact_email"),
-            contact_phone: row.get("contact_phone"),
-            address_prefecture: row.get("address_prefecture"),
-            address_city: row.get("address_city"),
-            address_line1: row.get("address_line1"),
-            address_line2: row.get::<Option<String>, _>("address_line2").unwrap_or_default(),
-            legal_notice: row.get("legal_notice"),
-            default_language: row.get("default_language"),
-            primary_domain: row.get::<Option<String>, _>("primary_domain").unwrap_or_default(),
-            subdomain: row.get::<Option<String>, _>("subdomain").unwrap_or_default(),
-            https_enabled: row.get("https_enabled"),
-            currency: row.get("currency"),
-            tax_mode: row.get("tax_mode"),
-            tax_rounding: row.get("tax_rounding"),
-            order_initial_status: row.get("order_initial_status"),
-            cod_enabled: row.get("cod_enabled"),
+            store_name: row.store_name,
+            legal_name: row.legal_name,
+            contact_email: row.contact_email,
+            contact_phone: row.contact_phone,
+            address_prefecture: row.address_prefecture,
+            address_city: row.address_city,
+            address_line1: row.address_line1,
+            address_line2: row.address_line2.unwrap_or_default(),
+            legal_notice: row.legal_notice,
+            default_language: row.default_language,
+            primary_domain: row.primary_domain.unwrap_or_default(),
+            subdomain: row.subdomain.unwrap_or_default(),
+            https_enabled: row.https_enabled,
+            currency: row.currency,
+            tax_mode: row.tax_mode,
+            tax_rounding: row.tax_rounding,
+            order_initial_status: row.order_initial_status,
+            cod_enabled: row.cod_enabled,
             cod_fee: Some(money_from_parts(
-                row.get::<i64, _>("cod_fee_amount"),
-                row.get::<String, _>("cod_fee_currency"),
+                row.cod_fee_amount.unwrap_or_default(),
+                row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
             )),
-            bank_name: row.get("bank_name"),
-            bank_branch: row.get("bank_branch"),
-            bank_account_type: row.get("bank_account_type"),
-            bank_account_number: row.get("bank_account_number"),
-            bank_account_name: row.get("bank_account_name"),
-            theme: row.get("theme"),
-            brand_color: row.get("brand_color"),
-            logo_url: row.get::<Option<String>, _>("logo_url").unwrap_or_default(),
-            favicon_url: row.get::<Option<String>, _>("favicon_url").unwrap_or_default(),
-            time_zone: row.get("time_zone"),
+            bank_name: row.bank_name,
+            bank_branch: row.bank_branch,
+            bank_account_type: row.bank_account_type,
+            bank_account_number: row.bank_account_number,
+            bank_account_name: row.bank_account_name,
+            theme: row.theme,
+            brand_color: row.brand_color,
+            logo_url: row.logo_url.unwrap_or_default(),
+            favicon_url: row.favicon_url.unwrap_or_default(),
+            time_zone: row.time_zone,
         });
     }
 
-    let store_name = sqlx::query("SELECT name FROM stores WHERE id = $1")
-        .bind(store_uuid.as_uuid())
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?
-        .map(|row| row.get::<String, _>("name"))
+    let store_name = repo
+        .fetch_store_name(&store_uuid.as_uuid())
+        .await?
         .unwrap_or_else(|| "Store".to_string());
 
     Ok(default_store_settings(store_name))

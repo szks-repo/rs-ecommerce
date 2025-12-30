@@ -7,7 +7,6 @@ use argon2::{
 use jsonwebtoken::{EncodingKey, Header, encode};
 use rand_core::OsRng;
 use serde::Serialize;
-use sqlx::Row;
 use chrono::{Duration, Utc};
 
 use crate::{
@@ -15,6 +14,7 @@ use crate::{
     pb::pb,
     infrastructure::{audit, email},
     identity::error::{IdentityError, IdentityResult},
+    identity::repository::{IdentityRepository, PgIdentityRepository},
     shared::validation::{Email, Phone},
     shared::{
         time::chrono_to_timestamp,
@@ -23,6 +23,108 @@ use crate::{
     },
     identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
 };
+
+pub struct IdentityService<'a> {
+    state: &'a AppState,
+}
+
+impl<'a> IdentityService<'a> {
+    pub fn new(state: &'a AppState) -> Self {
+        Self { state }
+    }
+
+    pub async fn sign_in(
+        &self,
+        req: pb::IdentitySignInRequest,
+    ) -> IdentityResult<pb::IdentitySignInResponse> {
+        sign_in(self.state, req).await
+    }
+
+    pub async fn sign_out(
+        &self,
+        req: pb::IdentitySignOutRequest,
+        actor: Option<pb::ActorContext>,
+    ) -> IdentityResult<pb::IdentitySignOutResponse> {
+        sign_out(self.state, req, actor).await
+    }
+
+    pub async fn list_staff(
+        &self,
+        req: pb::IdentityListStaffRequest,
+    ) -> IdentityResult<pb::IdentityListStaffResponse> {
+        list_staff(self.state, req).await
+    }
+
+    pub async fn update_staff(
+        &self,
+        req: pb::IdentityUpdateStaffRequest,
+    ) -> IdentityResult<pb::IdentityUpdateStaffResponse> {
+        update_staff(self.state, req).await
+    }
+
+    pub async fn create_staff(
+        &self,
+        req: pb::IdentityCreateStaffRequest,
+    ) -> IdentityResult<pb::IdentityCreateStaffResponse> {
+        create_staff(self.state, req).await
+    }
+
+    pub async fn invite_staff(
+        &self,
+        req: pb::IdentityInviteStaffRequest,
+    ) -> IdentityResult<pb::IdentityInviteStaffResponse> {
+        invite_staff(self.state, req).await
+    }
+
+    pub async fn transfer_owner(
+        &self,
+        req: pb::IdentityTransferOwnerRequest,
+    ) -> IdentityResult<pb::IdentityTransferOwnerResponse> {
+        transfer_owner(self.state, req).await
+    }
+
+    pub async fn create_role(
+        &self,
+        req: pb::IdentityCreateRoleRequest,
+    ) -> IdentityResult<pb::IdentityCreateRoleResponse> {
+        create_role(self.state, req).await
+    }
+
+    pub async fn assign_role_to_staff(
+        &self,
+        req: pb::IdentityAssignRoleRequest,
+    ) -> IdentityResult<pb::IdentityAssignRoleResponse> {
+        assign_role_to_staff(self.state, req).await
+    }
+
+    pub async fn list_roles(
+        &self,
+        req: pb::IdentityListRolesRequest,
+    ) -> IdentityResult<pb::IdentityListRolesResponse> {
+        list_roles(self.state, req).await
+    }
+
+    pub async fn list_roles_with_permissions(
+        &self,
+        req: pb::IdentityListRolesWithPermissionsRequest,
+    ) -> IdentityResult<pb::IdentityListRolesWithPermissionsResponse> {
+        list_roles_with_permissions(self.state, req).await
+    }
+
+    pub async fn update_role(
+        &self,
+        req: pb::IdentityUpdateRoleRequest,
+    ) -> IdentityResult<pb::IdentityUpdateRoleResponse> {
+        update_role(self.state, req).await
+    }
+
+    pub async fn delete_role(
+        &self,
+        req: pb::IdentityDeleteRoleRequest,
+    ) -> IdentityResult<pb::IdentityDeleteRoleResponse> {
+        delete_role(self.state, req).await
+    }
+}
 
 pub async fn sign_in(
     state: &AppState,
@@ -98,33 +200,20 @@ pub async fn list_staff(
 ) -> IdentityResult<pb::IdentityListStaffResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
-
-    let rows = sqlx::query(
-        r#"
-        SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
-               ss.display_name, sr.id::text as role_id, sr.key as role_key
-        FROM store_staff ss
-        JOIN store_roles sr ON sr.id = ss.role_id
-        WHERE ss.store_id = $1
-        ORDER BY ss.created_at ASC
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_all(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-
-    let staff = rows
+    let repo = PgIdentityRepository::new(&state.db);
+    let staff = repo
+        .list_staff(&store_uuid.as_uuid())
+        .await?
         .into_iter()
         .map(|row| pb::IdentityStaffSummary {
-            staff_id: row.get("staff_id"),
-            email: row.get::<Option<String>, _>("email").unwrap_or_default(),
-            login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
-            phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-            role_id: row.get("role_id"),
-            role_key: row.get("role_key"),
-            status: row.get("status"),
-            display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
+            staff_id: row.staff_id,
+            email: row.email.unwrap_or_default(),
+            login_id: row.login_id.unwrap_or_default(),
+            phone: row.phone.unwrap_or_default(),
+            role_id: row.role_id,
+            role_key: row.role_key,
+            status: row.status,
+            display_name: row.display_name.unwrap_or_default(),
         })
         .collect();
 
@@ -148,21 +237,11 @@ pub async fn update_staff(
     let store_uuid = StoreId::parse(&store_id)?;
     let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
 
-    let current = sqlx::query(
-        r#"
-        SELECT sr.key as role_key
-        FROM store_staff ss
-        JOIN store_roles sr ON sr.id = ss.role_id
-        WHERE ss.id = $1 AND ss.store_id = $2
-        "#,
-    )
-    .bind(staff_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    if let Some(row) = current {
-        let current_role: String = row.get("role_key");
+    let repo = PgIdentityRepository::new(&state.db);
+    let current_role = repo
+        .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
+        .await?;
+    if let Some(current_role) = current_role {
         if current_role == "owner" && !req.role_id.is_empty() {
             return Err(IdentityError::permission_denied(
                 "owner role cannot be changed",
@@ -172,48 +251,26 @@ pub async fn update_staff(
 
     if !req.role_id.is_empty() {
         let role_uuid = parse_uuid(&req.role_id, "role_id")?;
-        let role_row = sqlx::query(
-            r#"
-            SELECT key
-            FROM store_roles
-            WHERE id = $1 AND store_id = $2
-            "#,
-        )
-        .bind(role_uuid)
-        .bind(store_uuid.as_uuid())
-        .fetch_optional(&state.db)
-        .await
-        .map_err(IdentityError::from)?;
+        let role_row = repo.role_by_id(&store_uuid.as_uuid(), &role_uuid).await?;
         let Some(role_row) = role_row else {
             return Err(IdentityError::invalid_argument("role_id is invalid"));
         };
-        let role_key: String = role_row.get("key");
-        if role_key == "owner" {
+        if role_row.key == "owner" {
             return Err(IdentityError::permission_denied(
                 "owner role cannot be assigned",
             ));
         }
     }
 
-    let updated = sqlx::query(
-        r#"
-        UPDATE store_staff
-        SET role_id = COALESCE(NULLIF($1, '')::uuid, role_id),
-            status = COALESCE(NULLIF($2, ''), status),
-            display_name = COALESCE(NULLIF($3, ''), display_name),
-            updated_at = now()
-        WHERE id = $4 AND store_id = $5
-        RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name
-        "#,
-    )
-    .bind(&req.role_id)
-    .bind(&req.status)
-    .bind(&req.display_name)
-    .bind(staff_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let updated = repo
+        .update_staff(
+            &staff_uuid,
+            &store_uuid.as_uuid(),
+            &req.role_id,
+            &req.status,
+            &req.display_name,
+        )
+        .await?;
 
     let Some(row) = updated else {
         return Ok(pb::IdentityUpdateStaffResponse {
@@ -222,28 +279,20 @@ pub async fn update_staff(
         });
     };
 
-    let role_key_row = sqlx::query(
-        r#"
-        SELECT key
-        FROM store_roles
-        WHERE id = $1 AND store_id = $2
-        "#,
-    )
-    .bind(parse_uuid(&row.get::<String, _>("role_id"), "role_id")?)
-    .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let role_key = repo
+        .role_key_by_id(&store_uuid.as_uuid(), &row.role_id)
+        .await?
+        .unwrap_or_default();
 
     let staff = pb::IdentityStaffSummary {
-        staff_id: row.get("staff_id"),
-        email: row.get::<Option<String>, _>("email").unwrap_or_default(),
-        login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
-        phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-        role_id: row.get("role_id"),
-        role_key: role_key_row.get("key"),
-        status: row.get("status"),
-        display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
+        staff_id: row.staff_id,
+        email: row.email.unwrap_or_default(),
+        login_id: row.login_id.unwrap_or_default(),
+        phone: row.phone.unwrap_or_default(),
+        role_id: row.role_id,
+        role_key,
+        status: row.status,
+        display_name: row.display_name.unwrap_or_default(),
     };
 
     let actor_id = req
@@ -304,58 +353,30 @@ pub async fn invite_staff(
 
     let store_uuid = StoreId::parse(&store_id)?;
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
-    let role_row = sqlx::query(
-        r#"
-        SELECT key, name
-        FROM store_roles
-        WHERE id = $1 AND store_id = $2
-        "#,
-    )
-    .bind(role_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let role_row = repo.role_by_id(&store_uuid.as_uuid(), &role_uuid).await?;
     let Some(role_row) = role_row else {
         return Err(IdentityError::invalid_argument("role_id is invalid"));
     };
-    let role_key: String = role_row.get("key");
-    let role_name: Option<String> = role_row.get("name");
+    let role_key = role_row.key;
+    let role_name = role_row.name;
     if role_key == "owner" {
         return Err(IdentityError::invalid_argument(
             "owner role cannot be invited",
         ));
     }
 
-    let existing = sqlx::query(
-        r#"
-        SELECT 1
-        FROM store_staff
-        WHERE store_id = $1 AND email = $2
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .bind(invite_email.as_str())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    if existing.is_some() {
+    if repo
+        .store_staff_exists_by_email(&store_uuid.as_uuid(), invite_email.as_str())
+        .await?
+    {
         return Err(IdentityError::already_exists("email already exists"));
     }
 
-    let existing_invite = sqlx::query(
-        r#"
-        SELECT 1
-        FROM store_staff_invites
-        WHERE store_id = $1 AND email = $2 AND accepted_at IS NULL
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .bind(invite_email.as_str())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    if existing_invite.is_some() {
+    if repo
+        .invite_exists_by_email(&store_uuid.as_uuid(), invite_email.as_str())
+        .await?
+    {
         return Err(IdentityError::already_exists("invite already exists"));
     }
 
@@ -374,48 +395,29 @@ pub async fn invite_staff(
     let token = uuid::Uuid::new_v4().to_string();
     let expires_at = Utc::now() + Duration::days(7);
 
-    sqlx::query(
-        r#"
-        INSERT INTO store_staff (id, store_id, email, role_id, status, display_name)
-        VALUES ($1,$2,$3,$4,$5,$6)
-        "#,
+    repo.insert_staff_invite_tx(
+        &mut *tx,
+        &staff_id,
+        &invite_id,
+        &store_uuid.as_uuid(),
+        invite_email.as_str(),
+        &role_uuid,
+        &token,
+        created_by,
+        expires_at,
+        if req.display_name.is_empty() {
+            None
+        } else {
+            Some(req.display_name.as_str())
+        },
     )
-    .bind(staff_id)
-    .bind(store_uuid.as_uuid())
-    .bind(invite_email.as_str())
-    .bind(role_uuid)
-    .bind("invited")
-    .bind(if req.display_name.is_empty() { None } else { Some(req.display_name.clone()) })
-    .execute(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
-
-    sqlx::query(
-        r#"
-        INSERT INTO store_staff_invites (id, store_id, email, role_id, token, created_by, expires_at)
-        VALUES ($1,$2,$3,$4,$5,$6,$7)
-        "#,
-    )
-    .bind(invite_id)
-    .bind(store_uuid.as_uuid())
-    .bind(invite_email.as_str())
-    .bind(role_uuid)
-    .bind(&token)
-    .bind(created_by)
-    .bind(expires_at)
-    .execute(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
+    .await?;
 
     tx.commit().await.map_err(IdentityError::from)?;
 
-    let store_row = sqlx::query("SELECT name FROM stores WHERE id = $1")
-        .bind(store_uuid.as_uuid())
-        .fetch_optional(&state.db)
-        .await
-        .map_err(IdentityError::from)?;
-    let store_name: String = store_row
-        .and_then(|row| row.try_get::<String, _>("name").ok())
+    let store_name: String = repo
+        .store_name(&store_uuid.as_uuid())
+        .await?
         .unwrap_or_else(|| "Store".to_string());
 
     let email_config = email::EmailConfig::from_env();
@@ -486,22 +488,13 @@ pub async fn transfer_owner(
         .as_ref()
         .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
 
-    let current_owner_row = sqlx::query(
-        r#"
-        SELECT ss.id::text as staff_id
-        FROM store_staff ss
-        JOIN store_roles sr ON sr.id = ss.role_id
-        WHERE ss.store_id = $1 AND sr.key = 'owner'
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    let Some(current_owner_row) = current_owner_row else {
+    let repo = PgIdentityRepository::new(&state.db);
+    let current_owner_id = repo
+        .current_owner_id(&store_uuid.as_uuid())
+        .await?;
+    let Some(current_owner_id) = current_owner_id else {
         return Err(IdentityError::not_found("owner not found"));
     };
-    let current_owner_id: String = current_owner_row.get("staff_id");
     if current_owner_id == req.new_owner_staff_id {
         return Err(IdentityError::invalid_argument(
             "new owner is already the owner",
@@ -516,76 +509,32 @@ pub async fn transfer_owner(
         }
     }
 
-    let target_row = sqlx::query(
-        r#"
-        SELECT ss.id::text as staff_id, ss.status
-        FROM store_staff ss
-        WHERE ss.id = $1 AND ss.store_id = $2
-        "#,
-    )
-    .bind(new_owner_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    let Some(target_row) = target_row else {
+    let target_status = repo
+        .staff_status(&store_uuid.as_uuid(), &new_owner_uuid)
+        .await?;
+    let Some(target_status) = target_status else {
         return Err(IdentityError::not_found("new owner staff not found"));
     };
-    let target_status: String = target_row.get("status");
     if target_status != "active" {
         return Err(IdentityError::invalid_argument(
             "new owner must be active",
         ));
     }
 
-    let owner_role_row = sqlx::query(
-        "SELECT id FROM store_roles WHERE store_id = $1 AND key = 'owner'",
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    let owner_role_id: uuid::Uuid = owner_role_row.get("id");
+    let owner_role_id = repo
+        .role_id_by_key(&store_uuid.as_uuid(), "owner")
+        .await?
+        .ok_or_else(|| IdentityError::not_found("owner role not found"))?;
+    let staff_role_id = repo
+        .role_id_by_key(&store_uuid.as_uuid(), "staff")
+        .await?
+        .ok_or_else(|| IdentityError::not_found("staff role not found"))?;
 
-    let staff_role_row = sqlx::query(
-        "SELECT id FROM store_roles WHERE store_id = $1 AND key = 'staff'",
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    let staff_role_id: uuid::Uuid = staff_role_row.get("id");
-
-    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
-    sqlx::query(
-        r#"
-        UPDATE store_staff
-        SET role_id = $1, updated_at = now()
-        WHERE id = $2 AND store_id = $3
-        "#,
-    )
-    .bind(owner_role_id)
-    .bind(new_owner_uuid)
-    .bind(store_uuid.as_uuid())
-    .execute(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
-
-    sqlx::query(
-        r#"
-        UPDATE store_staff
-        SET role_id = $1, updated_at = now()
-        WHERE id = $2 AND store_id = $3
-        "#,
-    )
-    .bind(staff_role_id)
-    .bind(parse_uuid(&current_owner_id, "current_owner_id")?)
-    .bind(store_uuid.as_uuid())
-    .execute(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
-
-    tx.commit().await.map_err(IdentityError::from)?;
+    repo.update_staff_role(&new_owner_uuid, &store_uuid.as_uuid(), &owner_role_id)
+        .await?;
+    let current_owner_uuid = parse_uuid(&current_owner_id, "current_owner_id")?;
+    repo.update_staff_role(&current_owner_uuid, &store_uuid.as_uuid(), &staff_role_id)
+        .await?;
 
     let new_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
     let previous_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
@@ -880,27 +829,16 @@ pub async fn list_roles_with_permissions(
 ) -> IdentityResult<pb::IdentityListRolesWithPermissionsResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
-
-    let role_rows = sqlx::query(
-        r#"
-        SELECT id, id::text as id_text, key, name, description
-        FROM store_roles
-        WHERE store_id = $1 AND key <> 'owner'
-        ORDER BY created_at ASC
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_all(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let role_rows = repo.list_roles(&store_uuid.as_uuid()).await?;
 
     let mut roles: Vec<pb::IdentityRoleDetail> = role_rows
         .iter()
         .map(|row| pb::IdentityRoleDetail {
-            id: row.get("id_text"),
-            key: row.get("key"),
-            name: row.get("name"),
-            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+            id: row.id.clone(),
+            key: row.key.clone(),
+            name: row.name.clone(),
+            description: row.description.clone().unwrap_or_default(),
             permission_keys: Vec::new(),
         })
         .collect();
@@ -908,24 +846,10 @@ pub async fn list_roles_with_permissions(
     if !roles.is_empty() {
         let role_ids: Vec<uuid::Uuid> = role_rows
             .iter()
-            .map(|row| row.get::<uuid::Uuid, _>("id"))
+            .filter_map(|row| uuid::Uuid::parse_str(&row.id).ok())
             .collect();
-        let permission_rows = sqlx::query(
-            r#"
-            SELECT srp.role_id::text as role_id, p.key as key
-            FROM store_role_permissions srp
-            JOIN permissions p ON p.id = srp.permission_id
-            WHERE srp.role_id = ANY($1)
-            "#,
-        )
-        .bind(&role_ids)
-        .fetch_all(&state.db)
-        .await
-        .map_err(IdentityError::from)?;
-
-        for row in permission_rows {
-            let role_id: String = row.get("role_id");
-            let key: String = row.get("key");
+        let permission_rows = repo.list_role_permissions(&role_ids).await?;
+        for (role_id, key) in permission_rows {
             if let Some(role) = roles.iter_mut().find(|r| r.id == role_id) {
                 role.permission_keys.push(key);
             }
@@ -948,17 +872,8 @@ pub async fn update_role(
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
     let permission_keys = req.permission_keys.clone();
 
-    let rows = sqlx::query(
-        r#"
-        SELECT id::text as id, key
-        FROM permissions
-        WHERE key = ANY($1)
-        "#,
-    )
-    .bind(&permission_keys)
-    .fetch_all(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let rows = repo.permissions_by_keys(&permission_keys).await?;
 
     if rows.len() != permission_keys.len() && !permission_keys.is_empty() {
         return Err(IdentityError::invalid_argument(
@@ -967,23 +882,10 @@ pub async fn update_role(
     }
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
-    let updated = sqlx::query(
-        r#"
-        UPDATE store_roles
-        SET name = COALESCE(NULLIF($1, ''), name),
-            description = COALESCE(NULLIF($2, ''), description),
-            updated_at = now()
-        WHERE id = $3 AND store_id = $4
-        RETURNING id::text as id, key, name, description
-        "#,
-    )
-    .bind(&req.name)
-    .bind(&req.description)
-    .bind(role_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let updated = repo
+        .update_role_tx(&mut *tx, &store_uuid.as_uuid(), &role_uuid, &req.name, &req.description)
+        .await?;
 
     let Some(row) = updated else {
         return Ok(pb::IdentityUpdateRoleResponse {
@@ -992,35 +894,21 @@ pub async fn update_role(
         });
     };
 
-    sqlx::query("DELETE FROM store_role_permissions WHERE role_id = $1")
-        .bind(role_uuid)
-        .execute(&mut *tx)
-        .await
-        .map_err(IdentityError::from)?;
+    repo.delete_role_permissions_tx(&mut *tx, &role_uuid).await?;
 
-    for permission in rows {
-        let permission_id: String = permission.get("id");
-        sqlx::query(
-            r#"
-            INSERT INTO store_role_permissions (role_id, permission_id)
-            VALUES ($1,$2)
-            ON CONFLICT DO NOTHING
-            "#,
-        )
-        .bind(role_uuid)
-        .bind(parse_uuid(&permission_id, "permission_id")?)
-        .execute(&mut *tx)
-        .await
-        .map_err(IdentityError::from)?;
+    for (permission_id, _key) in rows {
+        let permission_uuid = parse_uuid(&permission_id, "permission_id")?;
+        repo.insert_role_permission_tx(&mut *tx, &role_uuid, &permission_uuid)
+            .await?;
     }
 
     tx.commit().await.map_err(IdentityError::from)?;
 
     let role = pb::IdentityRoleDetail {
-        id: row.get("id"),
-        key: row.get("key"),
-        name: row.get("name"),
-        description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+        id: row.id,
+        key: row.key,
+        name: row.name,
+        description: row.description.unwrap_or_default(),
         permission_keys,
     };
 
@@ -1077,37 +965,14 @@ pub async fn delete_role(
     let store_uuid = StoreId::parse(&store_id)?;
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
 
-    let attached = sqlx::query(
-        r#"
-        SELECT 1
-        FROM store_staff
-        WHERE role_id = $1
-        LIMIT 1
-        "#,
-    )
-    .bind(role_uuid)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-
-    if attached.is_some() {
+    let repo = PgIdentityRepository::new(&state.db);
+    if repo.role_attached(&role_uuid).await? {
         return Err(IdentityError::failed_precondition(
             "role is attached to staff",
         ));
     }
 
-    let deleted = sqlx::query(
-        r#"
-        DELETE FROM store_roles
-        WHERE id = $1 AND store_id = $2
-        RETURNING id::text as id, key, name
-        "#,
-    )
-    .bind(role_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let deleted = repo.delete_role(&store_uuid.as_uuid(), &role_uuid).await?;
 
     if let Some(row) = deleted {
         let actor_id = req
@@ -1128,14 +993,14 @@ pub async fn delete_role(
                 actor_type,
                 action: IdentityAuditAction::RoleDelete.into(),
                 target_type: Some("store_role".to_string()),
-                target_id: Some(row.get::<String, _>("id")),
+                target_id: Some(row.id.clone()),
                 request_id: None,
                 ip_address: None,
                 user_agent: None,
                 before_json: Some(serde_json::json!({
-                    "role_id": row.get::<String, _>("id"),
-                    "key": row.get::<String, _>("key"),
-                    "name": row.get::<String, _>("name"),
+                    "role_id": row.id,
+                    "key": row.key,
+                    "name": row.name.unwrap_or_default(),
                 })),
                 after_json: None,
                 metadata_json: None,
@@ -1183,54 +1048,16 @@ async fn sign_in_core(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
+    let repo = PgIdentityRepository::new(&state.db);
     let row = if !email.is_empty() {
-        sqlx::query(
-            r#"
-            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
-                   sr.key as role_key
-            FROM store_staff ss
-            JOIN store_roles sr ON sr.id = ss.role_id
-            WHERE ss.store_id = $1 AND ss.email = $2 AND ss.status = 'active'
-            LIMIT 1
-            "#,
-        )
-        .bind(store_uuid.as_uuid())
-        .bind(&email)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(IdentityError::from)?
+        repo.fetch_active_staff_by_email(&store_uuid.as_uuid(), &email)
+            .await?
     } else if !login_id.is_empty() {
-        sqlx::query(
-            r#"
-            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
-                   sr.key as role_key
-            FROM store_staff ss
-            JOIN store_roles sr ON sr.id = ss.role_id
-            WHERE ss.store_id = $1 AND ss.login_id = $2 AND ss.status = 'active'
-            LIMIT 1
-            "#,
-        )
-        .bind(store_uuid.as_uuid())
-        .bind(&login_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(IdentityError::from)?
+        repo.fetch_active_staff_by_login_id(&store_uuid.as_uuid(), &login_id)
+            .await?
     } else if !phone.is_empty() {
-        sqlx::query(
-            r#"
-            SELECT ss.id::text as id, ss.email, ss.login_id, ss.phone, ss.password_hash,
-                   sr.key as role_key
-            FROM store_staff ss
-            JOIN store_roles sr ON sr.id = ss.role_id
-            WHERE ss.store_id = $1 AND ss.phone = $2 AND ss.status = 'active'
-            LIMIT 1
-            "#,
-        )
-        .bind(store_uuid.as_uuid())
-        .bind(&phone)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(IdentityError::from)?
+        repo.fetch_active_staff_by_phone(&store_uuid.as_uuid(), &phone)
+            .await?
     } else {
         return Err(IdentityError::invalid_argument(
             "email or login_id or phone is required",
@@ -1242,7 +1069,7 @@ async fn sign_in_core(
     };
 
     let hash = row
-        .get::<Option<String>, _>("password_hash")
+        .password_hash
         .ok_or_else(|| IdentityError::unauthenticated("invalid credentials"))?;
 
     let parsed_hash = PasswordHash::new(&hash)
@@ -1252,8 +1079,8 @@ async fn sign_in_core(
         .verify_password(password.as_bytes(), &parsed_hash)
         .map_err(|_| IdentityError::unauthenticated("invalid credentials"))?;
 
-    let staff_id: String = row.get("id");
-    let role: String = row.get("role_key");
+    let staff_id: String = row.staff_id;
+    let role: String = row.role_key;
 
     let jwt_secret = std::env::var("AUTH_JWT_SECRET")
         .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
@@ -1332,43 +1159,33 @@ async fn create_staff_core(
     let staff_id = uuid::Uuid::new_v4();
 
     let role_uuid = parse_uuid(&role_id, "role_id")?;
-    let role_row = sqlx::query(
-        r#"
-        SELECT key
-        FROM store_roles
-        WHERE id = $1 AND store_id = $2
-        "#,
-    )
-    .bind(role_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_one(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    let role_key: String = role_row.get("key");
+    let repo = PgIdentityRepository::new(&state.db);
+    let role_row = repo.role_by_id(&store_uuid.as_uuid(), &role_uuid).await?;
+    let role_key = role_row
+        .map(|row| row.key)
+        .ok_or_else(|| IdentityError::invalid_argument("role_id is invalid"))?;
     if role_key == "owner" {
         return Err(IdentityError::invalid_argument(
             "owner role cannot be assigned",
         ));
     }
 
-    sqlx::query(
-        r#"
-        INSERT INTO store_staff (id, store_id, email, login_id, phone, password_hash, role_id, status, display_name)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        "#,
+    let email_value = if email.is_empty() { None } else { Some(email.as_str()) };
+    let login_id_value = if login_id.is_empty() { None } else { Some(login_id.as_str()) };
+    let phone_value = if phone.is_empty() { None } else { Some(phone.as_str()) };
+    let display_name_value = if display_name.is_empty() { None } else { Some(display_name.as_str()) };
+    repo.insert_staff(
+        &staff_id,
+        &store_uuid.as_uuid(),
+        email_value,
+        login_id_value,
+        phone_value,
+        &password_hash,
+        &role_uuid,
+        "active",
+        display_name_value,
     )
-    .bind(staff_id)
-    .bind(store_uuid.as_uuid())
-    .bind(if email.is_empty() { None } else { Some(email.clone()) })
-    .bind(if login_id.is_empty() { None } else { Some(login_id) })
-    .bind(if phone.is_empty() { None } else { Some(phone.clone()) })
-    .bind(password_hash)
-    .bind(role_uuid)
-    .bind("active")
-    .bind(if display_name.is_empty() { None } else { Some(display_name.clone()) })
-    .execute(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    .await?;
 
     Ok(CreateStaffCoreResult {
         staff_id: staff_id.to_string(),
@@ -1398,30 +1215,21 @@ async fn fetch_staff_summary(
     staff_id: &str,
 ) -> IdentityResult<pb::IdentityStaffSummary> {
     let staff_uuid = parse_uuid(staff_id, "staff_id")?;
-    let row = sqlx::query(
-        r#"
-        SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
-               ss.display_name, sr.id::text as role_id, sr.key as role_key
-        FROM store_staff ss
-        JOIN store_roles sr ON sr.id = ss.role_id
-        WHERE ss.id = $1 AND ss.store_id = $2
-        "#,
-    )
-    .bind(staff_uuid)
-    .bind(store_uuid)
-    .fetch_one(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let row = repo
+        .staff_summary(store_uuid, &staff_uuid)
+        .await?
+        .ok_or_else(|| IdentityError::not_found("staff not found"))?;
 
     Ok(pb::IdentityStaffSummary {
-        staff_id: row.get("staff_id"),
-        email: row.get::<Option<String>, _>("email").unwrap_or_default(),
-        login_id: row.get::<Option<String>, _>("login_id").unwrap_or_default(),
-        phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
-        role_id: row.get("role_id"),
-        role_key: row.get("role_key"),
-        status: row.get("status"),
-        display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
+        staff_id: row.staff_id,
+        email: row.email.unwrap_or_default(),
+        login_id: row.login_id.unwrap_or_default(),
+        phone: row.phone.unwrap_or_default(),
+        role_id: row.role_id,
+        role_key: row.role_key,
+        status: row.status,
+        display_name: row.display_name.unwrap_or_default(),
     })
 }
 
@@ -1464,48 +1272,16 @@ async fn create_role_core(
 
     let role_id = uuid::Uuid::new_v4();
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
-    sqlx::query(
-        r#"
-        INSERT INTO store_roles (id, store_id, key, name, description)
-        VALUES ($1,$2,$3,$4,$5)
-        "#,
-    )
-    .bind(role_id)
-    .bind(store_uuid.as_uuid())
-    .bind(&key)
-    .bind(&name)
-    .bind(&description)
-    .execute(&mut *tx)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    repo.insert_role_tx(&mut *tx, &store_uuid.as_uuid(), &role_id, &key, &name, &description)
+        .await?;
 
     if !permission_keys.is_empty() {
-        let rows = sqlx::query(
-            r#"
-            SELECT id::text as id, key
-            FROM permissions
-            WHERE key = ANY($1)
-            "#,
-        )
-        .bind(&permission_keys)
-        .fetch_all(&mut *tx)
-        .await
-        .map_err(IdentityError::from)?;
-
-        for row in rows {
-            let permission_id: String = row.get("id");
-            sqlx::query(
-                r#"
-                INSERT INTO store_role_permissions (role_id, permission_id)
-                VALUES ($1,$2)
-                ON CONFLICT DO NOTHING
-                "#,
-            )
-            .bind(role_id)
-            .bind(parse_uuid(&permission_id, "permission_id")?)
-            .execute(&mut *tx)
-            .await
-            .map_err(IdentityError::from)?;
+        let rows = repo.permissions_by_keys(&permission_keys).await?;
+        for (permission_id, _key) in rows {
+            let permission_uuid = parse_uuid(&permission_id, "permission_id")?;
+            repo.insert_role_permission_tx(&mut *tx, &role_id, &permission_uuid)
+                .await?;
         }
     }
 
@@ -1536,33 +1312,22 @@ async fn assign_role_to_staff_core(
     }
 
     let store_uuid = StoreId::parse(&store_id)?;
-    let role_owner = sqlx::query("SELECT store_id::text as store_id FROM store_roles WHERE id = $1")
-        .bind(parse_uuid(&role_id, "role_id")?)
-        .fetch_one(&state.db)
-        .await
-        .map_err(IdentityError::from)?;
-    let role_store_id: String = role_owner.get("store_id");
+    let repo = PgIdentityRepository::new(&state.db);
+    let role_store_id = repo
+        .role_store_id(&role_id)
+        .await?
+        .ok_or_else(|| IdentityError::invalid_argument("role_id is invalid"))?;
     if role_store_id != store_id {
         return Err(IdentityError::permission_denied(
             "role does not belong to store",
         ));
     }
 
-    let staff_row = sqlx::query(
-        r#"
-        SELECT sr.key as role_key
-        FROM store_staff ss
-        JOIN store_roles sr ON sr.id = ss.role_id
-        WHERE ss.id = $1 AND ss.store_id = $2
-        "#,
-    )
-    .bind(parse_uuid(&staff_id, "staff_id")?)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
-    if let Some(row) = staff_row {
-        let current_role: String = row.get("role_key");
+    let staff_uuid = parse_uuid(&staff_id, "staff_id")?;
+    let current_role = repo
+        .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
+        .await?;
+    if let Some(current_role) = current_role {
         if current_role == "owner" {
             return Err(IdentityError::permission_denied(
                 "owner role cannot be assigned",
@@ -1570,19 +1335,9 @@ async fn assign_role_to_staff_core(
         }
     }
 
-    sqlx::query(
-        r#"
-        UPDATE store_staff
-        SET role_id = $1, updated_at = now()
-        WHERE id = $2 AND store_id = $3
-        "#,
-    )
-    .bind(parse_uuid(&role_id, "role_id")?)
-    .bind(parse_uuid(&staff_id, "staff_id")?)
-    .bind(store_uuid.as_uuid())
-    .execute(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let role_uuid = parse_uuid(&role_id, "role_id")?;
+    repo.update_staff_role(&staff_uuid, &store_uuid.as_uuid(), &role_uuid)
+        .await?;
 
     Ok(pb::AssignRoleToStaffResponse { assigned: true })
 }
@@ -1594,26 +1349,16 @@ async fn list_roles_core(
 ) -> IdentityResult<pb::ListRolesResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
-    let rows = sqlx::query(
-        r#"
-        SELECT id::text as id, key, name, description
-        FROM store_roles
-        WHERE store_id = $1 AND key <> 'owner'
-        ORDER BY created_at ASC
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_all(&state.db)
-    .await
-    .map_err(IdentityError::from)?;
+    let repo = PgIdentityRepository::new(&state.db);
+    let rows = repo.list_roles(&store_uuid.as_uuid()).await?;
 
     let roles = rows
         .into_iter()
         .map(|row| pb::Role {
-            id: row.get("id"),
-            key: row.get("key"),
-            name: row.get("name"),
-            description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+            id: row.id,
+            key: row.key,
+            name: row.name,
+            description: row.description.unwrap_or_default(),
         })
         .collect();
 
