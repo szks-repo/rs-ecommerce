@@ -197,6 +197,35 @@ pub async fn initialize_store(
     })
 }
 
+pub async fn validate_store_code(
+    state: &AppState,
+    req: pb::ValidateStoreCodeRequest,
+) -> Result<pb::ValidateStoreCodeResponse, (StatusCode, Json<ConnectError>)> {
+    if req.store_code.is_empty() {
+        return Ok(pb::ValidateStoreCodeResponse {
+            available: false,
+            message: "store_code is required".to_string(),
+        });
+    }
+
+    let existing = sqlx::query("SELECT 1 FROM stores WHERE code = $1 LIMIT 1")
+        .bind(&req.store_code)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
+    if existing.is_some() {
+        return Ok(pb::ValidateStoreCodeResponse {
+            available: false,
+            message: "store_code already exists".to_string(),
+        });
+    }
+
+    Ok(pb::ValidateStoreCodeResponse {
+        available: true,
+        message: "store_code is available".to_string(),
+    })
+}
+
 fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ConnectError>)> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();

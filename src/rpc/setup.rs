@@ -26,3 +26,13 @@ pub async fn initialize_store(
     let resp = setup::service::initialize_store(&state, req).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
+
+pub async fn validate_store_code(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ValidateStoreCodeResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ValidateStoreCodeRequest>(&headers, body)?;
+    let resp = setup::service::validate_store_code(&state, req).await?;
+    Ok((StatusCode::OK, Json(resp)))
+}

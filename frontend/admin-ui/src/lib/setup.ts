@@ -1,6 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { createServiceClient } from "@/lib/connect";
-import { SetupService, InitializeStoreRequestSchema } from "@/gen/ecommerce/v1/setup_pb";
+import { SetupService, InitializeStoreRequestSchema, ValidateStoreCodeRequestSchema } from "@/gen/ecommerce/v1/setup_pb";
 
 const client = createServiceClient(SetupService);
 
@@ -18,6 +18,14 @@ export async function initializeStore(params: {
       ownerEmail: params.ownerEmail,
       ownerPassword: params.ownerPassword,
       ownerLoginId: params.ownerLoginId || "",
+    })
+  );
+}
+
+export async function validateStoreCode(params: { storeCode: string }) {
+  return client.validateStoreCode(
+    create(ValidateStoreCodeRequestSchema, {
+      storeCode: params.storeCode,
     })
   );
 }

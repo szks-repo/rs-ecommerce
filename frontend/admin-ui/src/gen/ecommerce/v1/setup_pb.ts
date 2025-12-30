@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/setup.proto.
  */
 export const file_ecommerce_v1_setup: GenFile = /*@__PURE__*/
-  fileDesc("ChhlY29tbWVyY2UvdjEvc2V0dXAucHJvdG8SDGVjb21tZXJjZS52MSKwAQoWSW5pdGlhbGl6ZVN0b3JlUmVxdWVzdBISCgpzdG9yZV9uYW1lGAEgASgJEhMKC293bmVyX2VtYWlsGAIgASgJEhYKDm93bmVyX3Bhc3N3b3JkGAMgASgJEhYKDm93bmVyX2xvZ2luX2lkGAQgASgJEhIKCnN0b3JlX2NvZGUYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0In0KF0luaXRpYWxpemVTdG9yZVJlc3BvbnNlEhEKCXRlbmFudF9pZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRIWCg5vd25lcl9zdGFmZl9pZBgDIAEoCRIRCgl2ZW5kb3JfaWQYBCABKAkSEgoKc3RvcmVfY29kZRgFIAEoCTJuCgxTZXR1cFNlcnZpY2USXgoPSW5pdGlhbGl6ZVN0b3JlEiQuZWNvbW1lcmNlLnYxLkluaXRpYWxpemVTdG9yZVJlcXVlc3QaJS5lY29tbWVyY2UudjEuSW5pdGlhbGl6ZVN0b3JlUmVzcG9uc2ViBnByb3RvMw", [file_ecommerce_v1_common]);
+  fileDesc("ChhlY29tbWVyY2UvdjEvc2V0dXAucHJvdG8SDGVjb21tZXJjZS52MSKwAQoWSW5pdGlhbGl6ZVN0b3JlUmVxdWVzdBISCgpzdG9yZV9uYW1lGAEgASgJEhMKC293bmVyX2VtYWlsGAIgASgJEhYKDm93bmVyX3Bhc3N3b3JkGAMgASgJEhYKDm93bmVyX2xvZ2luX2lkGAQgASgJEhIKCnN0b3JlX2NvZGUYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0In0KF0luaXRpYWxpemVTdG9yZVJlc3BvbnNlEhEKCXRlbmFudF9pZBgBIAEoCRIQCghzdG9yZV9pZBgCIAEoCRIWCg5vd25lcl9zdGFmZl9pZBgDIAEoCRIRCgl2ZW5kb3JfaWQYBCABKAkSEgoKc3RvcmVfY29kZRgFIAEoCSIuChhWYWxpZGF0ZVN0b3JlQ29kZVJlcXVlc3QSEgoKc3RvcmVfY29kZRgBIAEoCSI/ChlWYWxpZGF0ZVN0b3JlQ29kZVJlc3BvbnNlEhEKCWF2YWlsYWJsZRgBIAEoCBIPCgdtZXNzYWdlGAIgASgJMtQBCgxTZXR1cFNlcnZpY2USXgoPSW5pdGlhbGl6ZVN0b3JlEiQuZWNvbW1lcmNlLnYxLkluaXRpYWxpemVTdG9yZVJlcXVlc3QaJS5lY29tbWVyY2UudjEuSW5pdGlhbGl6ZVN0b3JlUmVzcG9uc2USZAoRVmFsaWRhdGVTdG9yZUNvZGUSJi5lY29tbWVyY2UudjEuVmFsaWRhdGVTdG9yZUNvZGVSZXF1ZXN0GicuZWNvbW1lcmNlLnYxLlZhbGlkYXRlU3RvcmVDb2RlUmVzcG9uc2ViBnByb3RvMw", [file_ecommerce_v1_common]);
 
 /**
  * @generated from message ecommerce.v1.InitializeStoreRequest
@@ -96,6 +96,45 @@ export const InitializeStoreResponseSchema: GenMessage<InitializeStoreResponse> 
   messageDesc(file_ecommerce_v1_setup, 1);
 
 /**
+ * @generated from message ecommerce.v1.ValidateStoreCodeRequest
+ */
+export type ValidateStoreCodeRequest = Message<"ecommerce.v1.ValidateStoreCodeRequest"> & {
+  /**
+   * @generated from field: string store_code = 1;
+   */
+  storeCode: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.ValidateStoreCodeRequest.
+ * Use `create(ValidateStoreCodeRequestSchema)` to create a new message.
+ */
+export const ValidateStoreCodeRequestSchema: GenMessage<ValidateStoreCodeRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_setup, 2);
+
+/**
+ * @generated from message ecommerce.v1.ValidateStoreCodeResponse
+ */
+export type ValidateStoreCodeResponse = Message<"ecommerce.v1.ValidateStoreCodeResponse"> & {
+  /**
+   * @generated from field: bool available = 1;
+   */
+  available: boolean;
+
+  /**
+   * @generated from field: string message = 2;
+   */
+  message: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.ValidateStoreCodeResponse.
+ * Use `create(ValidateStoreCodeResponseSchema)` to create a new message.
+ */
+export const ValidateStoreCodeResponseSchema: GenMessage<ValidateStoreCodeResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_setup, 3);
+
+/**
  * @generated from service ecommerce.v1.SetupService
  */
 export const SetupService: GenService<{
@@ -108,6 +147,14 @@ export const SetupService: GenService<{
     methodKind: "unary";
     input: typeof InitializeStoreRequestSchema;
     output: typeof InitializeStoreResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.SetupService.ValidateStoreCode
+   */
+  validateStoreCode: {
+    methodKind: "unary";
+    input: typeof ValidateStoreCodeRequestSchema;
+    output: typeof ValidateStoreCodeResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ecommerce_v1_setup, 0);

@@ -7,6 +7,7 @@ import "ecommerce/v1/common.proto";
 service SetupService {
   // One-time initial setup. Creates tenant + store + owner staff.
   rpc InitializeStore(InitializeStoreRequest) returns (InitializeStoreResponse);
+  rpc ValidateStoreCode(ValidateStoreCodeRequest) returns (ValidateStoreCodeResponse);
 }
 
 message InitializeStoreRequest {
@@ -24,4 +25,13 @@ message InitializeStoreResponse {
   string owner_staff_id = 3;
   string vendor_id = 4;
   string store_code = 5;
+}
+
+message ValidateStoreCodeRequest {
+  string store_code = 1;
+}
+
+message ValidateStoreCodeResponse {
+  bool available = 1;
+  string message = 2;
 }

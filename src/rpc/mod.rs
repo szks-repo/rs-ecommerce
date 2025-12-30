@@ -290,6 +290,10 @@ pub fn router() -> Router<AppState> {
             "/rpc/ecommerce.v1.SetupService/InitializeStore",
             post(setup::initialize_store),
         )
+        .route(
+            "/rpc/ecommerce.v1.SetupService/ValidateStoreCode",
+            post(setup::validate_store_code),
+        )
         // IdentityService is the single entry point for staff auth/roles.
         .route(
             "/rpc/ecommerce.v1.IdentityService/SignIn",

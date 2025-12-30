@@ -1,13 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { initializeStore } from "@/lib/setup";
+import { initializeStore, validateStoreCode } from "@/lib/setup";
 import { formatConnectError } from "@/lib/handle-error";
 
 export default function InitPage() {
@@ -17,13 +17,55 @@ export default function InitPage() {
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
   const [ownerLoginId, setOwnerLoginId] = useState("");
+  const [codeStatus, setCodeStatus] = useState<"idle" | "checking" | "available" | "unavailable">("idle");
+  const [codeMessage, setCodeMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+
+  useEffect(() => {
+    if (!storeCode.trim()) {
+      setCodeStatus("idle");
+      setCodeMessage("");
+      return;
+    }
+    setCodeStatus("checking");
+    const handle = setTimeout(() => {
+      validateStoreCode({ storeCode: storeCode.trim() })
+        .then((resp) => {
+          if (resp.available) {
+            setCodeStatus("available");
+            setCodeMessage(resp.message || "store_code is available");
+          } else {
+            setCodeStatus("unavailable");
+            setCodeMessage(resp.message || "store_code is not available");
+          }
+        })
+        .catch((err) => {
+          const uiError = formatConnectError(err, "Validation failed", "Failed to validate store_code");
+          setCodeStatus("unavailable");
+          setCodeMessage(uiError.description);
+        });
+    }, 400);
+    return () => clearTimeout(handle);
+  }, [storeCode]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      if (!storeCode.trim()) {
+        throw new Error("store_code is required");
+      }
+      if (codeStatus !== "available") {
+        const resp = await validateStoreCode({ storeCode: storeCode.trim() });
+        if (!resp.available) {
+          setCodeStatus("unavailable");
+          setCodeMessage(resp.message || "store_code is not available");
+          throw new Error(resp.message || "store_code is not available");
+        }
+        setCodeStatus("available");
+        setCodeMessage(resp.message || "store_code is available");
+      }
       const data = await initializeStore({
         storeName,
         storeCode,
@@ -85,6 +127,15 @@ export default function InitPage() {
                     onChange={(e) => setStoreCode(e.target.value)}
                     required
                   />
+                  {codeStatus === "checking" ? (
+                    <p className="text-xs text-neutral-500">Checking availability...</p>
+                  ) : null}
+                  {codeStatus === "available" ? (
+                    <p className="text-xs text-emerald-600">{codeMessage || "Available"}</p>
+                  ) : null}
+                  {codeStatus === "unavailable" ? (
+                    <p className="text-xs text-red-600">{codeMessage || "Not available"}</p>
+                  ) : null}
                 </div>
               </div>
             </CardContent>
