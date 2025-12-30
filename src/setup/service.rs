@@ -9,6 +9,7 @@ use crate::{
     pb::pb,
     infrastructure::db,
     rpc::json::ConnectError,
+    domain::validation::StoreCode,
 };
 
 pub async fn initialize_store(
@@ -43,15 +44,7 @@ pub async fn initialize_store(
             }),
         ));
     }
-    if req.store_code.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "store_code is required".to_string(),
-            }),
-        ));
-    }
+    let store_code = StoreCode::parse(&req.store_code)?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
 
@@ -71,7 +64,7 @@ pub async fn initialize_store(
     }
 
     let existing_code = sqlx::query("SELECT 1 FROM stores WHERE code = $1 LIMIT 1")
-        .bind(&req.store_code)
+        .bind(store_code.as_str())
         .fetch_optional(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -112,7 +105,7 @@ pub async fn initialize_store(
     .bind(tenant_id)
     .bind(&req.store_name)
     .bind("active")
-    .bind(&req.store_code)
+    .bind(store_code.as_str())
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -193,7 +186,7 @@ pub async fn initialize_store(
         store_id: store_id.to_string(),
         owner_staff_id: owner_staff_id.to_string(),
         vendor_id: vendor_id.to_string(),
-        store_code: req.store_code,
+        store_code: store_code.as_str().to_string(),
     })
 }
 
@@ -201,15 +194,18 @@ pub async fn validate_store_code(
     state: &AppState,
     req: pb::ValidateStoreCodeRequest,
 ) -> Result<pb::ValidateStoreCodeResponse, (StatusCode, Json<ConnectError>)> {
-    if req.store_code.is_empty() {
-        return Ok(pb::ValidateStoreCodeResponse {
-            available: false,
-            message: "store_code is required".to_string(),
-        });
-    }
+    let store_code = match StoreCode::parse(&req.store_code) {
+        Ok(value) => value,
+        Err((_, Json(err))) => {
+            return Ok(pb::ValidateStoreCodeResponse {
+                available: false,
+                message: err.message,
+            });
+        }
+    };
 
     let existing = sqlx::query("SELECT 1 FROM stores WHERE code = $1 LIMIT 1")
-        .bind(&req.store_code)
+        .bind(store_code.as_str())
         .fetch_optional(&state.db)
         .await
         .map_err(db::error)?;

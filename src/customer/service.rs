@@ -7,6 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit, outbox},
     rpc::json::ConnectError,
+    domain::validation::{Email, Phone},
     shared::{
         ids::{parse_uuid, StoreId, TenantId},
         time::chrono_to_timestamp,
@@ -243,12 +244,20 @@ pub async fn create_customer(
     state: &AppState,
     store_id: String,
     tenant_id: String,
-    profile: pb::CustomerProfileInput,
+    mut profile: pb::CustomerProfileInput,
     identities: Vec<pb::CustomerIdentityInput>,
     actor: Option<pb::ActorContext>,
 ) -> Result<(pb::Customer, pb::CustomerProfile, bool), (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
+    let normalized_email = Email::parse_optional(&profile.email)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    let normalized_phone = Phone::parse_optional(&profile.phone)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    profile.email = normalized_email;
+    profile.phone = normalized_phone;
     validate_customer_profile(&profile, &identities)?;
 
     let mut identity_inputs = normalize_identities(&profile, identities);
@@ -460,13 +469,21 @@ pub async fn update_customer(
     store_id: String,
     tenant_id: String,
     customer_id: String,
-    profile: pb::CustomerProfileInput,
+    mut profile: pb::CustomerProfileInput,
     customer_status: String,
     actor: Option<pb::ActorContext>,
 ) -> Result<(pb::Customer, pb::CustomerProfile), (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+    let normalized_email = Email::parse_optional(&profile.email)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    let normalized_phone = Phone::parse_optional(&profile.phone)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    profile.email = normalized_email;
+    profile.phone = normalized_phone;
 
     if !customer_status.is_empty() {
         sqlx::query(

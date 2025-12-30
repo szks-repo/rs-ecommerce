@@ -16,6 +16,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit, email},
     rpc::json::ConnectError,
+    domain::validation::{Email, Phone},
     shared::{
         time::chrono_to_timestamp,
         audit_action::IdentityAuditAction,
@@ -28,9 +29,13 @@ pub async fn sign_in(
     state: &AppState,
     req: pb::IdentitySignInRequest,
 ) -> Result<pb::IdentitySignInResponse, (StatusCode, Json<ConnectError>)> {
-    let email = req.email.clone();
+    let email = Email::parse_optional(&req.email)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
     let login_id = req.login_id.clone();
-    let phone = req.phone.clone();
+    let phone = Phone::parse_optional(&req.phone)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
     let resp = sign_in_core(
         state,
         req.store,
@@ -323,15 +328,7 @@ pub async fn invite_staff(
     let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     require_owner(req.actor.as_ref())?;
 
-    if req.email.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "email is required".to_string(),
-            }),
-        ));
-    }
+    let invite_email = Email::parse(&req.email)?;
     if req.role_id.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -385,7 +382,7 @@ pub async fn invite_staff(
         "#,
     )
     .bind(store_uuid.as_uuid())
-    .bind(&req.email)
+    .bind(invite_email.as_str())
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -407,7 +404,7 @@ pub async fn invite_staff(
         "#,
     )
     .bind(store_uuid.as_uuid())
-    .bind(&req.email)
+    .bind(invite_email.as_str())
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -444,7 +441,7 @@ pub async fn invite_staff(
     )
     .bind(staff_id)
     .bind(store_uuid.as_uuid())
-    .bind(&req.email)
+    .bind(invite_email.as_str())
     .bind(role_uuid)
     .bind("invited")
     .bind(if req.display_name.is_empty() { None } else { Some(req.display_name.clone()) })
@@ -460,7 +457,7 @@ pub async fn invite_staff(
     )
     .bind(invite_id)
     .bind(store_uuid.as_uuid())
-    .bind(&req.email)
+    .bind(invite_email.as_str())
     .bind(role_uuid)
     .bind(&token)
     .bind(created_by)
@@ -483,7 +480,7 @@ pub async fn invite_staff(
     let email_config = email::EmailConfig::from_env();
     email::send_invite_email(
         &email_config,
-        &req.email,
+        invite_email.as_str(),
         &store_name,
         Some(req.display_name.as_str()),
         role_name.as_deref(),
@@ -511,7 +508,7 @@ pub async fn invite_staff(
             after_json: Some(serde_json::json!({
                 "invite_id": invite_id.to_string(),
                 "staff_id": staff_id.to_string(),
-                "email": req.email,
+                "email": invite_email.as_str(),
                 "role_id": req.role_id,
             })),
             metadata_json: None,
@@ -522,7 +519,7 @@ pub async fn invite_staff(
     Ok(pb::IdentityInviteStaffResponse {
         invite_id: invite_id.to_string(),
         invite_token: token,
-        email: req.email,
+        email: invite_email.as_str().to_string(),
         role_id: req.role_id,
         expires_at: chrono_to_timestamp(Some(expires_at)),
     })
@@ -1288,6 +1285,13 @@ async fn sign_in_core(
         ));
     }
 
+    let email = Email::parse_optional(&email)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    let phone = Phone::parse_optional(&phone)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+
     let (store_id, tenant_id) = resolve_store_context_without_token_guard(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
@@ -1466,6 +1470,12 @@ async fn create_staff_core(
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
+    let email = Email::parse_optional(&email)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
+    let phone = Phone::parse_optional(&phone)?
+        .map(|value| value.as_str().to_string())
+        .unwrap_or_default();
 
     if role_id.is_empty() {
         return Err((
@@ -1530,9 +1540,9 @@ async fn create_staff_core(
     )
     .bind(staff_id)
     .bind(store_uuid.as_uuid())
-    .bind(if email.is_empty() { None } else { Some(email) })
+    .bind(if email.is_empty() { None } else { Some(email.clone()) })
     .bind(if login_id.is_empty() { None } else { Some(login_id) })
-    .bind(if phone.is_empty() { None } else { Some(phone) })
+    .bind(if phone.is_empty() { None } else { Some(phone.clone()) })
     .bind(password_hash)
     .bind(role_uuid)
     .bind("active")

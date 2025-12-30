@@ -7,8 +7,8 @@ use crate::{
     pb::pb,
     infrastructure::db,
     rpc::json::ConnectError,
-    shared::ids::parse_uuid,
-    shared::status::payment_method_to_string,
+    shared::ids::{CartId, CartItemId, CustomerId, LocationId, SkuId, StoreId, parse_uuid},
+    shared::status::{CartItemStatus, CartStatus, PaymentMethod},
     shared::time::chrono_to_timestamp,
 };
 
@@ -35,7 +35,7 @@ pub async fn create_cart(
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     let cart_id = uuid::Uuid::new_v4();
     let store_id = resolve_store_id(state, req.store.clone()).await?;
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
     let expires_at = Utc::now() + Duration::days(cart_ttl_days());
     sqlx::query(
         r#"
@@ -44,9 +44,13 @@ pub async fn create_cart(
         "#,
     )
     .bind(cart_id)
-    .bind(store_uuid)
-    .bind(parse_uuid(&req.customer_id, "customer_id").ok())
-    .bind("active")
+    .bind(store_uuid.as_uuid())
+    .bind(if req.customer_id.is_empty() {
+        None
+    } else {
+        Some(CustomerId::parse(&req.customer_id)?.as_uuid())
+    })
+    .bind(CartStatus::Active.as_str())
     .bind(expires_at)
     .execute(&state.db)
     .await
@@ -58,7 +62,7 @@ pub async fn create_cart(
         customer_id: req.customer_id,
         items: Vec::new(),
         total: None,
-        status: "active".to_string(),
+        status: CartStatus::Active.as_str().to_string(),
         expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
@@ -78,21 +82,21 @@ pub async fn add_cart_item(
     }
 
     let store_id = resolve_store_id(state, req.store.clone()).await?;
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
-    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
-    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let cart_uuid = CartId::parse(&req.cart_id)?;
+    let sku_uuid = SkuId::parse(&req.sku_id)?;
     let location_uuid = if req.location_id.is_empty() {
         None
     } else {
-        Some(parse_uuid(&req.location_id, "location_id")?)
+        Some(LocationId::parse(&req.location_id)?)
     };
 
     // Validate cart ownership.
     let cart_exists = sqlx::query(
         "SELECT id, expires_at FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1",
     )
-    .bind(cart_uuid)
-    .bind(store_uuid)
+    .bind(cart_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -117,8 +121,8 @@ pub async fn add_cart_item(
         LIMIT 1
         "#,
     )
-    .bind(sku_uuid)
-    .bind(store_uuid)
+    .bind(sku_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -153,17 +157,18 @@ pub async fn add_cart_item(
             id, cart_id, sku_id, location_id, unit_price_amount, unit_price_currency,
             quantity, fulfillment_type, status
         )
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'active')
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         "#,
     )
     .bind(cart_item_id)
-    .bind(cart_uuid)
-    .bind(sku_uuid)
-    .bind(location_uuid)
+    .bind(cart_uuid.as_uuid())
+    .bind(sku_uuid.as_uuid())
+    .bind(location_uuid.map(|value| value.as_uuid()))
     .bind(price_amount)
     .bind(&price_currency)
     .bind(req.quantity)
     .bind(&fulfillment_type)
+    .bind(CartItemStatus::Active.as_str())
     .execute(&state.db)
     .await
     .map_err(db::error)?;
@@ -180,11 +185,11 @@ pub async fn add_cart_item(
             "#,
         )
         .bind(request_id)
-        .bind(store_uuid)
-        .bind(cart_uuid)
+        .bind(store_uuid.as_uuid())
+        .bind(cart_uuid.as_uuid())
         .bind(cart_item_id)
-        .bind(sku_uuid)
-        .bind(location_uuid)
+        .bind(sku_uuid.as_uuid())
+        .bind(location_uuid.map(|value| value.as_uuid()))
         .bind(req.quantity)
         .execute(&state.db)
         .await
@@ -205,13 +210,13 @@ pub async fn add_cart_item(
             }),
             quantity: req.quantity,
             fulfillment_type: fulfillment_type.clone(),
-            status: "active".to_string(),
+            status: CartItemStatus::Active.as_str().to_string(),
         }],
         total: Some(pb::Money {
             amount: price_amount.saturating_mul(req.quantity as i64),
             currency: price_currency,
         }),
-        status: "active".to_string(),
+        status: CartStatus::Active.as_str().to_string(),
         expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
@@ -221,8 +226,8 @@ pub async fn remove_cart_item(
     req: pb::RemoveCartItemRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     let store_id = resolve_store_id(state, req.store.clone()).await?;
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
-    let cart_item_uuid = parse_uuid(&req.cart_item_id, "cart_item_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let cart_item_uuid = CartItemId::parse(&req.cart_item_id)?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
 
@@ -237,8 +242,8 @@ pub async fn remove_cart_item(
         FOR UPDATE
         "#,
     )
-    .bind(cart_item_uuid)
-    .bind(store_uuid)
+    .bind(cart_item_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -268,15 +273,15 @@ pub async fn remove_cart_item(
             WHERE cart_item_id = $1 AND status = 'active'
             "#,
         )
-        .bind(cart_item_uuid)
+        .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
 
-        let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
+        let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id
             .as_deref()
-            .map(|value| parse_uuid(value, "location_id"))
+            .map(|value| LocationId::parse(value))
             .transpose()?;
         if let Some(location_uuid) = location_uuid {
             sqlx::query(
@@ -288,16 +293,17 @@ pub async fn remove_cart_item(
                 "#,
             )
             .bind(quantity)
-            .bind(sku_uuid)
-            .bind(location_uuid)
+            .bind(sku_uuid.as_uuid())
+            .bind(location_uuid.as_uuid())
             .execute(&mut *tx)
             .await
             .map_err(db::error)?;
         }
     }
 
-    sqlx::query("UPDATE cart_items SET status = 'removed', updated_at = now() WHERE id = $1")
-        .bind(cart_item_uuid)
+    sqlx::query("UPDATE cart_items SET status = $1, updated_at = now() WHERE id = $2")
+        .bind(CartItemStatus::Removed.as_str())
+        .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -310,7 +316,7 @@ pub async fn remove_cart_item(
         customer_id: String::new(),
         items: Vec::new(),
         total: None,
-        status: "active".to_string(),
+        status: CartStatus::Active.as_str().to_string(),
         expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
@@ -330,8 +336,8 @@ pub async fn update_cart_item(
     }
 
     let store_id = resolve_store_id(state, req.store.clone()).await?;
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
-    let cart_item_uuid = parse_uuid(&req.cart_item_id, "cart_item_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let cart_item_uuid = CartItemId::parse(&req.cart_item_id)?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
     let row = sqlx::query(
@@ -345,8 +351,8 @@ pub async fn update_cart_item(
         FOR UPDATE
         "#,
     )
-    .bind(cart_item_uuid)
-    .bind(store_uuid)
+    .bind(cart_item_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -376,24 +382,24 @@ pub async fn update_cart_item(
             customer_id: String::new(),
             items: Vec::new(),
             total: None,
-            status: "active".to_string(),
+            status: CartStatus::Active.as_str().to_string(),
             expires_at: chrono_to_timestamp(Some(expires_at)),
         });
     }
 
     sqlx::query("UPDATE cart_items SET quantity = $1, updated_at = now() WHERE id = $2")
         .bind(req.quantity)
-        .bind(cart_item_uuid)
+        .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
 
     let delta = req.quantity - current_qty;
     if fulfillment_type == "physical" {
-        let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
+        let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id
             .as_deref()
-            .map(|value| parse_uuid(value, "location_id"))
+            .map(|value| LocationId::parse(value))
             .transpose()?;
         if delta > 0 {
             if let Some(location_uuid) = location_uuid {
@@ -407,11 +413,11 @@ pub async fn update_cart_item(
                     "#,
                 )
                 .bind(request_id)
-                .bind(store_uuid)
-                .bind(parse_uuid(&cart_id, "cart_id")?)
-                .bind(cart_item_uuid)
-                .bind(sku_uuid)
-                .bind(location_uuid)
+                .bind(store_uuid.as_uuid())
+                .bind(CartId::parse(&cart_id)?.as_uuid())
+                .bind(cart_item_uuid.as_uuid())
+                .bind(sku_uuid.as_uuid())
+                .bind(location_uuid.as_uuid())
                 .bind(delta)
                 .execute(&mut *tx)
                 .await
@@ -428,7 +434,7 @@ pub async fn update_cart_item(
                 FOR UPDATE
                 "#,
             )
-            .bind(cart_item_uuid)
+            .bind(cart_item_uuid.as_uuid())
             .fetch_optional(&mut *tx)
             .await
             .map_err(db::error)?;
@@ -476,8 +482,8 @@ pub async fn update_cart_item(
                     "#,
                 )
                 .bind(release_qty)
-                .bind(sku_uuid)
-                .bind(location_uuid)
+                .bind(sku_uuid.as_uuid())
+                .bind(location_uuid.as_uuid())
                 .execute(&mut *tx)
                 .await
                 .map_err(db::error)?;
@@ -493,7 +499,7 @@ pub async fn update_cart_item(
         customer_id: String::new(),
         items: Vec::new(),
         total: None,
-        status: "active".to_string(),
+        status: CartStatus::Active.as_str().to_string(),
         expires_at: chrono_to_timestamp(Some(expires_at)),
     })
 }
@@ -503,8 +509,8 @@ pub async fn get_cart(
     req: pb::GetCartRequest,
 ) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
     let store_id = resolve_store_id(state, req.store.clone()).await?;
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
-    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let cart_uuid = CartId::parse(&req.cart_id)?;
 
     let cart_row = sqlx::query(
         r#"
@@ -514,8 +520,8 @@ pub async fn get_cart(
         LIMIT 1
         "#,
     )
-    .bind(cart_uuid)
-    .bind(store_uuid)
+    .bind(cart_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
     .map_err(db::error)?;
@@ -538,7 +544,7 @@ pub async fn get_cart(
         ORDER BY created_at ASC
         "#,
     )
-    .bind(cart_uuid)
+    .bind(cart_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
@@ -604,16 +610,8 @@ pub async fn checkout(
     req: pb::CheckoutRequest,
 ) -> Result<pb::Order, (StatusCode, Json<ConnectError>)> {
     let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
-    let cart_uuid = parse_uuid(&req.cart_id, "cart_id")?;
-    let payment_method = payment_method_to_string(req.payment_method).ok_or_else(|| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "payment_method is required".to_string(),
-            }),
-        )
-    })?;
+    let cart_uuid = CartId::parse(&req.cart_id)?;
+    let payment_method = PaymentMethod::from_pb(req.payment_method)?;
 
     let mut tx = state.db.begin().await.map_err(db::error)?;
     let store_row = sqlx::query(
@@ -633,13 +631,13 @@ pub async fn checkout(
         ));
     };
     let store_id: String = store_row.get("id");
-    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let store_uuid = StoreId::parse(&store_id)?;
 
     let cart_row = sqlx::query(
         "SELECT customer_id::text as customer_id FROM carts WHERE id = $1 AND store_id = $2 LIMIT 1 FOR UPDATE",
     )
-    .bind(cart_uuid)
-    .bind(store_uuid)
+    .bind(cart_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -663,7 +661,7 @@ pub async fn checkout(
         FOR UPDATE
         "#,
     )
-    .bind(cart_uuid)
+    .bind(cart_uuid.as_uuid())
     .fetch_all(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -794,9 +792,8 @@ pub async fn checkout(
 
     let order_id = uuid::Uuid::new_v4();
     let status = match payment_method {
-        "bank_transfer" => "pending_payment",
-        "cod" => "pending_shipment",
-        _ => "pending_payment",
+        PaymentMethod::BankTransfer => "pending_payment",
+        PaymentMethod::Cod => "pending_shipment",
     };
     sqlx::query(
         r#"
@@ -810,7 +807,7 @@ pub async fn checkout(
     .bind(status)
     .bind(total_amount)
     .bind(currency.clone().unwrap_or_else(|| "JPY".to_string()))
-    .bind(payment_method)
+    .bind(payment_method.as_str())
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -847,8 +844,9 @@ pub async fn checkout(
             .map_err(db::error)?;
     }
 
-    sqlx::query("UPDATE carts SET status = 'ordered', updated_at = now() WHERE id = $1")
-        .bind(cart_uuid)
+    sqlx::query("UPDATE carts SET status = $1, updated_at = now() WHERE id = $2")
+        .bind(CartStatus::Ordered.as_str())
+        .bind(cart_uuid.as_uuid())
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;

@@ -12,6 +12,7 @@ mod customer;
 mod infrastructure;
 mod pb;
 mod rpc;
+mod domain;
 mod shared;
 mod store_settings;
 mod setup;

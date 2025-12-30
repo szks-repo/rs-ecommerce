@@ -10,7 +10,7 @@ use crate::{
     shared::{
         audit_action::{AuditAction, OrderAuditAction, ShipmentAuditAction},
         ids::{parse_uuid, nullable_uuid},
-        status::{order_status_from_string, order_status_to_string, payment_method_from_string, shipment_status_to_string},
+        status::{order_status_from_string, order_status_to_string, shipment_status_to_string, PaymentMethod},
     },
 };
 
@@ -63,7 +63,9 @@ pub async fn list_orders(
                 amount: row.get::<i64, _>("total_amount"),
                 currency: row.get::<String, _>("currency"),
             }),
-            payment_method: payment_method_from_string(row.get::<String, _>("payment_method")),
+            payment_method: PaymentMethod::from_str(row.get::<String, _>("payment_method").as_str())
+                .map(|value| value.to_pb())
+                .unwrap_or(pb::PaymentMethod::Unspecified as i32),
             created_at: None,
         })
         .collect())

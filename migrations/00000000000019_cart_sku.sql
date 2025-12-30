@@ -5,7 +5,7 @@ ALTER TABLE carts ADD COLUMN IF NOT EXISTS expires_at timestamptz NOT NULL DEFAU
 ALTER TABLE carts ALTER COLUMN status SET DEFAULT 'active';
 ALTER TABLE carts DROP COLUMN IF EXISTS tenant_id;
 
-DROP TABLE IF EXISTS cart_items;
+DROP TABLE IF EXISTS cart_items CASCADE;
 DROP TABLE IF EXISTS inventory_reservations;
 DROP TABLE IF EXISTS inventory_reservation_requests;
 

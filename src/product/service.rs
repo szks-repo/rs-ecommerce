@@ -7,6 +7,7 @@ use crate::{
     pb::pb,
     infrastructure::{db, audit},
     rpc::json::ConnectError,
+    domain::validation::SkuCode,
     shared::{
         audit_action::{AuditAction, ProductAuditAction, VariantAuditAction, InventoryAuditAction},
         ids::{parse_uuid, nullable_uuid, TenantId, StoreId, ProductId},
@@ -252,15 +253,7 @@ pub async fn create_product(
                 }),
             )
         })?;
-        if default_variant.sku.trim().is_empty() {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "default_variant.sku is required".to_string(),
-                }),
-            ));
-        }
+        let default_sku = SkuCode::parse(&default_variant.sku)?;
         if default_variant.fulfillment_type.trim().is_empty() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -295,7 +288,7 @@ pub async fn create_product(
         )
         .bind(uuid::Uuid::new_v4())
         .bind(product_id)
-        .bind(default_variant.sku.trim())
+        .bind(default_sku.as_str())
         .bind(&fulfillment_type)
         .bind(price_amount)
         .bind(&price_currency)
@@ -466,6 +459,7 @@ pub async fn create_variant(
     let (compare_amount, compare_currency) = money_to_parts_opt(req.compare_at.clone())?;
     let fulfillment_type = FulfillmentType::parse(&req.fulfillment_type)?.as_str().to_string();
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
+    let sku = SkuCode::parse(&req.sku)?;
     sqlx::query(
         r#"
         INSERT INTO variants (
@@ -476,7 +470,7 @@ pub async fn create_variant(
     )
     .bind(variant_id)
     .bind(parse_uuid(&req.product_id, "product_id")?)
-    .bind(&req.sku)
+    .bind(sku.as_str())
     .bind(&fulfillment_type)
     .bind(price_amount)
     .bind(&price_currency)
