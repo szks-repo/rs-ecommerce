@@ -22,7 +22,9 @@ pub async fn list_customers(
 ) -> Result<(StatusCode, Json<pb::ListCustomersResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListCustomersRequest>(&headers, body)?;
     let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
-    let customers = customer::service::list_customers(&state, store_id, tenant_id, req.query).await?;
+    let customers = customer::service::list_customers(&state, store_id, tenant_id, req.query)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::ListCustomersResponse {
@@ -43,7 +45,9 @@ pub async fn get_customer(
     let req = parse_request::<pb::GetCustomerRequest>(&headers, body)?;
     let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
     let (customer, profile, identities, addresses) =
-        customer::service::get_customer(&state, store_id, tenant_id, req.customer_id).await?;
+        customer::service::get_customer(&state, store_id, tenant_id, req.customer_id)
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::GetCustomerResponse {
@@ -74,7 +78,9 @@ pub async fn create_customer(
     })?;
     let actor = req.actor.or(actor_ctx);
     let (customer, profile, matched_existing) =
-        customer::service::create_customer(&state, store_id, tenant_id, profile, req.identities, actor).await?;
+        customer::service::create_customer(&state, store_id, tenant_id, profile, req.identities, actor)
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::CreateCustomerResponse {
@@ -113,7 +119,8 @@ pub async fn update_customer(
             req.customer_status,
             actor,
         )
-            .await?;
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpdateCustomerResponse {
@@ -142,7 +149,9 @@ pub async fn upsert_customer_identity(
         )
     })?;
     let identity =
-        customer::service::upsert_customer_identity(&state, tenant_id, req.customer_id, identity, actor).await?;
+        customer::service::upsert_customer_identity(&state, tenant_id, req.customer_id, identity, actor)
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpsertCustomerIdentityResponse {
@@ -170,7 +179,9 @@ pub async fn upsert_customer_address(
         )
     })?;
     let address =
-        customer::service::upsert_customer_address(&state, req.customer_id, address, actor).await?;
+        customer::service::upsert_customer_address(&state, req.customer_id, address, actor)
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpsertCustomerAddressResponse {

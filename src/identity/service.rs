@@ -1,4 +1,3 @@
-use axum::{Json, http::StatusCode};
 use argon2::{
     Argon2,
     PasswordHash,
@@ -14,8 +13,8 @@ use chrono::{Duration, Utc};
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::{db, audit, email},
-    rpc::json::ConnectError,
+    infrastructure::{audit, email},
+    identity::error::{IdentityError, IdentityResult},
     shared::validation::{Email, Phone},
     shared::{
         time::chrono_to_timestamp,
@@ -28,7 +27,7 @@ use crate::{
 pub async fn sign_in(
     state: &AppState,
     req: pb::IdentitySignInRequest,
-) -> Result<pb::IdentitySignInResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentitySignInResponse> {
     let email = Email::parse_optional(&req.email)?
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
@@ -96,7 +95,7 @@ pub async fn sign_in(
 pub async fn list_staff(
     state: &AppState,
     req: pb::IdentityListStaffRequest,
-) -> Result<pb::IdentityListStaffResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityListStaffResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
 
@@ -113,7 +112,7 @@ pub async fn list_staff(
     .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let staff = rows
         .into_iter()
@@ -135,23 +134,13 @@ pub async fn list_staff(
 pub async fn update_staff(
     state: &AppState,
     req: pb::IdentityUpdateStaffRequest,
-) -> Result<pb::IdentityUpdateStaffResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityUpdateStaffResponse> {
     if req.staff_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "staff_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("staff_id is required"));
     }
     if req.role_id.is_empty() && req.status.is_empty() && req.display_name.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id, status, or display_name is required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "role_id, status, or display_name is required",
         ));
     }
 
@@ -171,16 +160,12 @@ pub async fn update_staff(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     if let Some(row) = current {
         let current_role: String = row.get("role_key");
         if current_role == "owner" && !req.role_id.is_empty() {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::PermissionDenied,
-                    message: "owner role cannot be changed".to_string(),
-                }),
+            return Err(IdentityError::permission_denied(
+                "owner role cannot be changed",
             ));
         }
     }
@@ -198,24 +183,14 @@ pub async fn update_staff(
         .bind(store_uuid.as_uuid())
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
         let Some(role_row) = role_row else {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "role_id is invalid".to_string(),
-                }),
-            ));
+            return Err(IdentityError::invalid_argument("role_id is invalid"));
         };
         let role_key: String = role_row.get("key");
         if role_key == "owner" {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::PermissionDenied,
-                    message: "owner role cannot be assigned".to_string(),
-                }),
+            return Err(IdentityError::permission_denied(
+                "owner role cannot be assigned",
             ));
         }
     }
@@ -238,7 +213,7 @@ pub async fn update_staff(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let Some(row) = updated else {
         return Ok(pb::IdentityUpdateStaffResponse {
@@ -258,7 +233,7 @@ pub async fn update_staff(
     .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let staff = pb::IdentityStaffSummary {
         staff_id: row.get("staff_id"),
@@ -276,13 +251,7 @@ pub async fn update_staff(
         .as_ref()
         .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
     if actor_id.is_none() {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::PermissionDenied,
-                message: "actor_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::permission_denied("actor_id is required"));
     }
     let actor_type = req
         .actor
@@ -324,19 +293,13 @@ pub async fn update_staff(
 pub async fn invite_staff(
     state: &AppState,
     req: pb::IdentityInviteStaffRequest,
-) -> Result<pb::IdentityInviteStaffResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityInviteStaffResponse> {
     let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     require_owner(req.actor.as_ref())?;
 
     let invite_email = Email::parse(&req.email)?;
     if req.role_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("role_id is required"));
     }
 
     let store_uuid = StoreId::parse(&store_id)?;
@@ -352,25 +315,15 @@ pub async fn invite_staff(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let Some(role_row) = role_row else {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id is invalid".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("role_id is invalid"));
     };
     let role_key: String = role_row.get("key");
     let role_name: Option<String> = role_row.get("name");
     if role_key == "owner" {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "owner role cannot be invited".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "owner role cannot be invited",
         ));
     }
 
@@ -385,15 +338,9 @@ pub async fn invite_staff(
     .bind(invite_email.as_str())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     if existing.is_some() {
-        return Err((
-            StatusCode::CONFLICT,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::AlreadyExists,
-                message: "email already exists".to_string(),
-            }),
-        ));
+        return Err(IdentityError::already_exists("email already exists"));
     }
 
     let existing_invite = sqlx::query(
@@ -407,15 +354,9 @@ pub async fn invite_staff(
     .bind(invite_email.as_str())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     if existing_invite.is_some() {
-        return Err((
-            StatusCode::CONFLICT,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::AlreadyExists,
-                message: "invite already exists".to_string(),
-            }),
-        ));
+        return Err(IdentityError::already_exists("invite already exists"));
     }
 
     let actor_id = req
@@ -427,7 +368,7 @@ pub async fn invite_staff(
         None => None,
     };
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     let staff_id = uuid::Uuid::new_v4();
     let invite_id = uuid::Uuid::new_v4();
     let token = uuid::Uuid::new_v4().to_string();
@@ -447,7 +388,7 @@ pub async fn invite_staff(
     .bind(if req.display_name.is_empty() { None } else { Some(req.display_name.clone()) })
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     sqlx::query(
         r#"
@@ -464,15 +405,15 @@ pub async fn invite_staff(
     .bind(expires_at)
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(IdentityError::from)?;
 
     let store_row = sqlx::query("SELECT name FROM stores WHERE id = $1")
         .bind(store_uuid.as_uuid())
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
     let store_name: String = store_row
         .and_then(|row| row.try_get::<String, _>("name").ok())
         .unwrap_or_else(|| "Store".to_string());
@@ -528,17 +469,13 @@ pub async fn invite_staff(
 pub async fn transfer_owner(
     state: &AppState,
     req: pb::IdentityTransferOwnerRequest,
-) -> Result<pb::IdentityTransferOwnerResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityTransferOwnerResponse> {
     let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     require_owner(req.actor.as_ref())?;
 
     if req.new_owner_staff_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "new_owner_staff_id is required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "new_owner_staff_id is required",
         ));
     }
 
@@ -560,35 +497,21 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let Some(current_owner_row) = current_owner_row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "owner not found".to_string(),
-            }),
-        ));
+        return Err(IdentityError::not_found("owner not found"));
     };
     let current_owner_id: String = current_owner_row.get("staff_id");
     if current_owner_id == req.new_owner_staff_id {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "new owner is already the owner".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "new owner is already the owner",
         ));
     }
 
     if let Some(actor_id) = actor_id.as_ref() {
         if actor_id != &current_owner_id {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::PermissionDenied,
-                    message: "only owner can transfer ownership".to_string(),
-                }),
+            return Err(IdentityError::permission_denied(
+                "only owner can transfer ownership",
             ));
         }
     }
@@ -604,24 +527,14 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let Some(target_row) = target_row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "new owner staff not found".to_string(),
-            }),
-        ));
+        return Err(IdentityError::not_found("new owner staff not found"));
     };
     let target_status: String = target_row.get("status");
     if target_status != "active" {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "new owner must be active".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "new owner must be active",
         ));
     }
 
@@ -631,7 +544,7 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let owner_role_id: uuid::Uuid = owner_role_row.get("id");
 
     let staff_role_row = sqlx::query(
@@ -640,10 +553,10 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let staff_role_id: uuid::Uuid = staff_role_row.get("id");
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     sqlx::query(
         r#"
         UPDATE store_staff
@@ -656,7 +569,7 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     sqlx::query(
         r#"
@@ -670,9 +583,9 @@ pub async fn transfer_owner(
     .bind(store_uuid.as_uuid())
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(IdentityError::from)?;
 
     let new_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
     let previous_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
@@ -711,7 +624,7 @@ pub async fn sign_out(
     state: &AppState,
     req: pb::IdentitySignOutRequest,
     actor: Option<pb::ActorContext>,
-) -> Result<pb::IdentitySignOutResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentitySignOutResponse> {
     let (_store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let actor_id = actor.as_ref().and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.clone()) });
     let actor_type = actor
@@ -745,7 +658,7 @@ pub async fn sign_out(
 pub async fn create_staff(
     state: &AppState,
     req: pb::IdentityCreateStaffRequest,
-) -> Result<pb::IdentityCreateStaffResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityCreateStaffResponse> {
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let email = req.email.clone();
@@ -818,7 +731,7 @@ pub async fn create_staff(
 pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
-) -> Result<pb::IdentityCreateRoleResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityCreateRoleResponse> {
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let key = req.key.clone();
@@ -888,7 +801,7 @@ pub async fn create_role(
 pub async fn assign_role_to_staff(
     state: &AppState,
     req: pb::IdentityAssignRoleRequest,
-) -> Result<pb::IdentityAssignRoleResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityAssignRoleResponse> {
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let staff_id = req.staff_id.clone();
@@ -945,7 +858,7 @@ pub async fn assign_role_to_staff(
 pub async fn list_roles(
     state: &AppState,
     req: pb::IdentityListRolesRequest,
-) -> Result<pb::IdentityListRolesResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityListRolesResponse> {
     let resp = list_roles_core(state, req.store, req.tenant).await?;
     Ok(pb::IdentityListRolesResponse {
         roles: resp
@@ -964,7 +877,7 @@ pub async fn list_roles(
 pub async fn list_roles_with_permissions(
     state: &AppState,
     req: pb::IdentityListRolesWithPermissionsRequest,
-) -> Result<pb::IdentityListRolesWithPermissionsResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityListRolesWithPermissionsResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
 
@@ -979,7 +892,7 @@ pub async fn list_roles_with_permissions(
     .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let mut roles: Vec<pb::IdentityRoleDetail> = role_rows
         .iter()
@@ -1008,7 +921,7 @@ pub async fn list_roles_with_permissions(
         .bind(&role_ids)
         .fetch_all(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
 
         for row in permission_rows {
             let role_id: String = row.get("role_id");
@@ -1025,15 +938,9 @@ pub async fn list_roles_with_permissions(
 pub async fn update_role(
     state: &AppState,
     req: pb::IdentityUpdateRoleRequest,
-) -> Result<pb::IdentityUpdateRoleResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityUpdateRoleResponse> {
     if req.role_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("role_id is required"));
     }
 
     let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
@@ -1051,19 +958,15 @@ pub async fn update_role(
     .bind(&permission_keys)
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     if rows.len() != permission_keys.len() && !permission_keys.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "unknown permission key included".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "unknown permission key included",
         ));
     }
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     let updated = sqlx::query(
         r#"
         UPDATE store_roles
@@ -1080,7 +983,7 @@ pub async fn update_role(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let Some(row) = updated else {
         return Ok(pb::IdentityUpdateRoleResponse {
@@ -1093,7 +996,7 @@ pub async fn update_role(
         .bind(role_uuid)
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
 
     for permission in rows {
         let permission_id: String = permission.get("id");
@@ -1108,10 +1011,10 @@ pub async fn update_role(
         .bind(parse_uuid(&permission_id, "permission_id")?)
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
     }
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(IdentityError::from)?;
 
     let role = pb::IdentityRoleDetail {
         id: row.get("id"),
@@ -1165,15 +1068,9 @@ pub async fn update_role(
 pub async fn delete_role(
     state: &AppState,
     req: pb::IdentityDeleteRoleRequest,
-) -> Result<pb::IdentityDeleteRoleResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityDeleteRoleResponse> {
     if req.role_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("role_id is required"));
     }
 
     let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
@@ -1191,15 +1088,11 @@ pub async fn delete_role(
     .bind(role_uuid)
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     if attached.is_some() {
-        return Err((
-            StatusCode::CONFLICT,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                message: "role is attached to staff".to_string(),
-            }),
+        return Err(IdentityError::failed_precondition(
+            "role is attached to staff",
         ));
     }
 
@@ -1214,7 +1107,7 @@ pub async fn delete_role(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     if let Some(row) = deleted {
         let actor_id = req
@@ -1274,15 +1167,9 @@ async fn sign_in_core(
     login_id: String,
     phone: String,
     password: String,
-) -> Result<SignInCoreResult, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<SignInCoreResult> {
     if password.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "password is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("password is required"));
     }
 
     let email = Email::parse_optional(&email)?
@@ -1311,7 +1198,7 @@ async fn sign_in_core(
         .bind(&email)
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(IdentityError::from)?
     } else if !login_id.is_empty() {
         sqlx::query(
             r#"
@@ -1327,7 +1214,7 @@ async fn sign_in_core(
         .bind(&login_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(IdentityError::from)?
     } else if !phone.is_empty() {
         sqlx::query(
             r#"
@@ -1343,73 +1230,33 @@ async fn sign_in_core(
         .bind(&phone)
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(IdentityError::from)?
     } else {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "email or login_id or phone is required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "email or login_id or phone is required",
         ));
     };
 
     let Some(row) = row else {
-        return Err((
-            StatusCode::UNAUTHORIZED,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::Unauthenticated,
-                message: "invalid credentials".to_string(),
-            }),
-        ));
+        return Err(IdentityError::unauthenticated("invalid credentials"));
     };
 
     let hash = row
         .get::<Option<String>, _>("password_hash")
-        .ok_or_else(|| {
-            (
-                StatusCode::UNAUTHORIZED,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::Unauthenticated,
-                    message: "invalid credentials".to_string(),
-                }),
-            )
-        })?;
+        .ok_or_else(|| IdentityError::unauthenticated("invalid credentials"))?;
 
-    let parsed_hash = PasswordHash::new(&hash).map_err(|_| {
-        (
-            StatusCode::UNAUTHORIZED,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::Unauthenticated,
-                message: "invalid credentials".to_string(),
-            }),
-        )
-    })?;
+    let parsed_hash = PasswordHash::new(&hash)
+        .map_err(|_| IdentityError::unauthenticated("invalid credentials"))?;
 
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
-        .map_err(|_| {
-            (
-                StatusCode::UNAUTHORIZED,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::Unauthenticated,
-                    message: "invalid credentials".to_string(),
-                }),
-            )
-        })?;
+        .map_err(|_| IdentityError::unauthenticated("invalid credentials"))?;
 
     let staff_id: String = row.get("id");
     let role: String = row.get("role_key");
 
-    let jwt_secret = std::env::var("AUTH_JWT_SECRET").map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::Internal,
-                message: "AUTH_JWT_SECRET is required".to_string(),
-            }),
-        )
-    })?;
+    let jwt_secret = std::env::var("AUTH_JWT_SECRET")
+        .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
 
     let now = chrono::Utc::now();
     let exp = now + chrono::Duration::hours(12);
@@ -1427,15 +1274,7 @@ async fn sign_in_core(
         &claims,
         &EncodingKey::from_secret(jwt_secret.as_bytes()),
     )
-    .map_err(|_| {
-        (
-            StatusCode::INTERNAL_SERVER_ERROR,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::Internal,
-                message: "failed to sign token".to_string(),
-            }),
-        )
-    })?;
+    .map_err(|_| IdentityError::internal("failed to sign token"))?;
 
     Ok(SignInCoreResult {
         access_token: token,
@@ -1466,7 +1305,7 @@ async fn create_staff_core(
     password: String,
     role_id: String,
     display_name: String,
-) -> Result<CreateStaffCoreResult, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<CreateStaffCoreResult> {
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
@@ -1478,31 +1317,15 @@ async fn create_staff_core(
         .unwrap_or_default();
 
     if role_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "role_id is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("role_id is required"));
     }
     if email.is_empty() && login_id.is_empty() && phone.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "email or login_id or phone is required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "email or login_id or phone is required",
         ));
     }
     if password.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "password is required".to_string(),
-            }),
-        ));
+        return Err(IdentityError::invalid_argument("password is required"));
     }
 
     let password_hash = hash_password(&password)?;
@@ -1520,15 +1343,11 @@ async fn create_staff_core(
     .bind(store_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     let role_key: String = role_row.get("key");
     if role_key == "owner" {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "owner role cannot be assigned".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "owner role cannot be assigned",
         ));
     }
 
@@ -1549,7 +1368,7 @@ async fn create_staff_core(
     .bind(if display_name.is_empty() { None } else { Some(display_name.clone()) })
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     Ok(CreateStaffCoreResult {
         staff_id: staff_id.to_string(),
@@ -1561,17 +1380,13 @@ async fn create_staff_core(
     })
 }
 
-fn require_owner(actor: Option<&pb::ActorContext>) -> Result<(), (StatusCode, Json<ConnectError>)> {
+fn require_owner(actor: Option<&pb::ActorContext>) -> IdentityResult<()> {
     let actor_type = actor
         .and_then(|a| if a.actor_type.is_empty() { None } else { Some(a.actor_type.as_str()) })
         .unwrap_or("");
     if actor_type != "owner" {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::PermissionDenied,
-                message: "owner role is required".to_string(),
-            }),
+        return Err(IdentityError::permission_denied(
+            "owner role is required",
         ));
     }
     Ok(())
@@ -1581,7 +1396,7 @@ async fn fetch_staff_summary(
     state: &AppState,
     store_uuid: &uuid::Uuid,
     staff_id: &str,
-) -> Result<pb::IdentityStaffSummary, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::IdentityStaffSummary> {
     let staff_uuid = parse_uuid(staff_id, "staff_id")?;
     let row = sqlx::query(
         r#"
@@ -1596,7 +1411,7 @@ async fn fetch_staff_summary(
     .bind(store_uuid)
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     Ok(pb::IdentityStaffSummary {
         staff_id: row.get("staff_id"),
@@ -1610,21 +1425,13 @@ async fn fetch_staff_summary(
     })
 }
 
-fn hash_password(password: &str) -> Result<String, (StatusCode, Json<ConnectError>)> {
+fn hash_password(password: &str) -> IdentityResult<String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     argon2
         .hash_password(password.as_bytes(), &salt)
         .map(|hash| hash.to_string())
-        .map_err(|_| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::Internal,
-                    message: "failed to hash password".to_string(),
-                }),
-            )
-        })
+        .map_err(|_| IdentityError::internal("failed to hash password"))
 }
 
 #[derive(Serialize)]
@@ -1645,22 +1452,18 @@ async fn create_role_core(
     name: String,
     description: String,
     permission_keys: Vec<String>,
-) -> Result<pb::CreateRoleResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::CreateRoleResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
 
     if key.is_empty() || name.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "key and name are required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "key and name are required",
         ));
     }
 
     let role_id = uuid::Uuid::new_v4();
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     sqlx::query(
         r#"
         INSERT INTO store_roles (id, store_id, key, name, description)
@@ -1674,7 +1477,7 @@ async fn create_role_core(
     .bind(&description)
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     if !permission_keys.is_empty() {
         let rows = sqlx::query(
@@ -1687,7 +1490,7 @@ async fn create_role_core(
         .bind(&permission_keys)
         .fetch_all(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
 
         for row in rows {
             let permission_id: String = row.get("id");
@@ -1702,11 +1505,11 @@ async fn create_role_core(
             .bind(parse_uuid(&permission_id, "permission_id")?)
             .execute(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(IdentityError::from)?;
         }
     }
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(IdentityError::from)?;
 
     Ok(pb::CreateRoleResponse {
         role: Some(pb::Role {
@@ -1724,15 +1527,11 @@ async fn assign_role_to_staff_core(
     tenant: Option<pb::TenantContext>,
     staff_id: String,
     role_id: String,
-) -> Result<pb::AssignRoleToStaffResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::AssignRoleToStaffResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
     if staff_id.is_empty() || role_id.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "staff_id and role_id are required".to_string(),
-            }),
+        return Err(IdentityError::invalid_argument(
+            "staff_id and role_id are required",
         ));
     }
 
@@ -1741,15 +1540,11 @@ async fn assign_role_to_staff_core(
         .bind(parse_uuid(&role_id, "role_id")?)
         .fetch_one(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(IdentityError::from)?;
     let role_store_id: String = role_owner.get("store_id");
     if role_store_id != store_id {
-        return Err((
-            StatusCode::FORBIDDEN,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::PermissionDenied,
-                message: "role does not belong to store".to_string(),
-            }),
+        return Err(IdentityError::permission_denied(
+            "role does not belong to store",
         ));
     }
 
@@ -1765,16 +1560,12 @@ async fn assign_role_to_staff_core(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
     if let Some(row) = staff_row {
         let current_role: String = row.get("role_key");
         if current_role == "owner" {
-            return Err((
-                StatusCode::FORBIDDEN,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::PermissionDenied,
-                    message: "owner role cannot be assigned".to_string(),
-                }),
+            return Err(IdentityError::permission_denied(
+                "owner role cannot be assigned",
             ));
         }
     }
@@ -1791,7 +1582,7 @@ async fn assign_role_to_staff_core(
     .bind(store_uuid.as_uuid())
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     Ok(pb::AssignRoleToStaffResponse { assigned: true })
 }
@@ -1800,7 +1591,7 @@ async fn list_roles_core(
     state: &AppState,
     store: Option<pb::StoreContext>,
     tenant: Option<pb::TenantContext>,
-) -> Result<pb::ListRolesResponse, (StatusCode, Json<ConnectError>)> {
+) -> IdentityResult<pb::ListRolesResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let rows = sqlx::query(
@@ -1814,7 +1605,7 @@ async fn list_roles_core(
     .bind(store_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(IdentityError::from)?;
 
     let roles = rows
         .into_iter()

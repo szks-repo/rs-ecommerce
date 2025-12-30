@@ -19,7 +19,9 @@ pub async fn sign_in(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentitySignInResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentitySignInRequest>(&headers, body)?;
-    let resp = identity::service::sign_in(&state, req).await?;
+    let resp = identity::service::sign_in(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -30,7 +32,9 @@ pub async fn sign_out(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentitySignOutResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentitySignOutRequest>(&headers, body)?;
-    let resp = identity::service::sign_out(&state, req, actor_ctx).await?;
+    let resp = identity::service::sign_out(&state, req, actor_ctx)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -44,7 +48,9 @@ pub async fn create_staff(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::create_staff(&state, req).await?;
+    let resp = identity::service::create_staff(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -58,7 +64,9 @@ pub async fn create_role(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::create_role(&state, req).await?;
+    let resp = identity::service::create_role(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -72,7 +80,9 @@ pub async fn assign_role_to_staff(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::assign_role_to_staff(&state, req).await?;
+    let resp = identity::service::assign_role_to_staff(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -82,7 +92,9 @@ pub async fn list_roles(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityListRolesResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListRolesRequest>(&headers, body)?;
-    let resp = identity::service::list_roles(&state, req).await?;
+    let resp = identity::service::list_roles(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -92,7 +104,9 @@ pub async fn list_roles_with_permissions(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityListRolesWithPermissionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListRolesWithPermissionsRequest>(&headers, body)?;
-    let resp = identity::service::list_roles_with_permissions(&state, req).await?;
+    let resp = identity::service::list_roles_with_permissions(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -106,7 +120,9 @@ pub async fn update_role(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::update_role(&state, req).await?;
+    let resp = identity::service::update_role(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -120,7 +136,9 @@ pub async fn delete_role(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::delete_role(&state, req).await?;
+    let resp = identity::service::delete_role(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -130,7 +148,9 @@ pub async fn list_staff(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::IdentityListStaffResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListStaffRequest>(&headers, body)?;
-    let resp = identity::service::list_staff(&state, req).await?;
+    let resp = identity::service::list_staff(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -144,7 +164,9 @@ pub async fn update_staff(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::update_staff(&state, req).await?;
+    let resp = identity::service::update_staff(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -158,7 +180,9 @@ pub async fn invite_staff(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::invite_staff(&state, req).await?;
+    let resp = identity::service::invite_staff(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -172,6 +196,8 @@ pub async fn transfer_owner(
     if req.actor.is_none() {
         req.actor = actor_ctx;
     }
-    let resp = identity::service::transfer_owner(&state, req).await?;
+    let resp = identity::service::transfer_owner(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(resp)))
 }

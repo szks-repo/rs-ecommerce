@@ -1,12 +1,11 @@
-use axum::{Json, http::StatusCode};
 use sqlx::Row;
 use serde_json::Value;
 
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::{db, audit},
-    rpc::json::ConnectError,
+    infrastructure::audit,
+    order::error::{OrderError, OrderResult},
     shared::{
         audit_action::{AuditAction, OrderAuditAction, ShipmentAuditAction},
         ids::{parse_uuid, nullable_uuid},
@@ -18,7 +17,7 @@ pub async fn list_orders(
     state: &AppState,
     tenant_id: String,
     status_filter: i32,
-) -> Result<Vec<pb::OrderAdmin>, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<Vec<pb::OrderAdmin>> {
     let status = order_status_to_string(status_filter);
     let rows = if let Some(status) = status {
         sqlx::query(
@@ -35,7 +34,7 @@ pub async fn list_orders(
         .bind(status)
         .fetch_all(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(OrderError::from)?
     } else {
         sqlx::query(
             r#"
@@ -50,7 +49,7 @@ pub async fn list_orders(
         .bind(&tenant_id)
         .fetch_all(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(OrderError::from)?
     };
 
     Ok(rows
@@ -76,23 +75,16 @@ pub async fn update_order_status(
     tenant_id: String,
     req: pb::UpdateOrderStatusRequest,
     _actor: Option<pb::ActorContext>,
-) -> Result<pb::OrderAdmin, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<pb::OrderAdmin> {
     let before_status = sqlx::query("SELECT status FROM orders WHERE id = $1 AND tenant_id = $2")
         .bind(parse_uuid(&req.order_id, "order_id")?)
         .bind(&tenant_id)
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(OrderError::from)?
         .map(|row| row.get::<String, _>("status"));
-    let status = order_status_to_string(req.status).ok_or_else(|| {
-        (
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "status is required".to_string(),
-            }),
-        )
-    })?;
+    let status = order_status_to_string(req.status)
+        .ok_or_else(|| OrderError::invalid_argument("status is required"))?;
     sqlx::query(
         r#"
         UPDATE orders SET status = $1, updated_at = now()
@@ -104,7 +96,7 @@ pub async fn update_order_status(
     .bind(&tenant_id)
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(OrderError::from)?;
 
     let order = pb::OrderAdmin {
         id: req.order_id,
@@ -138,7 +130,7 @@ pub async fn create_shipment(
     state: &AppState,
     req: pb::CreateShipmentRequest,
     _actor: Option<pb::ActorContext>,
-) -> Result<pb::ShipmentAdmin, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<pb::ShipmentAdmin> {
     let tenant_id = tenant_id_for_order(state, &req.order_id).await?;
     let shipment_id = uuid::Uuid::new_v4();
     sqlx::query(
@@ -155,7 +147,7 @@ pub async fn create_shipment(
     .bind(req.carrier.clone())
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(OrderError::from)?;
 
     let shipment = pb::ShipmentAdmin {
         id: shipment_id.to_string(),
@@ -187,13 +179,13 @@ pub async fn update_shipment_status(
     state: &AppState,
     req: pb::UpdateShipmentStatusRequest,
     _actor: Option<pb::ActorContext>,
-) -> Result<pb::ShipmentAdmin, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<pb::ShipmentAdmin> {
     let tenant_id = tenant_id_for_shipment(state, &req.shipment_id).await?;
     let before_status = sqlx::query("SELECT status FROM shipments WHERE id = $1")
         .bind(parse_uuid(&req.shipment_id, "shipment_id")?)
         .fetch_optional(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(OrderError::from)?
         .map(|row| row.get::<String, _>("status"));
     sqlx::query(
         r#"
@@ -208,7 +200,7 @@ pub async fn update_shipment_status(
     .bind(parse_uuid(&req.shipment_id, "shipment_id")?)
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(OrderError::from)?;
 
     let shipment = pb::ShipmentAdmin {
         id: req.shipment_id,
@@ -281,19 +273,19 @@ fn to_json_opt<T: serde::Serialize>(value: Option<T>) -> Option<Value> {
 async fn tenant_id_for_order(
     state: &AppState,
     order_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<String> {
     let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM orders WHERE id = $1")
         .bind(parse_uuid(order_id, "order_id")?)
         .fetch_one(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(OrderError::from)?;
     Ok(row.get("tenant_id"))
 }
 
 async fn tenant_id_for_shipment(
     state: &AppState,
     shipment_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+) -> OrderResult<String> {
     let row = sqlx::query(
         r#"
         SELECT o.tenant_id::text as tenant_id
@@ -305,6 +297,6 @@ async fn tenant_id_for_shipment(
     .bind(parse_uuid(shipment_id, "shipment_id")?)
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(OrderError::from)?;
     Ok(row.get("tenant_id"))
 }

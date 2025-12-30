@@ -1,12 +1,10 @@
-use axum::{Json, http::StatusCode};
 use chrono::{Duration, Utc};
 use sqlx::Row;
 
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::db,
-    rpc::json::ConnectError,
+    cart::error::{CartError, CartResult},
     shared::ids::{CartId, CartItemId, CustomerId, LocationId, SkuId, StoreId, parse_uuid},
     shared::status::{CartItemStatus, CartStatus, PaymentMethod},
     shared::time::chrono_to_timestamp,
@@ -23,7 +21,7 @@ fn cart_ttl_days() -> i64 {
 async fn resolve_store_id(
     state: &AppState,
     store: Option<pb::StoreContext>,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<String> {
     let (store_id, _tenant_id) =
         crate::identity::context::resolve_store_context_without_token_guard(state, store, None).await?;
     Ok(store_id)
@@ -32,7 +30,7 @@ async fn resolve_store_id(
 pub async fn create_cart(
     state: &AppState,
     req: pb::CreateCartRequest,
-) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Cart> {
     let cart_id = uuid::Uuid::new_v4();
     let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
@@ -54,7 +52,7 @@ pub async fn create_cart(
     .bind(expires_at)
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     Ok(pb::Cart {
         id: cart_id.to_string(),
@@ -70,14 +68,10 @@ pub async fn create_cart(
 pub async fn add_cart_item(
     state: &AppState,
     req: pb::AddCartItemRequest,
-) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Cart> {
     if req.quantity <= 0 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "quantity must be greater than 0".to_string(),
-            }),
+        return Err(CartError::invalid_argument(
+            "quantity must be greater than 0",
         ));
     }
 
@@ -99,15 +93,9 @@ pub async fn add_cart_item(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
     let Some(cart_row) = cart_exists else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "cart not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("cart not found"));
     };
     let expires_at: chrono::DateTime<Utc> = cart_row.get("expires_at");
 
@@ -125,15 +113,9 @@ pub async fn add_cart_item(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
     let Some(row) = row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "variant not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("variant not found"));
     };
 
     let price_amount: i64 = row.get("price_amount");
@@ -141,12 +123,8 @@ pub async fn add_cart_item(
     let fulfillment_type: String = row.get("fulfillment_type");
     let is_physical = fulfillment_type == "physical";
     if is_physical && location_uuid.is_none() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "location_id is required for physical SKU".to_string(),
-            }),
+        return Err(CartError::invalid_argument(
+            "location_id is required for physical SKU",
         ));
     }
 
@@ -171,7 +149,7 @@ pub async fn add_cart_item(
     .bind(CartItemStatus::Active.as_str())
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     // Enqueue reservation request (async worker) for physical items only.
     if is_physical {
@@ -193,7 +171,7 @@ pub async fn add_cart_item(
         .bind(req.quantity)
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
     }
 
     Ok(pb::Cart {
@@ -224,12 +202,12 @@ pub async fn add_cart_item(
 pub async fn remove_cart_item(
     state: &AppState,
     req: pb::RemoveCartItemRequest,
-) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Cart> {
     let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let cart_item_uuid = CartItemId::parse(&req.cart_item_id)?;
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(CartError::from)?;
 
     let row = sqlx::query(
         r#"
@@ -246,16 +224,10 @@ pub async fn remove_cart_item(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     let Some(row) = row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "cart item not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("cart item not found"));
     };
 
     let cart_id: String = row.get("cart_id");
@@ -276,7 +248,7 @@ pub async fn remove_cart_item(
         .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
 
         let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id
@@ -297,7 +269,7 @@ pub async fn remove_cart_item(
             .bind(location_uuid.as_uuid())
             .execute(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(CartError::from)?;
         }
     }
 
@@ -306,9 +278,9 @@ pub async fn remove_cart_item(
         .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(CartError::from)?;
 
     Ok(pb::Cart {
         id: cart_id,
@@ -324,14 +296,10 @@ pub async fn remove_cart_item(
 pub async fn update_cart_item(
     state: &AppState,
     req: pb::UpdateCartItemRequest,
-) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Cart> {
     if req.quantity <= 0 {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "quantity must be greater than 0".to_string(),
-            }),
+        return Err(CartError::invalid_argument(
+            "quantity must be greater than 0",
         ));
     }
 
@@ -339,7 +307,7 @@ pub async fn update_cart_item(
     let store_uuid = StoreId::parse(&store_id)?;
     let cart_item_uuid = CartItemId::parse(&req.cart_item_id)?;
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(CartError::from)?;
     let row = sqlx::query(
         r#"
         SELECT c.id::text as cart_id, c.expires_at, ci.sku_id::text as sku_id, ci.location_id::text as location_id,
@@ -355,16 +323,10 @@ pub async fn update_cart_item(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     let Some(row) = row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "cart item not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("cart item not found"));
     };
 
     let cart_id: String = row.get("cart_id");
@@ -375,7 +337,7 @@ pub async fn update_cart_item(
     let expires_at: chrono::DateTime<Utc> = row.get("expires_at");
 
     if req.quantity == current_qty {
-        tx.commit().await.map_err(db::error)?;
+        tx.commit().await.map_err(CartError::from)?;
         return Ok(pb::Cart {
             id: cart_id,
             store_id,
@@ -392,7 +354,7 @@ pub async fn update_cart_item(
         .bind(cart_item_uuid.as_uuid())
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
 
     let delta = req.quantity - current_qty;
     if fulfillment_type == "physical" {
@@ -421,7 +383,7 @@ pub async fn update_cart_item(
                 .bind(delta)
                 .execute(&mut *tx)
                 .await
-                .map_err(db::error)?;
+                .map_err(CartError::from)?;
             }
         } else {
             let release_qty = -delta;
@@ -437,7 +399,7 @@ pub async fn update_cart_item(
             .bind(cart_item_uuid.as_uuid())
             .fetch_optional(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(CartError::from)?;
 
             if let Some(reservation) = reservation {
                 let reservation_id: String = reservation.get("id");
@@ -455,7 +417,7 @@ pub async fn update_cart_item(
                     .bind(parse_uuid(&reservation_id, "reservation_id")?)
                     .execute(&mut *tx)
                     .await
-                    .map_err(db::error)?;
+                    .map_err(CartError::from)?;
                 } else {
                     sqlx::query(
                         r#"
@@ -468,7 +430,7 @@ pub async fn update_cart_item(
                     .bind(parse_uuid(&reservation_id, "reservation_id")?)
                     .execute(&mut *tx)
                     .await
-                    .map_err(db::error)?;
+                    .map_err(CartError::from)?;
                 }
             }
 
@@ -486,12 +448,12 @@ pub async fn update_cart_item(
                 .bind(location_uuid.as_uuid())
                 .execute(&mut *tx)
                 .await
-                .map_err(db::error)?;
+                .map_err(CartError::from)?;
             }
         }
     }
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(CartError::from)?;
 
     Ok(pb::Cart {
         id: cart_id,
@@ -507,7 +469,7 @@ pub async fn update_cart_item(
 pub async fn get_cart(
     state: &AppState,
     req: pb::GetCartRequest,
-) -> Result<pb::Cart, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Cart> {
     let store_id = resolve_store_id(state, req.store.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let cart_uuid = CartId::parse(&req.cart_id)?;
@@ -524,15 +486,9 @@ pub async fn get_cart(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
     let Some(cart_row) = cart_row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "cart not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("cart not found"));
     };
 
     let items = sqlx::query(
@@ -547,7 +503,7 @@ pub async fn get_cart(
     .bind(cart_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     let mut total_amount: i64 = 0;
     let mut currency: Option<String> = None;
@@ -608,27 +564,21 @@ pub async fn checkout(
     state: &AppState,
     tenant_id: String,
     req: pb::CheckoutRequest,
-) -> Result<pb::Order, (StatusCode, Json<ConnectError>)> {
+) -> CartResult<pb::Order> {
     let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
     let cart_uuid = CartId::parse(&req.cart_id)?;
     let payment_method = PaymentMethod::from_pb(req.payment_method)?;
 
-    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let mut tx = state.db.begin().await.map_err(CartError::from)?;
     let store_row = sqlx::query(
         "SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1",
     )
     .bind(tenant_uuid)
     .fetch_optional(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
     let Some(store_row) = store_row else {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "tenant_id not found".to_string(),
-            }),
-        ));
+        return Err(CartError::invalid_argument("tenant_id not found"));
     };
     let store_id: String = store_row.get("id");
     let store_uuid = StoreId::parse(&store_id)?;
@@ -640,15 +590,9 @@ pub async fn checkout(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
     let Some(cart_row) = cart_row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "cart not found".to_string(),
-            }),
-        ));
+        return Err(CartError::not_found("cart not found"));
     };
 
     let items = sqlx::query(
@@ -664,16 +608,10 @@ pub async fn checkout(
     .bind(cart_uuid.as_uuid())
     .fetch_all(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     if items.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "cart has no items".to_string(),
-            }),
-        ));
+        return Err(CartError::invalid_argument("cart has no items"));
     }
 
     let mut total_amount: i64 = 0;
@@ -691,12 +629,8 @@ pub async fn checkout(
 
         if let Some(curr) = &currency {
             if curr != &price_currency {
-                return Err((
-                    StatusCode::BAD_REQUEST,
-                    Json(ConnectError {
-                        code: crate::rpc::json::ErrorCode::InvalidArgument,
-                        message: "mixed currency cart is not supported".to_string(),
-                    }),
+                return Err(CartError::invalid_argument(
+                    "mixed currency cart is not supported",
                 ));
             }
         } else {
@@ -716,25 +650,17 @@ pub async fn checkout(
             .bind(parse_uuid(&cart_item_id, "cart_item_id")?)
             .fetch_optional(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(CartError::from)?;
 
             let Some(reservation) = reservation else {
-                return Err((
-                    StatusCode::CONFLICT,
-                    Json(ConnectError {
-                        code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                        message: "inventory reservation not ready".to_string(),
-                    }),
+                return Err(CartError::failed_precondition(
+                    "inventory reservation not ready",
                 ));
             };
             let reserved_qty: i32 = reservation.get("quantity");
             if reserved_qty < quantity {
-                return Err((
-                    StatusCode::CONFLICT,
-                    Json(ConnectError {
-                        code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                        message: "reserved quantity is insufficient".to_string(),
-                    }),
+                return Err(CartError::failed_precondition(
+                    "reserved quantity is insufficient",
                 ));
             }
 
@@ -761,14 +687,10 @@ pub async fn checkout(
                 .bind(location_uuid)
                 .execute(&mut *tx)
                 .await
-                .map_err(db::error)?;
+                .map_err(CartError::from)?;
                 if updated.rows_affected() != 1 {
-                    return Err((
-                        StatusCode::CONFLICT,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                            message: "inventory stock is insufficient".to_string(),
-                        }),
+                    return Err(CartError::failed_precondition(
+                        "inventory stock is insufficient",
                     ));
                 }
             }
@@ -784,7 +706,7 @@ pub async fn checkout(
             .bind(parse_uuid(&reservation_id, "reservation_id")?)
             .execute(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(CartError::from)?;
         }
 
         total_amount = total_amount.saturating_add(price_amount * (quantity as i64));
@@ -810,7 +732,7 @@ pub async fn checkout(
     .bind(payment_method.as_str())
     .execute(&mut *tx)
     .await
-    .map_err(db::error)?;
+    .map_err(CartError::from)?;
 
     for item in &items {
         let cart_item_id: String = item.get("cart_item_id");
@@ -835,13 +757,13 @@ pub async fn checkout(
         .bind(quantity)
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
 
         sqlx::query("DELETE FROM cart_items WHERE id = $1")
             .bind(parse_uuid(&cart_item_id, "cart_item_id")?)
             .execute(&mut *tx)
             .await
-            .map_err(db::error)?;
+            .map_err(CartError::from)?;
     }
 
     sqlx::query("UPDATE carts SET status = $1, updated_at = now() WHERE id = $2")
@@ -849,9 +771,9 @@ pub async fn checkout(
         .bind(cart_uuid.as_uuid())
         .execute(&mut *tx)
         .await
-        .map_err(db::error)?;
+        .map_err(CartError::from)?;
 
-    tx.commit().await.map_err(db::error)?;
+    tx.commit().await.map_err(CartError::from)?;
 
     Ok(pb::Order {
         id: order_id.to_string(),

@@ -120,7 +120,9 @@ pub async fn list_orders(
 ) -> Result<(StatusCode, Json<pb::ListOrdersResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListOrdersRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    let orders = order::service::list_orders(&state, tenant_id, req.status).await?;
+    let orders = order::service::list_orders(&state, tenant_id, req.status)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::ListOrdersResponse {
@@ -141,7 +143,9 @@ pub async fn update_order_status(
     let req = parse_request::<pb::UpdateOrderStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let tenant_id = require_tenant_id(req.tenant.clone())?;
-    let order = order::service::update_order_status(&state, tenant_id, req, actor).await?;
+    let order = order::service::update_order_status(&state, tenant_id, req, actor)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(pb::UpdateOrderStatusResponse { order: Some(order) })))
 }
 
@@ -153,7 +157,9 @@ pub async fn create_shipment(
 ) -> Result<(StatusCode, Json<pb::CreateShipmentResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateShipmentRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let shipment = order::service::create_shipment(&state, req, actor).await?;
+    let shipment = order::service::create_shipment(&state, req, actor)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(pb::CreateShipmentResponse { shipment: Some(shipment) })))
 }
 
@@ -165,7 +171,9 @@ pub async fn update_shipment_status(
 ) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateShipmentStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
-    let shipment = order::service::update_shipment_status(&state, req, actor).await?;
+    let shipment = order::service::update_shipment_status(&state, req, actor)
+        .await
+        .map_err(|err| err.into_connect())?;
     Ok((StatusCode::OK, Json(pb::UpdateShipmentStatusResponse { shipment: Some(shipment) })))
 }
 

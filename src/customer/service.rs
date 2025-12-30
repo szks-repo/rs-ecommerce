@@ -1,12 +1,11 @@
-use axum::{Json, http::StatusCode};
 use chrono::Utc;
 use sqlx::Row;
 
 use crate::{
     AppState,
     pb::pb,
-    infrastructure::{db, audit, outbox},
-    rpc::json::ConnectError,
+    infrastructure::{audit, outbox},
+    customer::error::{CustomerError, CustomerResult},
     shared::validation::{Email, Phone},
     shared::{
         ids::{parse_uuid, StoreId, TenantId},
@@ -23,9 +22,9 @@ pub async fn list_customers(
     store_id: String,
     tenant_id: String,
     query: String,
-) -> Result<Vec<pb::CustomerSummary>, (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
+) -> CustomerResult<Vec<pb::CustomerSummary>> {
+    let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
+    let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let q = query.trim();
 
     let rows = if q.is_empty() {
@@ -48,7 +47,7 @@ pub async fn list_customers(
         .bind(store_uuid.as_uuid())
         .fetch_all(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(CustomerError::from)?
     } else {
         let pattern = format!("%{}%", q);
         sqlx::query(
@@ -72,7 +71,7 @@ pub async fn list_customers(
         .bind(pattern)
         .fetch_all(&state.db)
         .await
-        .map_err(db::error)?
+        .map_err(CustomerError::from)?
     };
 
     let customers = rows
@@ -97,10 +96,10 @@ pub async fn get_customer(
     store_id: String,
     tenant_id: String,
     customer_id: String,
-) -> Result<(pb::Customer, pb::CustomerProfile, Vec<pb::CustomerIdentity>, Vec<pb::CustomerAddress>), (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+) -> CustomerResult<(pb::Customer, pb::CustomerProfile, Vec<pb::CustomerIdentity>, Vec<pb::CustomerAddress>)> {
+    let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
+    let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
+    let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
 
     let row = sqlx::query(
         r#"
@@ -113,16 +112,10 @@ pub async fn get_customer(
     .bind(tenant_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let Some(row) = row else {
-        return Err((
-            StatusCode::NOT_FOUND,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::NotFound,
-                message: "customer not found".to_string(),
-            }),
-        ));
+        return Err(CustomerError::NotFound("customer not found".to_string()));
     };
 
     let customer = pb::Customer {
@@ -145,7 +138,7 @@ pub async fn get_customer(
     .bind(store_uuid.as_uuid())
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let profile = if let Some(row) = profile_row {
         pb::CustomerProfile {
@@ -188,7 +181,7 @@ pub async fn get_customer(
     .bind(tenant_uuid.as_uuid())
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let identities = identity_rows
         .into_iter()
@@ -217,7 +210,7 @@ pub async fn get_customer(
     .bind(customer_uuid)
     .fetch_all(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let addresses = address_rows
         .into_iter()
@@ -247,9 +240,9 @@ pub async fn create_customer(
     mut profile: pb::CustomerProfileInput,
     identities: Vec<pb::CustomerIdentityInput>,
     actor: Option<pb::ActorContext>,
-) -> Result<(pb::Customer, pb::CustomerProfile, bool), (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
+) -> CustomerResult<(pb::Customer, pb::CustomerProfile, bool)> {
+    let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
+    let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let normalized_email = Email::parse_optional(&profile.email)?
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
@@ -283,7 +276,7 @@ pub async fn create_customer(
             .bind(&identity.identity_value)
             .fetch_optional(&state.db)
             .await
-            .map_err(db::error)?;
+            .map_err(CustomerError::from)?;
             if let Some(row) = row {
                 let candidate = (
                     row.get::<String, _>("customer_id"),
@@ -322,12 +315,12 @@ pub async fn create_customer(
             VALUES ($1,$2,$3)
             "#,
         )
-        .bind(parse_uuid(&customer_id, "customer_id")?)
+        .bind(parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?)
         .bind(tenant_uuid.as_uuid())
         .bind(DEFAULT_CUSTOMER_STATUS)
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
     }
 
     let profile_row = sqlx::query(
@@ -346,7 +339,7 @@ pub async fn create_customer(
         "#,
     )
     .bind(uuid::Uuid::new_v4())
-    .bind(parse_uuid(&customer_id, "customer_id")?)
+    .bind(parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?)
     .bind(store_uuid.as_uuid())
     .bind(profile.name)
     .bind(if profile.email.is_empty() { None } else { Some(profile.email) })
@@ -355,7 +348,7 @@ pub async fn create_customer(
     .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     for identity in &identity_inputs {
         sqlx::query(
@@ -368,14 +361,14 @@ pub async fn create_customer(
         )
         .bind(uuid::Uuid::new_v4())
         .bind(tenant_uuid.as_uuid())
-        .bind(parse_uuid(&customer_id, "customer_id")?)
+        .bind(parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?)
         .bind(&identity.identity_type)
         .bind(&identity.identity_value)
         .bind(identity.verified)
         .bind("admin")
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
     }
 
     let customer = pb::Customer {
@@ -472,10 +465,10 @@ pub async fn update_customer(
     mut profile: pb::CustomerProfileInput,
     customer_status: String,
     actor: Option<pb::ActorContext>,
-) -> Result<(pb::Customer, pb::CustomerProfile), (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+) -> CustomerResult<(pb::Customer, pb::CustomerProfile)> {
+    let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
+    let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
+    let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
     let normalized_email = Email::parse_optional(&profile.email)?
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
@@ -498,7 +491,7 @@ pub async fn update_customer(
         .bind(tenant_uuid.as_uuid())
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
     }
 
     let profile_row = sqlx::query(
@@ -526,7 +519,7 @@ pub async fn update_customer(
     .bind(if profile.notes.is_empty() { None } else { Some(profile.notes) })
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let customer_row = sqlx::query(
         r#"
@@ -539,7 +532,7 @@ pub async fn update_customer(
     .bind(tenant_uuid.as_uuid())
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let customer = pb::Customer {
         id: customer_row.get("id"),
@@ -608,18 +601,14 @@ pub async fn upsert_customer_identity(
     customer_id: String,
     identity: pb::CustomerIdentityUpsert,
     actor: Option<pb::ActorContext>,
-) -> Result<pb::CustomerIdentity, (StatusCode, Json<ConnectError>)> {
+) -> CustomerResult<pb::CustomerIdentity> {
     if identity.identity_type.is_empty() || identity.identity_value.is_empty() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "identity_type and identity_value are required".to_string(),
-            }),
+        return Err(CustomerError::InvalidArgument(
+            "identity_type and identity_value are required".to_string(),
         ));
     }
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+    let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
+    let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
     let normalized_value = normalize_identity(&identity.identity_type, &identity.identity_value);
 
     let existing = sqlx::query(
@@ -634,17 +623,13 @@ pub async fn upsert_customer_identity(
     .bind(&normalized_value)
     .fetch_optional(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     if let Some(row) = existing {
         let existing_customer_id: String = row.get("customer_id");
         if existing_customer_id != customer_id {
-            return Err((
-                StatusCode::CONFLICT,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::AlreadyExists,
-                    message: "identity is already linked to another customer".to_string(),
-                }),
+            return Err(CustomerError::AlreadyExists(
+                "identity is already linked to another customer".to_string(),
             ));
         }
         sqlx::query(
@@ -656,10 +641,10 @@ pub async fn upsert_customer_identity(
         )
         .bind(identity.verified)
         .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
-        .bind(parse_uuid(&row.get::<String, _>("id"), "identity_id")?)
+        .bind(parse_uuid(&row.get::<String, _>("id"), "identity_id").map_err(CustomerError::from)?)
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
 
         let updated = pb::CustomerIdentity {
             id: row.get("id"),
@@ -715,7 +700,7 @@ pub async fn upsert_customer_identity(
     let identity_id = if identity.id.is_empty() {
         uuid::Uuid::new_v4()
     } else {
-        parse_uuid(&identity.id, "identity_id")?
+        parse_uuid(&identity.id, "identity_id").map_err(CustomerError::from)?
     };
 
     sqlx::query(
@@ -734,7 +719,7 @@ pub async fn upsert_customer_identity(
     .bind(if identity.source.is_empty() { "admin" } else { identity.source.as_str() })
     .execute(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
 
     let created = pb::CustomerIdentity {
         id: identity_id.to_string(),
@@ -792,7 +777,7 @@ pub async fn upsert_customer_address(
     customer_id: String,
     address: pb::CustomerAddressInput,
     actor: Option<pb::ActorContext>,
-) -> Result<pb::CustomerAddress, (StatusCode, Json<ConnectError>)> {
+) -> CustomerResult<pb::CustomerAddress> {
     if address.r#type.is_empty()
         || address.name.is_empty()
         || address.postal_code.is_empty()
@@ -800,20 +785,16 @@ pub async fn upsert_customer_address(
         || address.city.is_empty()
         || address.line1.is_empty()
     {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "address required fields are missing".to_string(),
-            }),
+        return Err(CustomerError::InvalidArgument(
+            "address required fields are missing".to_string(),
         ));
     }
 
-    let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+    let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
     let address_id = if address.id.is_empty() {
         uuid::Uuid::new_v4()
     } else {
-        parse_uuid(&address.id, "address_id")?
+        parse_uuid(&address.id, "address_id").map_err(CustomerError::from)?
     };
 
     if address.id.is_empty() {
@@ -836,7 +817,7 @@ pub async fn upsert_customer_address(
         .bind(if address.phone.is_empty() { None } else { Some(address.phone.clone()) })
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
     } else {
         sqlx::query(
             r#"
@@ -858,7 +839,7 @@ pub async fn upsert_customer_address(
         .bind(customer_uuid)
         .execute(&state.db)
         .await
-        .map_err(db::error)?;
+        .map_err(CustomerError::from)?;
     }
 
     let updated = pb::CustomerAddress {
@@ -914,15 +895,11 @@ pub async fn upsert_customer_address(
 fn validate_customer_profile(
     profile: &pb::CustomerProfileInput,
     identities: &Vec<pb::CustomerIdentityInput>,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+) -> CustomerResult<()> {
     let has_identifier = !profile.email.is_empty() || !profile.phone.is_empty() || !identities.is_empty();
     if profile.name.is_empty() && !has_identifier {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "customer name or identity is required".to_string(),
-            }),
+        return Err(CustomerError::InvalidArgument(
+            "customer name or identity is required".to_string(),
         ));
     }
     Ok(())
@@ -968,7 +945,7 @@ fn normalize_identity(identity_type: &str, value: &str) -> String {
 async fn resolve_tenant_id(
     state: &AppState,
     customer_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+) -> CustomerResult<String> {
     let row = sqlx::query(
         r#"
         SELECT tenant_id::text as tenant_id
@@ -976,10 +953,10 @@ async fn resolve_tenant_id(
         WHERE id = $1
         "#,
     )
-    .bind(parse_uuid(customer_id, "customer_id")?)
+    .bind(parse_uuid(customer_id, "customer_id").map_err(CustomerError::from)?)
     .fetch_one(&state.db)
     .await
-    .map_err(db::error)?;
+    .map_err(CustomerError::from)?;
     Ok(row.get("tenant_id"))
 }
 
