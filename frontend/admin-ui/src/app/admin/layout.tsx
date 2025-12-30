@@ -18,26 +18,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <a className="block rounded-lg bg-neutral-100 px-3 py-2 text-neutral-900" href="/admin">
                     Overview
                   </a>
-                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
-                    Identity & Staff
-                  </a>
-                  <a className="ml-2 block rounded-lg px-3 py-2 text-xs text-neutral-500 hover:bg-neutral-100" href="/admin/identity/roles">
-                    Roles
-                  </a>
-                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/customers">
-                    Customers
-                  </a>
-                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/audit">
-                    Audit Logs
+                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/orders">
+                    Orders
                   </a>
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/products">
                     Products
+                  </a>
+                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/customers">
+                    Customers
                   </a>
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/inventory">
                     Inventory
                   </a>
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/settings">
                     Shop Settings
+                  </a>
+                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/identity">
+                    Identity
+                  </a>
+                  <a className="ml-2 block rounded-lg px-3 py-2 text-xs text-neutral-500 hover:bg-neutral-100" href="/admin/identity/roles">
+                    Roles
+                  </a>
+                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/audit">
+                    Audit Logs
                   </a>
                 </nav>
                 <div className="mt-8 flex items-center justify-between border-t border-neutral-200 pt-4">
