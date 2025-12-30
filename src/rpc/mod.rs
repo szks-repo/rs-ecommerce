@@ -6,6 +6,7 @@ use crate::AppState;
 
 pub mod json;
 pub(crate) mod actor;
+mod permissions;
 mod storefront;
 mod backoffice;
 mod store_settings;
@@ -71,55 +72,81 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListProducts",
-            post(backoffice::list_products),
+            post(backoffice::list_products).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateProduct",
-            post(backoffice::create_product),
+            post(backoffice::create_product).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateProduct",
-            post(backoffice::update_product),
+            post(backoffice::update_product).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListVariants",
-            post(backoffice::list_variants),
+            post(backoffice::list_variants).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateVariant",
-            post(backoffice::create_variant),
+            post(backoffice::create_variant).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateVariant",
-            post(backoffice::update_variant),
+            post(backoffice::update_variant).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/SetInventory",
-            post(backoffice::set_inventory),
+            post(backoffice::set_inventory).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "catalog.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListOrders",
-            post(backoffice::list_orders),
+            post(backoffice::list_orders).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "orders.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateOrderStatus",
-            post(backoffice::update_order_status),
+            post(backoffice::update_order_status).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "orders.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateShipment",
-            post(backoffice::create_shipment),
+            post(backoffice::create_shipment).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "orders.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateShipmentStatus",
-            post(backoffice::update_shipment_status),
+            post(backoffice::update_shipment_status).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "orders.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreatePromotion",
-            post(backoffice::create_promotion),
+            post(backoffice::create_promotion).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "promotions.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdatePromotion",
-            post(backoffice::update_promotion),
+            post(backoffice::update_promotion).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "promotions.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/ListCustomers",
@@ -147,71 +174,105 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetStoreSettings",
-            post(store_settings::get_store_settings),
+            post(store_settings::get_store_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpdateStoreSettings",
-            post(store_settings::update_store_settings),
+            post(store_settings::update_store_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/InitializeStoreSettings",
-            post(store_settings::initialize_store_settings),
+            post(store_settings::initialize_store_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetMallSettings",
-            post(store_settings::get_mall_settings),
+            post(store_settings::get_mall_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpdateMallSettings",
-            post(store_settings::update_mall_settings),
+            post(store_settings::update_mall_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListStoreLocations",
-            post(store_settings::list_store_locations),
+            post(store_settings::list_store_locations).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpsertStoreLocation",
-            post(store_settings::upsert_store_location),
+            post(store_settings::upsert_store_location).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/DeleteStoreLocation",
-            post(store_settings::delete_store_location),
+            post(store_settings::delete_store_location).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListShippingZones",
-            post(store_settings::list_shipping_zones),
+            post(store_settings::list_shipping_zones).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpsertShippingZone",
-            post(store_settings::upsert_shipping_zone),
+            post(store_settings::upsert_shipping_zone).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/DeleteShippingZone",
-            post(store_settings::delete_shipping_zone),
+            post(store_settings::delete_shipping_zone).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListShippingRates",
-            post(store_settings::list_shipping_rates),
+            post(store_settings::list_shipping_rates).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpsertShippingRate",
-            post(store_settings::upsert_shipping_rate),
+            post(store_settings::upsert_shipping_rate).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/DeleteShippingRate",
-            post(store_settings::delete_shipping_rate),
+            post(store_settings::delete_shipping_rate).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListTaxRules",
-            post(store_settings::list_tax_rules),
+            post(store_settings::list_tax_rules).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpsertTaxRule",
-            post(store_settings::upsert_tax_rule),
+            post(store_settings::upsert_tax_rule).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/DeleteTaxRule",
-            post(store_settings::delete_tax_rule),
+            post(store_settings::delete_tax_rule).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "settings.write")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.SetupService/InitializeStore",
@@ -228,55 +289,81 @@ pub fn router() -> Router<AppState> {
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/CreateStaff",
-            post(identity::create_staff),
+            post(identity::create_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/CreateRole",
-            post(identity::create_role),
+            post(identity::create_role).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/AssignRoleToStaff",
-            post(identity::assign_role_to_staff),
+            post(identity::assign_role_to_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/ListRoles",
-            post(identity::list_roles),
+            post(identity::list_roles).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/ListRolesWithPermissions",
-            post(identity::list_roles_with_permissions),
+            post(identity::list_roles_with_permissions).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/UpdateRole",
-            post(identity::update_role),
+            post(identity::update_role).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/DeleteRole",
-            post(identity::delete_role),
+            post(identity::delete_role).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/ListStaff",
-            post(identity::list_staff),
+            post(identity::list_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/UpdateStaff",
-            post(identity::update_staff),
+            post(identity::update_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/InviteStaff",
-            post(identity::invite_staff),
+            post(identity::invite_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/TransferOwner",
-            post(identity::transfer_owner),
+            post(identity::transfer_owner).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "staff.manage")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.AuditService/ListAuditLogs",
-            post(audit::list_audit_logs),
+            post(audit::list_audit_logs).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "audit.read")
+            })),
         )
         .route(
             "/rpc/ecommerce.v1.AuditService/ListAuditActions",
-            post(audit::list_audit_actions),
+            post(audit::list_audit_actions).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission(req, next, "audit.read")
+            })),
         )
         .layer(middleware::from_fn(request_context::inject_request_context))
         .layer(middleware::from_fn(actor::inject_actor))
