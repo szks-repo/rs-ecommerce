@@ -137,7 +137,7 @@ pub async fn get_customer(
     let profile_row = sqlx::query(
         r#"
         SELECT id::text as id, customer_id::text as customer_id, store_id::text as store_id,
-               name, email, phone, status, notes, created_at, updated_at
+               name, email, phone, status, notes, country_code, created_at, updated_at
         FROM customer_profiles
         WHERE customer_id = $1 AND store_id = $2
         "#,
@@ -158,6 +158,9 @@ pub async fn get_customer(
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
             status: row.get("status"),
             notes: row.get::<Option<String>, _>("notes").unwrap_or_default(),
+            country_code: row
+                .get::<Option<String>, _>("country_code")
+                .unwrap_or_else(|| "JP".to_string()),
             created_at: chrono_to_timestamp(Some(
                 row.get::<chrono::DateTime<Utc>, _>("created_at"),
             )),
@@ -175,6 +178,7 @@ pub async fn get_customer(
             phone: String::new(),
             status: DEFAULT_PROFILE_STATUS.to_string(),
             notes: String::new(),
+            country_code: "JP".to_string(),
             created_at: None,
             updated_at: None,
         }
@@ -214,7 +218,7 @@ pub async fn get_customer(
     let address_rows = sqlx::query(
         r#"
         SELECT id::text as id, customer_id::text as customer_id, type, name,
-               postal_code, prefecture, city, line1, line2, phone,
+               postal_code, prefecture, city, line1, line2, phone, country_code,
                created_at, updated_at
         FROM customer_addresses
         WHERE customer_id = $1
@@ -239,6 +243,9 @@ pub async fn get_customer(
             line1: row.get("line1"),
             line2: row.get::<Option<String>, _>("line2").unwrap_or_default(),
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
+            country_code: row
+                .get::<Option<String>, _>("country_code")
+                .unwrap_or_else(|| "JP".to_string()),
             created_at: chrono_to_timestamp(Some(
                 row.get::<chrono::DateTime<Utc>, _>("created_at"),
             )),
@@ -269,6 +276,9 @@ pub async fn create_customer(
         .unwrap_or_default();
     profile.email = normalized_email;
     profile.phone = normalized_phone;
+    if profile.country_code.is_empty() {
+        profile.country_code = "JP".to_string();
+    }
     validate_customer_profile(&profile, &identities)?;
 
     let mut identity_inputs = normalize_identities(&profile, identities);
@@ -345,17 +355,18 @@ pub async fn create_customer(
 
     let profile_row = sqlx::query(
         r#"
-        INSERT INTO customer_profiles (id, customer_id, store_id, name, email, phone, status, notes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        INSERT INTO customer_profiles (id, customer_id, store_id, name, email, phone, status, notes, country_code)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         ON CONFLICT (customer_id, store_id)
         DO UPDATE SET name = EXCLUDED.name,
                       email = EXCLUDED.email,
                       phone = EXCLUDED.phone,
                       status = EXCLUDED.status,
                       notes = EXCLUDED.notes,
+                      country_code = EXCLUDED.country_code,
                       updated_at = now()
         RETURNING id::text as id, customer_id::text as customer_id, store_id::text as store_id,
-                  name, email, phone, status, notes, created_at, updated_at
+                  name, email, phone, status, notes, country_code, created_at, updated_at
         "#,
     )
     .bind(uuid::Uuid::new_v4())
@@ -381,6 +392,11 @@ pub async fn create_customer(
         None
     } else {
         Some(profile.notes)
+    })
+    .bind(if profile.country_code.is_empty() {
+        "JP"
+    } else {
+        profile.country_code.as_str()
     })
     .fetch_one(tx.as_mut())
     .await
@@ -429,6 +445,9 @@ pub async fn create_customer(
         notes: profile_row
             .get::<Option<String>, _>("notes")
             .unwrap_or_default(),
+        country_code: profile_row
+            .get::<Option<String>, _>("country_code")
+            .unwrap_or_else(|| "JP".to_string()),
         created_at: chrono_to_timestamp(Some(
             profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
         )),
@@ -469,6 +488,7 @@ pub async fn create_customer(
                     "phone": profile.phone.clone(),
                     "status": profile.status.clone(),
                     "notes": profile.notes.clone(),
+                    "country_code": profile.country_code.clone(),
                 }
             }),
         },
@@ -524,6 +544,9 @@ pub async fn update_customer(
         .unwrap_or_default();
     profile.email = normalized_email;
     profile.phone = normalized_phone;
+    if profile.country_code.is_empty() {
+        profile.country_code = "JP".to_string();
+    }
 
     let mut tx = state.db.begin().await.map_err(CustomerError::from)?;
     if !customer_status.is_empty() {
@@ -544,17 +567,18 @@ pub async fn update_customer(
 
     let profile_row = sqlx::query(
         r#"
-        INSERT INTO customer_profiles (id, customer_id, store_id, name, email, phone, status, notes)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        INSERT INTO customer_profiles (id, customer_id, store_id, name, email, phone, status, notes, country_code)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
         ON CONFLICT (customer_id, store_id)
         DO UPDATE SET name = EXCLUDED.name,
                       email = EXCLUDED.email,
                       phone = EXCLUDED.phone,
                       status = EXCLUDED.status,
                       notes = EXCLUDED.notes,
+                      country_code = EXCLUDED.country_code,
                       updated_at = now()
         RETURNING id::text as id, customer_id::text as customer_id, store_id::text as store_id,
-                  name, email, phone, status, notes, created_at, updated_at
+                  name, email, phone, status, notes, country_code, created_at, updated_at
         "#,
     )
     .bind(uuid::Uuid::new_v4())
@@ -580,6 +604,11 @@ pub async fn update_customer(
         None
     } else {
         Some(profile.notes)
+    })
+    .bind(if profile.country_code.is_empty() {
+        "JP"
+    } else {
+        profile.country_code.as_str()
     })
     .fetch_one(tx.as_mut())
     .await
@@ -624,6 +653,9 @@ pub async fn update_customer(
         notes: profile_row
             .get::<Option<String>, _>("notes")
             .unwrap_or_default(),
+        country_code: profile_row
+            .get::<Option<String>, _>("country_code")
+            .unwrap_or_else(|| "JP".to_string()),
         created_at: chrono_to_timestamp(Some(
             profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
         )),
@@ -664,6 +696,7 @@ pub async fn update_customer(
                     "phone": profile.phone.clone(),
                     "status": profile.status.clone(),
                     "notes": profile.notes.clone(),
+                    "country_code": profile.country_code.clone(),
                 }
             }),
         },
@@ -871,7 +904,7 @@ pub async fn upsert_customer_identity(
 pub async fn upsert_customer_address(
     state: &AppState,
     customer_id: String,
-    address: pb::CustomerAddressInput,
+    mut address: pb::CustomerAddressInput,
     actor: Option<pb::ActorContext>,
 ) -> CustomerResult<pb::CustomerAddress> {
     if address.r#type.is_empty()
@@ -884,6 +917,9 @@ pub async fn upsert_customer_address(
         return Err(CustomerError::InvalidArgument(
             "address required fields are missing".to_string(),
         ));
+    }
+    if address.country_code.is_empty() {
+        address.country_code = "JP".to_string();
     }
 
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
@@ -898,8 +934,8 @@ pub async fn upsert_customer_address(
         sqlx::query(
             r#"
             INSERT INTO customer_addresses
-                (id, customer_id, type, name, postal_code, prefecture, city, line1, line2, phone)
-            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+                (id, customer_id, type, name, postal_code, prefecture, city, line1, line2, phone, country_code)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
             "#,
         )
         .bind(address_id)
@@ -920,6 +956,11 @@ pub async fn upsert_customer_address(
         } else {
             Some(address.phone.clone())
         })
+        .bind(if address.country_code.is_empty() {
+            "JP"
+        } else {
+            address.country_code.as_str()
+        })
         .execute(tx.as_mut())
         .await
         .map_err(CustomerError::from)?;
@@ -928,8 +969,8 @@ pub async fn upsert_customer_address(
             r#"
             UPDATE customer_addresses
             SET type = $1, name = $2, postal_code = $3, prefecture = $4, city = $5,
-                line1 = $6, line2 = $7, phone = $8, updated_at = now()
-            WHERE id = $9 AND customer_id = $10
+                line1 = $6, line2 = $7, phone = $8, country_code = $9, updated_at = now()
+            WHERE id = $10 AND customer_id = $11
             "#,
         )
         .bind(&address.r#type)
@@ -947,6 +988,11 @@ pub async fn upsert_customer_address(
             None
         } else {
             Some(address.phone.clone())
+        })
+        .bind(if address.country_code.is_empty() {
+            "JP"
+        } else {
+            address.country_code.as_str()
         })
         .bind(address_id)
         .bind(customer_uuid)
@@ -966,6 +1012,11 @@ pub async fn upsert_customer_address(
         line1: address.line1,
         line2: address.line2,
         phone: address.phone,
+        country_code: if address.country_code.is_empty() {
+            "JP".to_string()
+        } else {
+            address.country_code
+        },
         created_at: None,
         updated_at: None,
     };

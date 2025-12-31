@@ -4,6 +4,7 @@ use axum::{
     extract::Extension,
     extract::State,
     http::{HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
 };
 
 use crate::{
@@ -20,18 +21,18 @@ pub async fn sign_in(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, HeaderMap, Json<pb::IdentitySignInResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<Response, (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentitySignInRequest>(&headers, body)?;
     let result = identity::service::sign_in_with_refresh(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
     let cookie_name = refresh_cookie_name(&result.response.store_id);
-    let mut headers = HeaderMap::new();
-    headers.insert(
+    let mut response = Json(result.response).into_response();
+    response.headers_mut().insert(
         axum::http::header::SET_COOKIE,
         build_refresh_cookie(&cookie_name, &result.refresh_token, REFRESH_TOKEN_MAX_AGE),
     );
-    Ok((StatusCode::OK, headers, Json(result.response)))
+    Ok(response)
 }
 
 pub async fn sign_out(
@@ -40,7 +41,7 @@ pub async fn sign_out(
     Extension(auth_ctx): Extension<Option<AuthContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, HeaderMap, Json<pb::IdentitySignOutResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<Response, (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentitySignOutRequest>(&headers, body)?;
     let store_id_from_auth = auth_ctx.as_ref().and_then(|ctx| ctx.store_id.clone());
     let session_id = auth_ctx.and_then(|ctx| ctx.session_id);
@@ -54,21 +55,21 @@ pub async fn sign_out(
         .map_err(|err| err.into_connect())?;
     if let Some(store_id) = store_id {
         let cookie_name = refresh_cookie_name(&store_id);
-        let mut headers = HeaderMap::new();
-        headers.insert(
+        let mut response = Json(resp).into_response();
+        response.headers_mut().insert(
             axum::http::header::SET_COOKIE,
             clear_refresh_cookie(&cookie_name),
         );
-        return Ok((StatusCode::OK, headers, Json(resp)));
+        return Ok(response);
     }
-    Ok((StatusCode::OK, HeaderMap::new(), Json(resp)))
+    Ok(Json(resp).into_response())
 }
 
 pub async fn refresh_token(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, HeaderMap, Json<pb::IdentityRefreshTokenResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<Response, (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityRefreshTokenRequest>(&headers, body)?;
     let store_id = req
         .store
@@ -88,12 +89,12 @@ pub async fn refresh_token(
     let result = identity::service::refresh_token(&state, req, refresh_token)
         .await
         .map_err(|err| err.into_connect())?;
-    let mut resp_headers = HeaderMap::new();
-    resp_headers.insert(
+    let mut response = Json(result.response).into_response();
+    response.headers_mut().insert(
         axum::http::header::SET_COOKIE,
         build_refresh_cookie(&cookie_name, &result.refresh_token, REFRESH_TOKEN_MAX_AGE),
     );
-    Ok((StatusCode::OK, resp_headers, Json(result.response)))
+    Ok(response)
 }
 
 pub async fn create_staff(

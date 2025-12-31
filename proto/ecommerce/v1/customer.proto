@@ -31,8 +31,9 @@ message CustomerProfile {
   string phone = 6;
   string status = 7;
   string notes = 8;
-  google.protobuf.Timestamp created_at = 9;
-  google.protobuf.Timestamp updated_at = 10;
+  string country_code = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
 }
 
 message CustomerIdentity {
@@ -57,8 +58,9 @@ message CustomerAddress {
   string line1 = 8;
   string line2 = 9;
   string phone = 10;
-  google.protobuf.Timestamp created_at = 11;
-  google.protobuf.Timestamp updated_at = 12;
+  string country_code = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
 }
 
 message CustomerSummary {
@@ -78,6 +80,7 @@ message CustomerProfileInput {
   string phone = 3;
   string status = 4;
   string notes = 5;
+  string country_code = 6;
 }
 
 message CustomerIdentityInput {
@@ -104,6 +107,7 @@ message CustomerAddressInput {
   string line1 = 7;
   string line2 = 8;
   string phone = 9;
+  string country_code = 10;
 }
 
 message ListCustomersRequest {

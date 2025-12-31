@@ -32,6 +32,7 @@ pub fn router(state: AppState) -> Router<()> {
             axum::http::header::HeaderName::from_static("x-actor-id"),
             axum::http::header::HeaderName::from_static("x-actor-type"),
             axum::http::header::HeaderName::from_static("x-request-id"),
+            axum::http::header::HeaderName::from_static("x-refresh-attempt"),
             axum::http::header::HeaderName::from_static("connect-protocol-version"),
             axum::http::header::HeaderName::from_static("connect-timeout-ms"),
         ])

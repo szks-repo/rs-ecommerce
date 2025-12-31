@@ -17,12 +17,19 @@ import { useToast } from "@/components/ui/toast";
 import { createCustomer } from "@/lib/customer";
 import { formatConnectError } from "@/lib/handle-error";
 
+const COUNTRY_OPTIONS = [
+  { code: "JP", label: "Japan (JP)" },
+  { code: "US", label: "United States (US)" },
+  { code: "GB", label: "United Kingdom (GB)" },
+];
+
 export default function CustomerCreateForm() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("active");
+  const [countryCode, setCountryCode] = useState("JP");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
 
@@ -39,6 +46,7 @@ export default function CustomerCreateForm() {
         phone: phone || undefined,
         status,
         notes: notes || undefined,
+        countryCode,
       });
       push({
         variant: "success",
@@ -52,6 +60,7 @@ export default function CustomerCreateForm() {
       setPhone("");
       setNotes("");
       setStatus("active");
+      setCountryCode("JP");
     } catch (err) {
       const uiError = formatConnectError(err, "Create failed", "Failed to create customer");
       push({
@@ -112,6 +121,21 @@ export default function CustomerCreateForm() {
               <SelectContent>
                 <SelectItem value="active">active</SelectItem>
                 <SelectItem value="inactive">inactive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Country</Label>
+            <Select value={countryCode} onValueChange={setCountryCode}>
+              <SelectTrigger className="bg-white">
+                <SelectValue placeholder="Select country" />
+              </SelectTrigger>
+              <SelectContent>
+                {COUNTRY_OPTIONS.map((country) => (
+                  <SelectItem key={country.code} value={country.code}>
+                    {country.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

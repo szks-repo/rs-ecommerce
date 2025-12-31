@@ -38,6 +38,7 @@ export async function createCustomer(params: {
   phone?: string;
   status?: string;
   notes?: string;
+  countryCode?: string;
   identities?: { identityType: string; identityValue: string; verified?: boolean }[];
 }) {
   const profile = create(CustomerProfileInputSchema, {
@@ -46,6 +47,7 @@ export async function createCustomer(params: {
     phone: params.phone || "",
     status: params.status || "active",
     notes: params.notes || "",
+    countryCode: params.countryCode || "JP",
   });
   const identities = (params.identities || []).map((identity) =>
     create(CustomerIdentityInputSchema, {
@@ -69,6 +71,7 @@ export async function updateCustomer(params: {
   phone?: string;
   status?: string;
   notes?: string;
+  countryCode?: string;
   customerStatus?: string;
 }) {
   const profile = create(CustomerProfileInputSchema, {
@@ -77,6 +80,7 @@ export async function updateCustomer(params: {
     phone: params.phone || "",
     status: params.status || "active",
     notes: params.notes || "",
+    countryCode: params.countryCode || "JP",
   });
   return client.updateCustomer(
     create(UpdateCustomerRequestSchema, {
@@ -121,6 +125,7 @@ export async function upsertCustomerAddress(params: {
   line1: string;
   line2?: string;
   phone?: string;
+  countryCode?: string;
 }) {
   const address = create(CustomerAddressInputSchema, {
     id: params.id || "",
@@ -132,6 +137,7 @@ export async function upsertCustomerAddress(params: {
     line1: params.line1,
     line2: params.line2 || "",
     phone: params.phone || "",
+    countryCode: params.countryCode || "JP",
   });
   return client.upsertCustomerAddress(
     create(UpsertCustomerAddressRequestSchema, {

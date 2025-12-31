@@ -20,6 +20,26 @@ import { getCustomer, updateCustomer, upsertCustomerIdentity, upsertCustomerAddr
 import type { CustomerAddress, CustomerIdentity } from "@/gen/ecommerce/v1/customer_pb";
 import { formatConnectError } from "@/lib/handle-error";
 
+const COUNTRY_OPTIONS = [
+  { code: "JP", label: "Japan (JP)" },
+  { code: "US", label: "United States (US)" },
+  { code: "GB", label: "United Kingdom (GB)" },
+];
+
+const JP_POSTAL_LOOKUP: Record<string, { prefecture: string; city: string; line1?: string }> = {
+  "100-0001": { prefecture: "東京都", city: "千代田区" },
+  "150-0001": { prefecture: "東京都", city: "渋谷区" },
+  "530-0001": { prefecture: "大阪府", city: "大阪市北区" },
+};
+
+function normalizePostalCodeJP(value: string): string | null {
+  const digits = value.replace(/[^0-9]/g, "");
+  if (digits.length !== 7) {
+    return null;
+  }
+  return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+}
+
 export default function CustomerDetailPage() {
   const params = useParams<{ customerId: string }>();
   const router = useRouter();
@@ -33,6 +53,7 @@ export default function CustomerDetailPage() {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("active");
+  const [countryCode, setCountryCode] = useState("JP");
   const [customerStatus, setCustomerStatus] = useState("active");
   const [identities, setIdentities] = useState<CustomerIdentity[]>([]);
   const [addresses, setAddresses] = useState<CustomerAddress[]>([]);
@@ -50,6 +71,7 @@ export default function CustomerDetailPage() {
   const [addressLine1, setAddressLine1] = useState("");
   const [addressLine2, setAddressLine2] = useState("");
   const [addressPhone, setAddressPhone] = useState("");
+  const [addressCountryCode, setAddressCountryCode] = useState("JP");
   const [isSavingAddress, setIsSavingAddress] = useState(false);
 
   useEffect(() => {
@@ -63,6 +85,7 @@ export default function CustomerDetailPage() {
         setPhone(profile?.phone ?? "");
         setNotes(profile?.notes ?? "");
         setStatus(profile?.status ?? "active");
+        setCountryCode(profile?.countryCode || "JP");
         setCustomerStatus(resp.customer?.status ?? "active");
         setIdentities(resp.identities ?? []);
         setAddresses(resp.addresses ?? []);
@@ -100,6 +123,7 @@ export default function CustomerDetailPage() {
         phone: phone || undefined,
         status,
         notes: notes || undefined,
+        countryCode,
         customerStatus,
       });
       push({
@@ -173,6 +197,7 @@ export default function CustomerDetailPage() {
         line1: addressLine1,
         line2: addressLine2 || undefined,
         phone: addressPhone || undefined,
+        countryCode: addressCountryCode,
       });
       push({
         variant: "success",
@@ -188,6 +213,7 @@ export default function CustomerDetailPage() {
       setAddressLine1("");
       setAddressLine2("");
       setAddressPhone("");
+      setAddressCountryCode("JP");
       await reloadCustomer();
     } catch (err) {
       const uiError = formatConnectError(err, "Address save failed", "Failed to save address");
@@ -253,7 +279,7 @@ export default function CustomerDetailPage() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-3">
               <div className="space-y-2">
                 <Label>Profile Status</Label>
                 <Select value={status} onValueChange={setStatus}>
@@ -275,6 +301,21 @@ export default function CustomerDetailPage() {
                   <SelectContent>
                     <SelectItem value="active">active</SelectItem>
                     <SelectItem value="inactive">inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Select value={countryCode} onValueChange={setCountryCode}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_OPTIONS.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -407,7 +448,7 @@ export default function CustomerDetailPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm text-neutral-700">
           <form className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50 p-3" onSubmit={handleSaveAddress}>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-4">
               <div className="space-y-2">
                 <Label>Type</Label>
                 <Select value={addressType} onValueChange={setAddressType}>
@@ -417,6 +458,21 @@ export default function CustomerDetailPage() {
                   <SelectContent>
                     <SelectItem value="shipping">shipping</SelectItem>
                     <SelectItem value="billing">billing</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Country</Label>
+                <Select value={addressCountryCode} onValueChange={setAddressCountryCode}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {COUNTRY_OPTIONS.map((country) => (
+                      <SelectItem key={country.code} value={country.code}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -436,10 +492,30 @@ export default function CustomerDetailPage() {
                   id="postalCode"
                   value={addressPostalCode}
                   onChange={(event) => setAddressPostalCode(event.target.value)}
+                  onBlur={() => {
+                    if (addressCountryCode !== "JP") {
+                      return;
+                    }
+                    const normalized = normalizePostalCodeJP(addressPostalCode);
+                    if (!normalized) {
+                      return;
+                    }
+                    setAddressPostalCode(normalized);
+                    const hit = JP_POSTAL_LOOKUP[normalized];
+                    if (hit) {
+                      setAddressPrefecture(hit.prefecture);
+                      setAddressCity(hit.city);
+                      if (hit.line1) {
+                        setAddressLine1(hit.line1);
+                      }
+                    }
+                  }}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="prefecture">Prefecture</Label>
+                <Label htmlFor="prefecture">
+                  {addressCountryCode === "JP" ? "Prefecture" : "State/Region"}
+                </Label>
                 <Input
                   id="prefecture"
                   value={addressPrefecture}
@@ -500,6 +576,7 @@ export default function CustomerDetailPage() {
                       setAddressLine1("");
                       setAddressLine2("");
                       setAddressPhone("");
+                      setAddressCountryCode("JP");
                     }}
                   >
                     Cancel
@@ -522,7 +599,7 @@ export default function CustomerDetailPage() {
                       {address.type.toUpperCase()} - {address.name}
                     </div>
                     <div className="text-xs text-neutral-500">
-                      {address.postalCode} {address.prefecture} {address.city} {address.line1}{" "}
+                      {address.countryCode || "JP"} {address.postalCode} {address.prefecture} {address.city} {address.line1}{" "}
                       {address.line2 || ""}
                     </div>
                     <div className="text-xs text-neutral-500">phone: {address.phone || "-"}</div>
@@ -541,6 +618,7 @@ export default function CustomerDetailPage() {
                       setAddressLine1(address.line1);
                       setAddressLine2(address.line2 || "");
                       setAddressPhone(address.phone || "");
+                      setAddressCountryCode(address.countryCode || "JP");
                     }}
                   >
                     Edit

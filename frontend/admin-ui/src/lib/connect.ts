@@ -19,11 +19,11 @@ const authInterceptor: Interceptor = (next) => async (req) => {
       rawResponse?.status ??
       (err as { status?: number })?.status ??
       (err as { httpStatus?: number })?.httpStatus;
-    const shouldLogout = code === ErrorCode.ERROR_CODE_UNAUTHENTICATED && status === 401;
+    const shouldRefresh = code === ErrorCode.ERROR_CODE_UNAUTHENTICATED || status === 401;
     const isRefreshRequest = typeof req.url === "string" && req.url.includes("IdentityService/RefreshToken");
     const alreadyRetried = req.header.get("x-refresh-attempt") === "1";
 
-    if (shouldLogout && !isRefreshRequest && !alreadyRetried) {
+    if (shouldRefresh && !isRefreshRequest && !alreadyRetried) {
       const refreshed = await refreshAccessToken();
       if (refreshed?.accessToken) {
         req.header.set("Authorization", `Bearer ${refreshed.accessToken}`);
@@ -32,7 +32,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
       }
     }
 
-    if (shouldLogout && typeof window !== "undefined") {
+    if (shouldRefresh && typeof window !== "undefined") {
       setAuthFlashMessage({
         variant: "error",
         title: "Session expired",
@@ -53,6 +53,9 @@ const transport = createConnectTransport({
   interceptors: [authInterceptor],
   fetchOptions: {
     credentials: "include",
+  },
+  fetch: (input, init) => {
+    return fetch(input, { ...init, credentials: "include" });
   },
 });
 
