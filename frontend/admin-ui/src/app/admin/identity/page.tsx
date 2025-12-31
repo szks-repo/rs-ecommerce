@@ -2,6 +2,7 @@ import StaffCreateForm from "@/components/staff-create-form";
 import StaffListForm from "@/components/staff-list-form";
 import StaffInviteForm from "@/components/staff-invite-form";
 import OwnerTransferForm from "@/components/owner-transfer-form";
+import StaffSessionList from "@/components/staff-session-list";
 
 export default function IdentityPage() {
   return (
@@ -14,6 +15,10 @@ export default function IdentityPage() {
         <StaffListForm />
         <StaffInviteForm />
         <OwnerTransferForm />
+      </div>
+
+      <div className="mt-8">
+        <StaffSessionList />
       </div>
 
       <div className="mt-8 rounded-lg border border-neutral-200 bg-white p-6 text-sm text-neutral-600">

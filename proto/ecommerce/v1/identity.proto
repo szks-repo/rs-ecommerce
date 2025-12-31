@@ -8,6 +8,9 @@ import "google/protobuf/timestamp.proto";
 service IdentityService {
   rpc SignIn(IdentitySignInRequest) returns (IdentitySignInResponse);
   rpc SignOut(IdentitySignOutRequest) returns (IdentitySignOutResponse);
+  rpc RefreshToken(IdentityRefreshTokenRequest) returns (IdentityRefreshTokenResponse);
+  rpc ListStaffSessions(IdentityListStaffSessionsRequest) returns (IdentityListStaffSessionsResponse);
+  rpc ForceSignOutStaff(IdentityForceSignOutStaffRequest) returns (IdentityForceSignOutStaffResponse);
   rpc CreateStaff(IdentityCreateStaffRequest) returns (IdentityCreateStaffResponse);
   rpc ListStaff(IdentityListStaffRequest) returns (IdentityListStaffResponse);
   rpc UpdateStaff(IdentityUpdateStaffRequest) returns (IdentityUpdateStaffResponse);
@@ -46,6 +49,53 @@ message IdentitySignOutRequest {
 
 message IdentitySignOutResponse {
   bool signed_out = 1;
+}
+
+message IdentityRefreshTokenRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message IdentityRefreshTokenResponse {
+  string access_token = 1;
+  string store_id = 2;
+  string tenant_id = 3;
+  string staff_id = 4;
+  string role = 5;
+  google.protobuf.Timestamp expires_at = 6;
+}
+
+message IdentityStaffSession {
+  string session_id = 1;
+  string staff_id = 2;
+  string display_name = 3;
+  string email = 4;
+  string role_key = 5;
+  string status = 6;
+  string ip_address = 7;
+  string user_agent = 8;
+  google.protobuf.Timestamp last_seen_at = 9;
+  google.protobuf.Timestamp created_at = 10;
+}
+
+message IdentityListStaffSessionsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message IdentityListStaffSessionsResponse {
+  repeated IdentityStaffSession sessions = 1;
+}
+
+message IdentityForceSignOutStaffRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string staff_id = 3;
+  ActorContext actor = 4;
+}
+
+message IdentityForceSignOutStaffResponse {
+  bool revoked = 1;
 }
 
 message IdentityCreateStaffRequest {

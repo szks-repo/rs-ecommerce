@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
+import { consumeAuthFlashMessage } from "@/lib/auth";
 import { identitySignIn } from "@/lib/identity";
 import { formatConnectError } from "@/lib/handle-error";
 
@@ -25,7 +26,11 @@ export default function LoginPage() {
     if (saved) {
       setStoreCode(saved);
     }
-  }, []);
+    const flash = consumeAuthFlashMessage();
+    if (flash) {
+      push(flash);
+    }
+  }, [push]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

@@ -11,17 +11,19 @@ use crate::AppState;
 
 pub(crate) mod actor;
 mod audit;
+mod auction;
 mod backoffice;
 mod customer;
 mod identity;
 pub mod json;
 mod permissions;
 pub mod request_context;
+mod session;
 mod setup;
 mod store_settings;
 mod storefront;
 
-pub fn router() -> Router<AppState> {
+pub fn router(state: AppState) -> Router<()> {
     let cors = CorsLayer::new()
         .allow_methods([Method::POST, Method::OPTIONS])
         .allow_headers([
@@ -33,6 +35,7 @@ pub fn router() -> Router<AppState> {
             axum::http::header::HeaderName::from_static("connect-protocol-version"),
             axum::http::header::HeaderName::from_static("connect-timeout-ms"),
         ])
+        .allow_credentials(true)
         .allow_origin([
             HeaderValue::from_static("http://localhost:3000"),
             HeaderValue::from_static("http://127.0.0.1:3000"),
@@ -117,6 +120,70 @@ pub fn router() -> Router<AppState> {
                     next,
                     permissions::PermissionKey::CatalogRead,
                 )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListSkus",
+            post(backoffice::list_skus).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/ListAuctions",
+            post(auction::list_auctions).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/GetAuction",
+            post(auction::get_auction).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/ListBids",
+            post(auction::list_bids).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/CreateAuction",
+            post(auction::create_auction).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/PlaceBid",
+            post(auction::place_bid).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/CloseAuction",
+            post(auction::close_auction).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/ApproveAuction",
+            post(auction::approve_auction).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/GetAuctionSettings",
+            post(auction::get_auction_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/UpdateAuctionSettings",
+            post(auction::update_auction_settings).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
             })),
         )
         .route(
@@ -491,6 +558,10 @@ pub fn router() -> Router<AppState> {
             post(identity::sign_out),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/RefreshToken",
+            post(identity::refresh_token),
+        )
+        .route(
             "/rpc/ecommerce.v1.IdentityService/CreateStaff",
             post(identity::create_staff).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(
@@ -573,6 +644,26 @@ pub fn router() -> Router<AppState> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/ListStaffSessions",
+            post(identity::list_staff_sessions).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::StaffManage,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.IdentityService/ForceSignOutStaff",
+            post(identity::force_sign_out_staff).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::StaffManage,
+                )
+            })),
+        )
+        .route(
             "/rpc/ecommerce.v1.IdentityService/UpdateStaff",
             post(identity::update_staff).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(
@@ -623,6 +714,10 @@ pub fn router() -> Router<AppState> {
             })),
         )
         .layer(middleware::from_fn(request_context::inject_request_context))
+        .layer(middleware::from_fn_with_state(
+            state.clone(),
+            session::require_active_staff_session,
+        ))
         .layer(middleware::from_fn(actor::inject_actor))
         .layer(
             TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
@@ -641,4 +736,5 @@ pub fn router() -> Router<AppState> {
             }),
         )
         .layer(cors)
+        .with_state(state)
 }

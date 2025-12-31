@@ -24,6 +24,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/products">
                     Products
                   </a>
+                  <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/auctions">
+                    Auctions
+                  </a>
                   <a className="block rounded-lg px-3 py-2 hover:bg-neutral-100" href="/admin/customers">
                     Customers
                   </a>

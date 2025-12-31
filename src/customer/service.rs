@@ -440,7 +440,7 @@ pub async fn create_customer(
     let _ = audit::record_tx(
         &mut tx,
         audit_input(
-            customer.tenant_id.clone(),
+            Some(store_id.clone()),
             CustomerAuditAction::Create.into(),
             Some("customer"),
             Some(customer.id.clone()),
@@ -635,7 +635,7 @@ pub async fn update_customer(
     let _ = audit::record_tx(
         &mut tx,
         audit_input(
-            customer.tenant_id.clone(),
+            Some(store_id.clone()),
             CustomerAuditAction::Update.into(),
             Some("customer_profile"),
             Some(profile.id.clone()),
@@ -746,7 +746,7 @@ pub async fn upsert_customer_identity(
         let _ = audit::record_tx(
             &mut tx,
             audit_input(
-                updated.tenant_id.clone(),
+                None,
                 CustomerAuditAction::IdentityUpsert.into(),
                 Some("customer_identity"),
                 Some(updated.id.clone()),
@@ -830,7 +830,7 @@ pub async fn upsert_customer_identity(
     let _ = audit::record_tx(
         &mut tx,
         audit_input(
-            created.tenant_id.clone(),
+            None,
             CustomerAuditAction::IdentityUpsert.into(),
             Some("customer_identity"),
             Some(created.id.clone()),
@@ -986,7 +986,7 @@ pub async fn upsert_customer_address(
     let _ = audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            None,
             CustomerAuditAction::AddressUpsert.into(),
             Some("customer_address"),
             Some(updated.id.clone()),

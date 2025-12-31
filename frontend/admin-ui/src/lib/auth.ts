@@ -6,6 +6,13 @@ type StoreSession = {
 
 const STORE_TOKENS_KEY = "store_tokens";
 const ACTIVE_STORE_KEY = "active_store_id";
+const AUTH_FLASH_KEY = "auth_flash_message";
+
+type AuthFlashMessage = {
+  title: string;
+  description: string;
+  variant: "success" | "error";
+};
 
 function readStoreTokens(): Record<string, StoreSession> {
   if (typeof window === "undefined") {
@@ -85,4 +92,72 @@ export function getActiveTenantId(): string | null {
     return null;
   }
   return window.sessionStorage.getItem("tenant_id");
+}
+
+export function setAuthFlashMessage(message: AuthFlashMessage) {
+  if (typeof window === "undefined") {
+    return;
+  }
+  window.sessionStorage.setItem(AUTH_FLASH_KEY, JSON.stringify(message));
+}
+
+export function consumeAuthFlashMessage(): AuthFlashMessage | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const raw = window.sessionStorage.getItem(AUTH_FLASH_KEY);
+  if (!raw) {
+    return null;
+  }
+  window.sessionStorage.removeItem(AUTH_FLASH_KEY);
+  try {
+    return JSON.parse(raw) as AuthFlashMessage;
+  } catch {
+    return null;
+  }
+}
+
+export async function refreshAccessToken(): Promise<StoreSession | null> {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const storeId = getActiveStoreId();
+  const tenantId = getActiveTenantId() || "";
+  if (!storeId) {
+    return null;
+  }
+
+  const { API_BASE } = await import("@/lib/api");
+  const resp = await fetch(`${API_BASE}/ecommerce.v1.IdentityService/RefreshToken`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      "Connect-Protocol-Version": "1",
+    },
+    body: JSON.stringify({
+      store: { storeId },
+      tenant: tenantId ? { tenantId } : undefined,
+    }),
+  });
+
+  if (!resp.ok) {
+    return null;
+  }
+  const data = (await resp.json()) as {
+    accessToken?: string;
+    storeId?: string;
+    tenantId?: string;
+  };
+  if (!data.accessToken || !data.storeId) {
+    return null;
+  }
+  const session: StoreSession = {
+    storeId: data.storeId,
+    tenantId: data.tenantId || "",
+    accessToken: data.accessToken,
+  };
+  saveStoreSession(session);
+  setActiveStore(session.storeId, session.tenantId, session.accessToken);
+  return session;
 }

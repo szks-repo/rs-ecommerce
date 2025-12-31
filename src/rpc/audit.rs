@@ -8,7 +8,7 @@ use axum::{
 use crate::{
     AppState, audit,
     pb::pb,
-    rpc::json::{ConnectError, parse_request, require_tenant_id},
+    rpc::json::{ConnectError, parse_request, require_store_id},
     shared::audit_action::AuditAction,
 };
 
@@ -18,8 +18,8 @@ pub async fn list_audit_logs(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::ListAuditLogsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListAuditLogsRequest>(&headers, body)?;
-    let tenant_id = require_tenant_id(req.tenant.clone())?;
-    let (logs, page) = audit::service::list_audit_logs(&state, tenant_id, req).await?;
+    let store_id = require_store_id(req.store.clone())?;
+    let (logs, page) = audit::service::list_audit_logs(&state, store_id, req).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListAuditLogsResponse {
@@ -92,6 +92,10 @@ fn audit_action_type(action: &AuditAction) -> i32 {
         AuditAction::TaxRuleDelete => pb::AuditActionType::AuditActionTaxRuleDelete as i32,
         AuditAction::PromotionCreate => pb::AuditActionType::AuditActionPromotionCreate as i32,
         AuditAction::PromotionUpdate => pb::AuditActionType::AuditActionPromotionUpdate as i32,
+        AuditAction::AuctionCreate => pb::AuditActionType::AuditActionAuctionCreate as i32,
+        AuditAction::AuctionBid => pb::AuditActionType::AuditActionAuctionBid as i32,
+        AuditAction::AuctionEnd => pb::AuditActionType::AuditActionAuctionEnd as i32,
+        AuditAction::AuctionApprove => pb::AuditActionType::AuditActionAuctionApprove as i32,
         AuditAction::OrderUpdateStatus => pb::AuditActionType::AuditActionOrderUpdateStatus as i32,
         AuditAction::ShipmentCreate => pb::AuditActionType::AuditActionShipmentCreate as i32,
         AuditAction::ShipmentUpdateStatus => {

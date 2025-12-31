@@ -78,7 +78,7 @@ pub async fn upsert_tax_rule(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             TaxRuleAuditAction::Upsert.into(),
             Some("tax_rule"),
             Some(updated.id.clone()),
@@ -122,7 +122,7 @@ pub async fn delete_tax_rule(
         audit::record_tx(
             &mut tx,
             audit_input(
-                tenant_id.clone(),
+                Some(store_id.clone()),
                 TaxRuleAuditAction::Delete.into(),
                 Some("tax_rule"),
                 Some(rule_id),

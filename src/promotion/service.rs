@@ -57,7 +57,7 @@ pub async fn create_promotion(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            None,
             PromotionAuditAction::Create.into(),
             Some("promotion"),
             Some(promotion.id.clone()),
@@ -120,7 +120,7 @@ pub async fn update_promotion(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            None,
             PromotionAuditAction::Update.into(),
             Some("promotion"),
             Some(promotion.id.clone()),

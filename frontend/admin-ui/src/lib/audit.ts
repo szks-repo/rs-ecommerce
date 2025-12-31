@@ -5,7 +5,7 @@ import {
   ListAuditLogsRequestSchema,
   ListAuditActionsRequestSchema,
 } from "@/gen/ecommerce/v1/audit_pb";
-import { getActiveTenantId } from "@/lib/auth";
+import { getActiveStoreId } from "@/lib/auth";
 
 const client = createServiceClient(AuditService);
 
@@ -18,13 +18,13 @@ export async function listAuditLogs(params?: {
   pageToken?: string;
   pageSize?: number;
 }) {
-  const tenantId = getActiveTenantId();
-  if (!tenantId) {
-    throw new Error("tenant_id is missing. Please sign in again.");
+  const storeId = getActiveStoreId();
+  if (!storeId) {
+    throw new Error("store_id is missing. Please sign in again.");
   }
   return client.listAuditLogs(
     create(ListAuditLogsRequestSchema, {
-      tenant: { tenantId },
+      store: { storeId },
       action: params?.action ?? "",
       actorId: params?.actorId ?? "",
       actorType: params?.actorType ?? "",

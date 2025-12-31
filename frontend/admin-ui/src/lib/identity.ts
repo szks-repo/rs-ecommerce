@@ -10,6 +10,8 @@ import {
   IdentityUpdateStaffRequestSchema,
   IdentityInviteStaffRequestSchema,
   IdentityTransferOwnerRequestSchema,
+  IdentityListStaffSessionsRequestSchema,
+  IdentityForceSignOutStaffRequestSchema,
   IdentityListRolesRequestSchema,
   IdentityListRolesWithPermissionsRequestSchema,
   IdentityUpdateRoleRequestSchema,
@@ -77,6 +79,20 @@ export async function identityCreateStaff(params: {
 export async function identityListStaff() {
   return client.listStaff(
     create(IdentityListStaffRequestSchema, {})
+  );
+}
+
+export async function identityListStaffSessions() {
+  return client.listStaffSessions(
+    create(IdentityListStaffSessionsRequestSchema, {})
+  );
+}
+
+export async function identityForceSignOutStaff(params: { staffId: string }) {
+  return client.forceSignOutStaff(
+    create(IdentityForceSignOutStaffRequestSchema, {
+      staffId: params.staffId,
+    })
   );
 }
 

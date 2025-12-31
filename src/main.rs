@@ -1,8 +1,9 @@
-use axum::{Json, extract::State, http::StatusCode, routing::get};
+use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
 use rs_common::telemetry;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 
 mod audit;
+mod auction;
 mod cart;
 mod customer;
 mod identity;
@@ -36,9 +37,11 @@ async fn main() -> Result<(), anyhow::Error> {
         .await
         .expect("meilisearch settings");
 
-    let app = rpc::router()
+    let app_state = AppState { db, search };
+    let app = Router::new()
         .route("/health", get(health))
-        .with_state(AppState { db, search });
+        .with_state(app_state.clone())
+        .merge(rpc::router(app_state));
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await

@@ -120,7 +120,7 @@ pub async fn update_order_status(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            None,
             OrderAuditAction::UpdateStatus.into(),
             Some("order"),
             Some(order.id.clone()),
@@ -171,7 +171,7 @@ pub async fn create_shipment(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id,
+            None,
             ShipmentAuditAction::Create.into(),
             Some("shipment"),
             Some(shipment.id.clone()),
@@ -228,7 +228,7 @@ pub async fn update_shipment_status(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id,
+            None,
             ShipmentAuditAction::UpdateStatus.into(),
             Some("shipment"),
             Some(shipment.id.clone()),

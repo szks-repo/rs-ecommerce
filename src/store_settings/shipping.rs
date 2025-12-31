@@ -95,7 +95,7 @@ pub async fn upsert_shipping_zone(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             ShippingZoneAuditAction::Upsert.into(),
             Some("shipping_zone"),
             Some(updated.id.clone()),
@@ -137,7 +137,7 @@ pub async fn delete_shipping_zone(
         audit::record_tx(
             &mut tx,
             audit_input(
-                tenant_id.clone(),
+                Some(store_id.clone()),
                 ShippingZoneAuditAction::Delete.into(),
                 Some("shipping_zone"),
                 Some(zone_id),
@@ -187,7 +187,7 @@ pub async fn list_shipping_rates(
 
 pub async fn upsert_shipping_rate(
     state: &AppState,
-    _store_id: String,
+    store_id: String,
     tenant_id: String,
     rate: pb::ShippingRate,
     actor: Option<pb::ActorContext>,
@@ -246,7 +246,7 @@ pub async fn upsert_shipping_rate(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             ShippingRateAuditAction::Upsert.into(),
             Some("shipping_rate"),
             Some(updated.id.clone()),
@@ -290,7 +290,7 @@ pub async fn delete_shipping_rate(
         audit::record_tx(
             &mut tx,
             audit_input(
-                tenant_id.clone(),
+                Some(store_id.clone()),
                 ShippingRateAuditAction::Delete.into(),
                 Some("shipping_rate"),
                 Some(rate_id),

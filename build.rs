@@ -24,6 +24,7 @@ fn main() {
         "proto/ecommerce/v1/permissions.proto",
         "proto/ecommerce/v1/identity.proto",
         "proto/ecommerce/v1/customer.proto",
+        "proto/ecommerce/v1/auction.proto",
     ];
     let includes = &["proto"];
 

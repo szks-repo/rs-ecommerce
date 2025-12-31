@@ -1,7 +1,7 @@
 use crate::{infrastructure::audit, pb::pb, shared::audit_action::AuditAction};
 
 pub fn audit_input(
-    tenant_id: String,
+    store_id: Option<String>,
     action: AuditAction,
     target_type: Option<&str>,
     target_id: Option<String>,
@@ -11,7 +11,7 @@ pub fn audit_input(
 ) -> audit::AuditInput {
     let (actor_id, actor_type) = actor_fields(actor);
     audit::AuditInput {
-        tenant_id,
+        store_id,
         actor_id,
         actor_type,
         action,

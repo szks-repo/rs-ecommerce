@@ -48,6 +48,10 @@ enum AuditActionType {
   AUDIT_ACTION_IDENTITY_ROLE_DELETE = 34;
   AUDIT_ACTION_IDENTITY_STAFF_INVITE = 35;
   AUDIT_ACTION_IDENTITY_OWNER_TRANSFER = 36;
+  AUDIT_ACTION_AUCTION_CREATE = 37;
+  AUDIT_ACTION_AUCTION_BID = 38;
+  AUDIT_ACTION_AUCTION_END = 39;
+  AUDIT_ACTION_AUCTION_APPROVE = 40;
 }
 
 message AuditActionItem {
@@ -64,22 +68,23 @@ message ListAuditActionsResponse {
 
 message AuditLog {
   string id = 1;
-  string actor_id = 2;
-  string actor_type = 3;
-  string action = 4;
-  string target_type = 5;
-  string target_id = 6;
-  string request_id = 7;
-  string ip_address = 8;
-  string user_agent = 9;
-  string before_json = 10;
-  string after_json = 11;
-  string metadata_json = 12;
-  google.protobuf.Timestamp created_at = 13;
+  string store_id = 2;
+  string actor_id = 3;
+  string actor_type = 4;
+  string action = 5;
+  string target_type = 6;
+  string target_id = 7;
+  string request_id = 8;
+  string ip_address = 9;
+  string user_agent = 10;
+  string before_json = 11;
+  string after_json = 12;
+  string metadata_json = 13;
+  google.protobuf.Timestamp created_at = 14;
 }
 
 message ListAuditLogsRequest {
-  TenantContext tenant = 1;
+  StoreContext store = 1;
   string actor_id = 2;
   string actor_type = 3;
   string action = 4;

@@ -195,6 +195,61 @@ pub async fn list_variants_admin(
         .collect())
 }
 
+pub async fn list_skus_admin(
+    state: &AppState,
+    tenant: Option<pb::TenantContext>,
+    store: Option<pb::StoreContext>,
+    query: String,
+) -> Result<Vec<pb::SkuAdmin>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_id = StoreId::parse(&store_id)?;
+    let pattern = if query.trim().is_empty() {
+        "".to_string()
+    } else {
+        format!("%{}%", query.trim())
+    };
+
+    let rows = sqlx::query(
+        r#"
+        SELECT v.id::text as id,
+               v.sku,
+               v.product_id::text as product_id,
+               p.title as product_title,
+               v.fulfillment_type,
+               v.price_amount,
+               v.price_currency,
+               v.status
+        FROM variants v
+        JOIN products p ON p.id = v.product_id
+        WHERE p.store_id = $1
+          AND ($2 = '' OR v.sku ILIKE $2 OR p.title ILIKE $2)
+        ORDER BY v.created_at DESC
+        LIMIT 50
+        "#,
+    )
+    .bind(store_id.as_uuid())
+    .bind(pattern)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| pb::SkuAdmin {
+            id: row.get("id"),
+            sku: row.get("sku"),
+            product_id: row.get("product_id"),
+            product_title: row.get("product_title"),
+            fulfillment_type: row.get("fulfillment_type"),
+            price: Some(money_from_parts(
+                row.get::<i64, _>("price_amount"),
+                row.get::<String, _>("price_currency"),
+            )),
+            status: row.get("status"),
+        })
+        .collect())
+}
+
 pub async fn create_product(
     state: &AppState,
     req: pb::CreateProductRequest,
@@ -324,7 +379,7 @@ pub async fn create_product(
         description: req.description,
         status: status.clone(),
         updated_at: None,
-        store_id,
+        store_id: store_id.clone(),
         tax_rule_id: req.tax_rule_id,
     };
 
@@ -343,7 +398,7 @@ pub async fn create_product(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             ProductAuditAction::Create.into(),
             Some("product"),
             Some(product.id.clone()),
@@ -433,7 +488,7 @@ pub async fn update_product(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             ProductAuditAction::Update.into(),
             Some("product"),
             Some(product.id.clone()),
@@ -467,6 +522,7 @@ pub async fn create_variant(
     _actor: Option<pb::ActorContext>,
 ) -> Result<pb::VariantAdmin, (StatusCode, Json<ConnectError>)> {
     let tenant_id = tenant_id_for_product(state, &req.product_id).await?;
+    let store_id = store_id_for_tenant(state, &tenant_id).await?;
     if let Some(tenant) = req.tenant.as_ref().and_then(|t| {
         if t.tenant_id.is_empty() {
             None
@@ -527,7 +583,7 @@ pub async fn create_variant(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id,
+            Some(store_id.clone()),
             VariantAuditAction::Create.into(),
             Some("variant"),
             Some(variant.id.clone()),
@@ -551,6 +607,7 @@ pub async fn update_variant(
     _actor: Option<pb::ActorContext>,
 ) -> Result<pb::VariantAdmin, (StatusCode, Json<ConnectError>)> {
     let tenant_id = tenant_id_for_variant(state, &req.variant_id).await?;
+    let store_id = store_id_for_tenant(state, &tenant_id).await?;
     if let Some(tenant) = req.tenant.as_ref().and_then(|t| {
         if t.tenant_id.is_empty() {
             None
@@ -616,7 +673,7 @@ pub async fn update_variant(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id,
+            Some(store_id.clone()),
             VariantAuditAction::Update.into(),
             Some("variant"),
             Some(variant.id.clone()),
@@ -692,7 +749,7 @@ pub async fn set_inventory(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             InventoryAuditAction::Set.into(),
             Some("inventory"),
             Some(inventory.variant_id.clone()),

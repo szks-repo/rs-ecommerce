@@ -89,6 +89,27 @@ pub fn require_tenant_id(
     }
 }
 
+pub fn require_store_id(
+    store: Option<pb::StoreContext>,
+) -> Result<String, (StatusCode, Json<ConnectError>)> {
+    match store.and_then(|s| {
+        if s.store_id.is_empty() {
+            None
+        } else {
+            Some(s.store_id)
+        }
+    }) {
+        Some(id) => Ok(id),
+        None => Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "store.store_id is required".to_string(),
+            }),
+        )),
+    }
+}
+
 fn is_json_content_type(headers: &HeaderMap) -> bool {
     let Some(content_type) = headers.get(axum::http::header::CONTENT_TYPE) else {
         return false;

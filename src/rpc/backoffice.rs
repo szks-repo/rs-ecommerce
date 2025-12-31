@@ -53,6 +53,25 @@ pub async fn list_variants(
     ))
 }
 
+pub async fn list_skus(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListSkusAdminResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListSkusAdminRequest>(&headers, body)?;
+    let skus = product::service::list_skus_admin(&state, req.tenant, req.store, req.query).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListSkusAdminResponse {
+            skus,
+            page: Some(pb::PageResult {
+                next_page_token: String::new(),
+            }),
+        }),
+    ))
+}
+
 pub async fn create_product(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

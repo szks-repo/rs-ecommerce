@@ -11,6 +11,7 @@ service BackofficeService {
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
 
   rpc ListVariants(ListVariantsAdminRequest) returns (ListVariantsAdminResponse);
+  rpc ListSkus(ListSkusAdminRequest) returns (ListSkusAdminResponse);
   rpc CreateVariant(CreateVariantRequest) returns (CreateVariantResponse);
   rpc UpdateVariant(UpdateVariantRequest) returns (UpdateVariantResponse);
 
@@ -57,6 +58,16 @@ message VariantAdmin {
   string fulfillment_type = 4; // physical | digital
   Money price = 5;
   Money compare_at = 6;
+  string status = 7;
+}
+
+message SkuAdmin {
+  string id = 1;
+  string sku = 2;
+  string product_id = 3;
+  string product_title = 4;
+  string fulfillment_type = 5;
+  Money price = 6;
   string status = 7;
 }
 
@@ -117,6 +128,18 @@ message ListVariantsAdminRequest {
 
 message ListVariantsAdminResponse {
   repeated VariantAdmin variants = 1;
+  PageResult page = 2;
+}
+
+message ListSkusAdminRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string query = 3;
+  PageInfo page = 4;
+}
+
+message ListSkusAdminResponse {
+  repeated SkuAdmin skus = 1;
   PageResult page = 2;
 }
 

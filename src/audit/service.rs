@@ -17,7 +17,7 @@ const MAX_PAGE_SIZE: i64 = 200;
 
 pub async fn list_audit_logs(
     state: &AppState,
-    tenant_id: String,
+    store_id: String,
     req: pb::ListAuditLogsRequest,
 ) -> Result<(Vec<pb::AuditLog>, pb::PageResult), (StatusCode, Json<ConnectError>)> {
     let (limit, offset) = page_params(req.page.clone());
@@ -25,6 +25,7 @@ pub async fn list_audit_logs(
     let mut qb = QueryBuilder::new(
         r#"
         SELECT id::text as id,
+            store_id,
             actor_id,
             actor_type,
             action,
@@ -38,10 +39,10 @@ pub async fn list_audit_logs(
             metadata_json,
             created_at
         FROM audit_logs
-        WHERE tenant_id = 
+        WHERE store_id = 
         "#,
     );
-    qb.push_bind(parse_uuid(&tenant_id, "tenant_id")?);
+    qb.push_bind(parse_uuid(&store_id, "store_id")?);
 
     if !req.actor_id.is_empty() {
         qb.push(" AND actor_id = ").push_bind(req.actor_id);
@@ -84,6 +85,7 @@ pub async fn list_audit_logs(
     for row in rows.into_iter() {
         logs.push(pb::AuditLog {
             id: row.get("id"),
+            store_id: row.get::<uuid::Uuid, _>("store_id").to_string(),
             actor_id: row.get::<Option<String>, _>("actor_id").unwrap_or_default(),
             actor_type: row.get("actor_type"),
             action: row.get("action"),

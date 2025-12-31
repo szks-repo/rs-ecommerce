@@ -9,7 +9,7 @@ use crate::{
 };
 
 pub struct AuditInput {
-    pub tenant_id: String,
+    pub store_id: Option<String>,
     pub actor_id: Option<String>,
     pub actor_type: String,
     pub action: AuditAction,
@@ -30,6 +30,7 @@ pub async fn record(
     let mut request_id = input.request_id;
     let mut ip_address = input.ip_address;
     let mut user_agent = input.user_agent;
+    let mut store_id = input.store_id;
     if let Some(ctx) = request_context::current() {
         if request_id.is_none() {
             request_id = ctx.request_id;
@@ -40,18 +41,21 @@ pub async fn record(
         if user_agent.is_none() {
             user_agent = ctx.user_agent;
         }
+        if store_id.is_none() {
+            store_id = ctx.store_id;
+        }
     }
 
     sqlx::query(
         r#"
         INSERT INTO audit_logs (
-            tenant_id, actor_id, actor_type, action, target_type, target_id,
+            store_id, actor_id, actor_type, action, target_type, target_id,
             request_id, ip_address, user_agent,
             before_json, after_json, metadata_json
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
         "#,
     )
-    .bind(uuid::Uuid::parse_str(&input.tenant_id).ok())
+    .bind(store_id.and_then(|id| uuid::Uuid::parse_str(&id).ok()))
     .bind(input.actor_id)
     .bind(input.actor_type)
     .bind(input.action.as_str())
@@ -84,6 +88,7 @@ pub async fn record_tx(
     let mut request_id = input.request_id;
     let mut ip_address = input.ip_address;
     let mut user_agent = input.user_agent;
+    let mut store_id = input.store_id;
     if let Some(ctx) = request_context::current() {
         if request_id.is_none() {
             request_id = ctx.request_id;
@@ -94,18 +99,21 @@ pub async fn record_tx(
         if user_agent.is_none() {
             user_agent = ctx.user_agent;
         }
+        if store_id.is_none() {
+            store_id = ctx.store_id;
+        }
     }
 
     sqlx::query(
         r#"
         INSERT INTO audit_logs (
-            tenant_id, actor_id, actor_type, action, target_type, target_id,
+            store_id, actor_id, actor_type, action, target_type, target_id,
             request_id, ip_address, user_agent,
             before_json, after_json, metadata_json
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
         "#,
     )
-    .bind(uuid::Uuid::parse_str(&input.tenant_id).ok())
+    .bind(store_id.and_then(|id| uuid::Uuid::parse_str(&id).ok()))
     .bind(input.actor_id)
     .bind(input.actor_type)
     .bind(input.action.as_str())

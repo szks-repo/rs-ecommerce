@@ -1,0 +1,158 @@
+syntax = "proto3";
+
+package ecommerce.v1;
+
+import "google/protobuf/timestamp.proto";
+import "ecommerce/v1/common.proto";
+
+service AuctionService {
+  rpc CreateAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+  rpc ListAuctions(ListAuctionsRequest) returns (ListAuctionsResponse);
+  rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse);
+  rpc PlaceBid(PlaceBidRequest) returns (PlaceBidResponse);
+  rpc ListBids(ListBidsRequest) returns (ListBidsResponse);
+  rpc CloseAuction(CloseAuctionRequest) returns (CloseAuctionResponse);
+  rpc ApproveAuction(ApproveAuctionRequest) returns (ApproveAuctionResponse);
+  rpc GetAuctionSettings(GetAuctionSettingsRequest) returns (GetAuctionSettingsResponse);
+  rpc UpdateAuctionSettings(UpdateAuctionSettingsRequest) returns (UpdateAuctionSettingsResponse);
+}
+
+message Auction {
+  string id = 1;
+  string store_id = 2;
+  string product_id = 3;
+  string sku_id = 4;
+  string auction_type = 5; // open | sealed
+  string status = 6;
+  google.protobuf.Timestamp start_at = 7;
+  google.protobuf.Timestamp end_at = 8;
+  Money bid_increment = 9;
+  Money start_price = 10;
+  Money reserve_price = 11;
+  Money buyout_price = 12;
+  Money current_price = 13;
+  Money winning_price = 14;
+  string winning_bid_id = 15;
+  string approved_by = 16;
+  google.protobuf.Timestamp approved_at = 17;
+  google.protobuf.Timestamp created_at = 18;
+  google.protobuf.Timestamp updated_at = 19;
+  string title = 20;
+  string description = 21;
+}
+
+message AuctionBid {
+  string id = 1;
+  string auction_id = 2;
+  string customer_id = 3;
+  Money amount = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message AuctionSettings {
+  string store_id = 1;
+  Money bid_increment = 2;
+  double fee_rate_percent = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
+message CreateAuctionRequest {
+  StoreContext store = 1;
+  string sku_id = 2;
+  reserved 3;
+  string auction_type = 4;
+  string status = 5;
+  google.protobuf.Timestamp start_at = 6;
+  google.protobuf.Timestamp end_at = 7;
+  Money start_price = 8;
+  Money reserve_price = 9;
+  Money buyout_price = 10;
+  Money bid_increment = 11;
+  ActorContext actor = 12;
+  string title = 13;
+  string description = 14;
+}
+
+message CreateAuctionResponse {
+  Auction auction = 1;
+}
+
+message ListAuctionsRequest {
+  StoreContext store = 1;
+  string status = 2;
+  PageInfo page = 3;
+}
+
+message ListAuctionsResponse {
+  repeated Auction auctions = 1;
+  PageResult page = 2;
+}
+
+message GetAuctionRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+}
+
+message GetAuctionResponse {
+  Auction auction = 1;
+}
+
+message PlaceBidRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+  string customer_id = 3;
+  Money amount = 4;
+  ActorContext actor = 5;
+}
+
+message PlaceBidResponse {
+  Auction auction = 1;
+  AuctionBid bid = 2;
+}
+
+message ListBidsRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+}
+
+message ListBidsResponse {
+  repeated AuctionBid bids = 1;
+}
+
+message CloseAuctionRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+  ActorContext actor = 3;
+}
+
+message CloseAuctionResponse {
+  Auction auction = 1;
+}
+
+message ApproveAuctionRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+  ActorContext actor = 3;
+}
+
+message ApproveAuctionResponse {
+  Auction auction = 1;
+}
+
+message GetAuctionSettingsRequest {
+  StoreContext store = 1;
+}
+
+message GetAuctionSettingsResponse {
+  AuctionSettings settings = 1;
+}
+
+message UpdateAuctionSettingsRequest {
+  StoreContext store = 1;
+  AuctionSettings settings = 2;
+  ActorContext actor = 3;
+}
+
+message UpdateAuctionSettingsResponse {
+  AuctionSettings settings = 1;
+}

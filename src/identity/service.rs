@@ -3,6 +3,7 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString},
 };
 use chrono::{Duration, Utc};
+use sha2::{Digest, Sha256};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use rand_core::OsRng;
 use serde::Serialize;
@@ -29,6 +30,9 @@ pub struct IdentityService<'a> {
     state: &'a AppState,
 }
 
+const ACCESS_TOKEN_TTL_MINUTES: i64 = 5;
+const REFRESH_TOKEN_TTL_DAYS: i64 = 30;
+
 impl<'a> IdentityService<'a> {
     pub fn new(state: &'a AppState) -> Self {
         Self { state }
@@ -46,7 +50,7 @@ impl<'a> IdentityService<'a> {
         req: pb::IdentitySignOutRequest,
         actor: Option<pb::ActorContext>,
     ) -> IdentityResult<pb::IdentitySignOutResponse> {
-        sign_out(self.state, req, actor).await
+        sign_out(self.state, req, actor, None).await
     }
 
     pub async fn list_staff(
@@ -127,10 +131,23 @@ impl<'a> IdentityService<'a> {
     }
 }
 
+pub struct SignInWithRefresh {
+    pub response: pb::IdentitySignInResponse,
+    pub refresh_token: String,
+}
+
 pub async fn sign_in(
     state: &AppState,
     req: pb::IdentitySignInRequest,
 ) -> IdentityResult<pb::IdentitySignInResponse> {
+    let result = sign_in_with_refresh(state, req).await?;
+    Ok(result.response)
+}
+
+pub async fn sign_in_with_refresh(
+    state: &AppState,
+    req: pb::IdentitySignInRequest,
+) -> IdentityResult<SignInWithRefresh> {
     let email = Email::parse_optional(&req.email)?
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
@@ -169,7 +186,7 @@ pub async fn sign_in(
     let _ = audit::record(
         state,
         audit::AuditInput {
-            tenant_id: resp.tenant_id.clone(),
+            store_id: Some(resp.store_id.clone()),
             actor_id: Some(resp.staff_id.clone()),
             actor_type: resp.role.clone(),
             action: IdentityAuditAction::SignIn.into(),
@@ -185,13 +202,16 @@ pub async fn sign_in(
     )
     .await?;
 
-    Ok(pb::IdentitySignInResponse {
-        access_token: resp.access_token,
-        store_id: resp.store_id,
-        tenant_id: resp.tenant_id,
-        staff_id: resp.staff_id,
-        role: resp.role,
-        expires_at: resp.expires_at,
+    Ok(SignInWithRefresh {
+        response: pb::IdentitySignInResponse {
+            access_token: resp.access_token,
+            store_id: resp.store_id,
+            tenant_id: resp.tenant_id,
+            staff_id: resp.staff_id,
+            role: resp.role,
+            expires_at: resp.expires_at,
+        },
+        refresh_token: resp.refresh_token,
     })
 }
 
@@ -219,6 +239,127 @@ pub async fn list_staff(
         .collect();
 
     Ok(pb::IdentityListStaffResponse { staff })
+}
+
+pub async fn list_staff_sessions(
+    state: &AppState,
+    req: pb::IdentityListStaffSessionsRequest,
+) -> IdentityResult<pb::IdentityListStaffSessionsResponse> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let rows = sqlx::query(
+        r#"
+        SELECT s.id::text as session_id,
+               ss.id::text as staff_id,
+               ss.display_name,
+               ss.email,
+               sr.key as role_key,
+               ss.status,
+               s.ip_address,
+               s.user_agent,
+               s.last_seen_at,
+               s.created_at
+        FROM store_staff_sessions s
+        JOIN store_staff ss ON ss.id = s.staff_id
+        LEFT JOIN store_roles sr ON sr.id = ss.role_id
+        WHERE s.store_id = $1
+          AND s.revoked_at IS NULL
+          AND (s.expires_at IS NULL OR s.expires_at > now())
+        ORDER BY s.last_seen_at DESC
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(IdentityError::from)?;
+
+    let sessions = rows
+        .into_iter()
+        .map(|row| pb::IdentityStaffSession {
+            session_id: row.get("session_id"),
+            staff_id: row.get("staff_id"),
+            display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
+            email: row.get::<Option<String>, _>("email").unwrap_or_default(),
+            role_key: row.get::<Option<String>, _>("role_key").unwrap_or_default(),
+            status: row.get("status"),
+            ip_address: row.get::<Option<String>, _>("ip_address").unwrap_or_default(),
+            user_agent: row.get::<Option<String>, _>("user_agent").unwrap_or_default(),
+            last_seen_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("last_seen_at"))),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+        })
+        .collect();
+
+    Ok(pb::IdentityListStaffSessionsResponse { sessions })
+}
+
+pub async fn force_sign_out_staff(
+    state: &AppState,
+    req: pb::IdentityForceSignOutStaffRequest,
+) -> IdentityResult<pb::IdentityForceSignOutStaffResponse> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    if req.staff_id.is_empty() {
+        return Err(IdentityError::invalid_argument("staff_id is required"));
+    }
+    let store_uuid = StoreId::parse(&store_id)?;
+    let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
+
+    let result = sqlx::query(
+        r#"
+        UPDATE store_staff_sessions
+        SET revoked_at = now()
+        WHERE store_id = $1 AND staff_id = $2 AND revoked_at IS NULL
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(staff_uuid)
+    .execute(&state.db)
+    .await
+    .map_err(IdentityError::from)?;
+
+    let _ = sqlx::query(
+        r#"
+        UPDATE store_staff_refresh_tokens
+        SET revoked_at = now()
+        WHERE store_id = $1 AND staff_id = $2 AND revoked_at IS NULL
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(staff_uuid)
+    .execute(&state.db)
+    .await;
+
+    let revoked = result.rows_affected() > 0;
+
+    if revoked {
+        let actor = req.actor.clone();
+        let actor_id = actor.as_ref().map(|a| a.actor_id.clone()).filter(|v| !v.is_empty());
+        let actor_type = actor
+            .as_ref()
+            .map(|a| a.actor_type.clone())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| "staff".to_string());
+
+        let _ = audit::record(
+            state,
+            audit::AuditInput {
+                store_id: Some(store_id),
+                actor_id,
+                actor_type,
+                action: IdentityAuditAction::SignOut.into(),
+                target_type: Some("store_staff".to_string()),
+                target_id: Some(req.staff_id.clone()),
+                request_id: None,
+                ip_address: None,
+                user_agent: None,
+                before_json: None,
+                after_json: None,
+                metadata_json: None,
+            },
+        )
+        .await?;
+    }
+
+    Ok(pb::IdentityForceSignOutStaffResponse { revoked })
 }
 
 pub async fn update_staff(
@@ -338,7 +479,7 @@ pub async fn update_staff(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id.clone()),
             actor_id,
             actor_type,
             action: IdentityAuditAction::StaffUpdate.into(),
@@ -453,7 +594,7 @@ pub async fn invite_staff(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id.clone()),
             actor_id,
             actor_type: req
                 .actor
@@ -586,7 +727,7 @@ pub async fn transfer_owner(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id.clone()),
             actor_id,
             actor_type: req
                 .actor
@@ -630,8 +771,38 @@ pub async fn sign_out(
     state: &AppState,
     req: pb::IdentitySignOutRequest,
     actor: Option<pb::ActorContext>,
+    session_id: Option<String>,
 ) -> IdentityResult<pb::IdentitySignOutResponse> {
-    let (_store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    if let Some(session_id) = session_id {
+        if let Ok(session_uuid) = uuid::Uuid::parse_str(&session_id) {
+            if let Ok(store_uuid) = StoreId::parse(&store_id) {
+                let _ = sqlx::query(
+                    r#"
+                    UPDATE store_staff_sessions
+                    SET revoked_at = now()
+                    WHERE id = $1 AND store_id = $2 AND revoked_at IS NULL
+                    "#,
+                )
+                .bind(session_uuid)
+                .bind(store_uuid.as_uuid())
+                .execute(&state.db)
+                .await;
+
+                let _ = sqlx::query(
+                    r#"
+                    UPDATE store_staff_refresh_tokens
+                    SET revoked_at = now()
+                    WHERE session_id = $1 AND store_id = $2 AND revoked_at IS NULL
+                    "#,
+                )
+                .bind(session_uuid)
+                .bind(store_uuid.as_uuid())
+                .execute(&state.db)
+                .await;
+            }
+        }
+    }
     let actor_id = actor.as_ref().and_then(|a| {
         if a.actor_id.is_empty() {
             None
@@ -653,7 +824,7 @@ pub async fn sign_out(
     let _ = audit::record(
         state,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id),
             actor_id,
             actor_type,
             action: IdentityAuditAction::SignOut.into(),
@@ -670,6 +841,164 @@ pub async fn sign_out(
     .await?;
 
     Ok(pb::IdentitySignOutResponse { signed_out: true })
+}
+
+pub struct RefreshTokenResult {
+    pub response: pb::IdentityRefreshTokenResponse,
+    pub refresh_token: String,
+}
+
+pub async fn refresh_token(
+    state: &AppState,
+    req: pb::IdentityRefreshTokenRequest,
+    refresh_token: String,
+) -> IdentityResult<RefreshTokenResult> {
+    if refresh_token.is_empty() {
+        return Err(IdentityError::unauthenticated("refresh token is required"));
+    }
+
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let refresh_hash = hash_refresh_token(&refresh_token);
+    let now = Utc::now();
+
+    let row = sqlx::query(
+        r#"
+        SELECT id, staff_id, session_id, expires_at, revoked_at
+        FROM store_staff_refresh_tokens
+        WHERE token_hash = $1 AND store_id = $2
+        "#,
+    )
+    .bind(refresh_hash)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(IdentityError::from)?;
+
+    let Some(row) = row else {
+        return Err(IdentityError::unauthenticated("refresh token not found"));
+    };
+
+    let token_id: uuid::Uuid = row.get("id");
+    let staff_id: uuid::Uuid = row.get("staff_id");
+    let session_id: uuid::Uuid = row.get("session_id");
+    let revoked_at: Option<chrono::DateTime<Utc>> = row.get("revoked_at");
+    let expires_at: chrono::DateTime<Utc> = row.get("expires_at");
+
+    if revoked_at.is_some() || expires_at <= now {
+        return Err(IdentityError::unauthenticated("refresh token expired"));
+    }
+
+    let staff_row = sqlx::query(
+        r#"
+        SELECT s.id::text as staff_id, s.status, r.key as role_key
+        FROM store_staff s
+        LEFT JOIN store_roles r ON r.id = s.role_id
+        WHERE s.id = $1 AND s.store_id = $2
+        "#,
+    )
+    .bind(staff_id)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(IdentityError::from)?;
+
+    let Some(staff_row) = staff_row else {
+        return Err(IdentityError::unauthenticated("staff not found"));
+    };
+
+    let status: String = staff_row.get("status");
+    if status != "active" {
+        return Err(IdentityError::unauthenticated("staff is inactive"));
+    }
+
+    let role_key: String = staff_row.get::<Option<String>, _>("role_key").unwrap_or_default();
+    let staff_id_str: String = staff_row.get("staff_id");
+
+    let jwt_secret = std::env::var("AUTH_JWT_SECRET")
+        .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
+
+    let exp = now + Duration::minutes(ACCESS_TOKEN_TTL_MINUTES);
+    let claims = JwtClaims {
+        sub: staff_id_str.clone(),
+        actor_type: role_key.clone(),
+        tenant_id: tenant_id.clone(),
+        store_id: store_id.clone(),
+        jti: session_id.to_string(),
+        exp: exp.timestamp() as usize,
+        iat: now.timestamp() as usize,
+    };
+
+    let token = encode(
+        &Header::default(),
+        &claims,
+        &EncodingKey::from_secret(jwt_secret.as_bytes()),
+    )
+    .map_err(|_| IdentityError::internal("failed to sign token"))?;
+
+    let new_refresh_token = uuid::Uuid::new_v4().to_string();
+    let new_refresh_id = uuid::Uuid::new_v4();
+    let new_refresh_hash = hash_refresh_token(&new_refresh_token);
+    let refresh_expires_at = now + Duration::days(REFRESH_TOKEN_TTL_DAYS);
+
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
+
+    sqlx::query(
+        r#"
+        UPDATE store_staff_refresh_tokens
+        SET revoked_at = now(), replaced_by = $1, last_used_at = now()
+        WHERE id = $2 AND revoked_at IS NULL
+        "#,
+    )
+    .bind(new_refresh_id)
+    .bind(token_id)
+    .execute(tx.as_mut())
+    .await
+    .map_err(IdentityError::from)?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO store_staff_refresh_tokens
+            (id, store_id, staff_id, session_id, token_hash, expires_at)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        "#,
+    )
+    .bind(new_refresh_id)
+    .bind(store_uuid.as_uuid())
+    .bind(staff_id)
+    .bind(session_id)
+    .bind(new_refresh_hash)
+    .bind(refresh_expires_at)
+    .execute(tx.as_mut())
+    .await
+    .map_err(IdentityError::from)?;
+
+    sqlx::query(
+        r#"
+        UPDATE store_staff_sessions
+        SET last_seen_at = now(), expires_at = $2
+        WHERE id = $1
+        "#,
+    )
+    .bind(session_id)
+    .bind(exp)
+    .execute(tx.as_mut())
+    .await
+    .map_err(IdentityError::from)?;
+
+    tx.commit().await.map_err(IdentityError::from)?;
+
+    Ok(RefreshTokenResult {
+        response: pb::IdentityRefreshTokenResponse {
+            access_token: token,
+            store_id,
+            tenant_id,
+            staff_id: staff_id_str,
+            role: role_key,
+            expires_at: chrono_to_timestamp(Some(exp)),
+        },
+        refresh_token: new_refresh_token,
+    })
 }
 
 pub async fn create_staff(
@@ -721,7 +1050,7 @@ pub async fn create_staff(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id: resp.tenant_id.clone(),
+            store_id: Some(resp.store_id.clone()),
             actor_id,
             actor_type,
             action: IdentityAuditAction::StaffCreate.into(),
@@ -761,6 +1090,7 @@ pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
 ) -> IdentityResult<pb::IdentityCreateRoleResponse> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let key = req.key.clone();
@@ -807,7 +1137,7 @@ pub async fn create_role(
         let _ = audit::record_tx(
             &mut tx,
             audit::AuditInput {
-                tenant_id,
+                store_id: Some(store_id.clone()),
                 actor_id,
                 actor_type,
                 action: IdentityAuditAction::RoleCreate.into(),
@@ -901,7 +1231,7 @@ pub async fn assign_role_to_staff(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id.clone()),
             actor_id,
             actor_type,
             action: IdentityAuditAction::RoleAssign.into(),
@@ -1059,7 +1389,7 @@ pub async fn update_role(
     let _ = audit::record_tx(
         &mut tx,
         audit::AuditInput {
-            tenant_id,
+            store_id: Some(store_id.clone()),
             actor_id,
             actor_type,
             action: IdentityAuditAction::RoleUpdate.into(),
@@ -1135,7 +1465,7 @@ pub async fn delete_role(
         let _ = audit::record_tx(
             &mut tx,
             audit::AuditInput {
-                tenant_id,
+                store_id: Some(store_id.clone()),
                 actor_id,
                 actor_type,
                 action: IdentityAuditAction::RoleDelete.into(),
@@ -1170,6 +1500,7 @@ struct SignInCoreResult {
     staff_id: String,
     role: String,
     expires_at: Option<pbjson_types::Timestamp>,
+    refresh_token: String,
 }
 
 async fn sign_in_core(
@@ -1230,17 +1561,19 @@ async fn sign_in_core(
 
     let staff_id: String = row.staff_id;
     let role: String = row.role_key;
+    let session_id = uuid::Uuid::new_v4();
 
     let jwt_secret = std::env::var("AUTH_JWT_SECRET")
         .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
 
     let now = chrono::Utc::now();
-    let exp = now + chrono::Duration::hours(12);
+    let exp = now + chrono::Duration::minutes(ACCESS_TOKEN_TTL_MINUTES);
     let claims = JwtClaims {
         sub: staff_id.clone(),
         actor_type: role.clone(),
         tenant_id: tenant_id.clone(),
         store_id: store_id.clone(),
+        jti: session_id.to_string(),
         exp: exp.timestamp() as usize,
         iat: now.timestamp() as usize,
     };
@@ -1252,6 +1585,48 @@ async fn sign_in_core(
     )
     .map_err(|_| IdentityError::internal("failed to sign token"))?;
 
+    let ctx = crate::rpc::request_context::current();
+    let ip_address = ctx.as_ref().and_then(|c| c.ip_address.clone());
+    let user_agent = ctx.as_ref().and_then(|c| c.user_agent.clone());
+    let refresh_expires_at = now + chrono::Duration::days(REFRESH_TOKEN_TTL_DAYS);
+    let refresh_token = uuid::Uuid::new_v4().to_string();
+    let refresh_token_id = uuid::Uuid::new_v4();
+    let refresh_hash = hash_refresh_token(&refresh_token);
+
+    sqlx::query(
+        r#"
+        INSERT INTO store_staff_sessions
+            (id, store_id, staff_id, ip_address, user_agent, last_seen_at, expires_at)
+        VALUES ($1,$2,$3,$4,$5,now(),$6)
+        "#,
+    )
+    .bind(session_id)
+    .bind(store_uuid.as_uuid())
+    .bind(parse_uuid(&staff_id, "staff_id").map_err(|_| IdentityError::internal("invalid staff_id"))?)
+    .bind(ip_address)
+    .bind(user_agent)
+    .bind(exp)
+    .execute(&state.db)
+    .await
+    .map_err(|_| IdentityError::internal("failed to create staff session"))?;
+
+    sqlx::query(
+        r#"
+        INSERT INTO store_staff_refresh_tokens
+            (id, store_id, staff_id, session_id, token_hash, expires_at)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        "#,
+    )
+    .bind(refresh_token_id)
+    .bind(store_uuid.as_uuid())
+    .bind(parse_uuid(&staff_id, "staff_id").map_err(|_| IdentityError::internal("invalid staff_id"))?)
+    .bind(session_id)
+    .bind(refresh_hash)
+    .bind(refresh_expires_at)
+    .execute(&state.db)
+    .await
+    .map_err(|_| IdentityError::internal("failed to create refresh token"))?;
+
     Ok(SignInCoreResult {
         access_token: token,
         store_id,
@@ -1259,6 +1634,7 @@ async fn sign_in_core(
         staff_id,
         role,
         expires_at: chrono_to_timestamp(Some(exp)),
+        refresh_token,
     })
 }
 
@@ -1413,12 +1789,18 @@ fn hash_password(password: &str) -> IdentityResult<String> {
         .map_err(|_| IdentityError::internal("failed to hash password"))
 }
 
+fn hash_refresh_token(token: &str) -> String {
+    let hash = Sha256::digest(token.as_bytes());
+    hex::encode(hash)
+}
+
 #[derive(Serialize)]
 struct JwtClaims {
     sub: String,
     actor_type: String,
     tenant_id: String,
     store_id: String,
+    jti: String,
     exp: usize,
     iat: usize,
 }

@@ -78,7 +78,7 @@ pub async fn upsert_store_location(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             StoreLocationAuditAction::Upsert.into(),
             Some("store_location"),
             Some(updated.id.clone()),
@@ -121,8 +121,8 @@ pub async fn delete_store_location(
     if deleted {
         audit::record_tx(
             &mut tx,
-            audit_input(
-                tenant_id.clone(),
+        audit_input(
+            Some(store_id.clone()),
                 StoreLocationAuditAction::Delete.into(),
                 Some("store_location"),
                 Some(location_id),

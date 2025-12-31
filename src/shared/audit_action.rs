@@ -19,6 +19,10 @@ pub enum AuditAction {
     TaxRuleDelete,
     PromotionCreate,
     PromotionUpdate,
+    AuctionCreate,
+    AuctionBid,
+    AuctionEnd,
+    AuctionApprove,
     OrderUpdateStatus,
     ShipmentCreate,
     ShipmentUpdateStatus,
@@ -60,6 +64,10 @@ impl AuditAction {
             AuditAction::TaxRuleDelete => "tax_rule.delete",
             AuditAction::PromotionCreate => "promotion.create",
             AuditAction::PromotionUpdate => "promotion.update",
+            AuditAction::AuctionCreate => "auction.create",
+            AuditAction::AuctionBid => "auction.bid",
+            AuditAction::AuctionEnd => "auction.end",
+            AuditAction::AuctionApprove => "auction.approve",
             AuditAction::OrderUpdateStatus => "order.update_status",
             AuditAction::ShipmentCreate => "shipment.create",
             AuditAction::ShipmentUpdateStatus => "shipment.update_status",
@@ -101,6 +109,10 @@ impl AuditAction {
             AuditAction::TaxRuleDelete => "Tax rule deleted",
             AuditAction::PromotionCreate => "Promotion created",
             AuditAction::PromotionUpdate => "Promotion updated",
+            AuditAction::AuctionCreate => "Auction created",
+            AuditAction::AuctionBid => "Auction bid placed",
+            AuditAction::AuctionEnd => "Auction ended",
+            AuditAction::AuctionApprove => "Auction approved",
             AuditAction::OrderUpdateStatus => "Order status updated",
             AuditAction::ShipmentCreate => "Shipment created",
             AuditAction::ShipmentUpdateStatus => "Shipment status updated",
@@ -142,6 +154,10 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::TaxRuleDelete,
     AuditAction::PromotionCreate,
     AuditAction::PromotionUpdate,
+    AuditAction::AuctionCreate,
+    AuditAction::AuctionBid,
+    AuditAction::AuctionEnd,
+    AuditAction::AuctionApprove,
     AuditAction::OrderUpdateStatus,
     AuditAction::ShipmentCreate,
     AuditAction::ShipmentUpdateStatus,
@@ -218,6 +234,14 @@ pub enum TaxRuleAuditAction {
 pub enum PromotionAuditAction {
     Create,
     Update,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AuctionAuditAction {
+    Create,
+    Bid,
+    End,
+    Approve,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -338,6 +362,17 @@ impl From<PromotionAuditAction> for AuditAction {
         match action {
             PromotionAuditAction::Create => AuditAction::PromotionCreate,
             PromotionAuditAction::Update => AuditAction::PromotionUpdate,
+        }
+    }
+}
+
+impl From<AuctionAuditAction> for AuditAction {
+    fn from(action: AuctionAuditAction) -> Self {
+        match action {
+            AuctionAuditAction::Create => AuditAction::AuctionCreate,
+            AuctionAuditAction::Bid => AuditAction::AuctionBid,
+            AuctionAuditAction::End => AuditAction::AuctionEnd,
+            AuctionAuditAction::Approve => AuditAction::AuctionApprove,
         }
     }
 }

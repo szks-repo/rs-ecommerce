@@ -21,6 +21,7 @@ pub struct AuthContext {
     pub actor_type: String,
     pub store_id: Option<String>,
     pub tenant_id: Option<String>,
+    pub session_id: Option<String>,
 }
 
 pub async fn inject_actor(mut req: Request<Body>, next: Next) -> Response {
@@ -61,6 +62,7 @@ async fn auth_from_bearer(headers: &HeaderMap) -> Option<AuthContext> {
             actor_type: "api".to_string(),
             store_id: None,
             tenant_id: None,
+            session_id: None,
         });
     }
     None
@@ -81,6 +83,7 @@ fn auth_from_override(headers: &HeaderMap) -> Option<AuthContext> {
         actor_type,
         store_id: None,
         tenant_id: None,
+        session_id: None,
     })
 }
 
@@ -92,6 +95,7 @@ struct JwtClaims {
     actor_type: Option<String>,
     store_id: Option<String>,
     tenant_id: Option<String>,
+    jti: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -146,6 +150,7 @@ async fn verify_jwt_rs256(token: &str) -> Option<AuthContext> {
         actor_type: data.claims.actor_type.unwrap_or_else(|| "api".to_string()),
         store_id: data.claims.store_id,
         tenant_id: data.claims.tenant_id,
+        session_id: data.claims.jti,
     })
 }
 
@@ -169,6 +174,7 @@ fn verify_jwt_hs256(token: &str) -> Option<AuthContext> {
         actor_type: data.claims.actor_type.unwrap_or_else(|| "api".to_string()),
         store_id: data.claims.store_id,
         tenant_id: data.claims.tenant_id,
+        session_id: data.claims.jti,
     })
 }
 

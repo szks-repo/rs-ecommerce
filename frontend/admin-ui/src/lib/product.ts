@@ -4,6 +4,7 @@ import {
   BackofficeService,
   ListProductsAdminRequestSchema,
   ListVariantsAdminRequestSchema,
+  ListSkusAdminRequestSchema,
   CreateProductRequestSchema,
   UpdateProductRequestSchema,
   CreateVariantRequestSchema,
@@ -21,6 +22,14 @@ export async function listVariantsAdmin(params: { productId: string }) {
   return client.listVariants(
     create(ListVariantsAdminRequestSchema, {
       productId: params.productId,
+    })
+  );
+}
+
+export async function listSkusAdmin(params: { query?: string }) {
+  return client.listSkus(
+    create(ListSkusAdminRequestSchema, {
+      query: params.query || "",
     })
   );
 }

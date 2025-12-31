@@ -354,7 +354,7 @@ pub async fn update_store_settings(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             StoreSettingsAuditAction::Update.into(),
             Some("store_settings"),
             Some(store_id.clone()),
@@ -397,7 +397,7 @@ pub async fn initialize_store_settings(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             StoreSettingsAuditAction::Initialize.into(),
             Some("store_settings"),
             Some(store_id.clone()),
@@ -419,7 +419,7 @@ pub async fn initialize_store_settings(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             MallSettingsAuditAction::Initialize.into(),
             Some("mall_settings"),
             Some(store_id.clone()),
@@ -520,7 +520,7 @@ pub async fn update_mall_settings(
     audit::record_tx(
         &mut tx,
         audit_input(
-            tenant_id.clone(),
+            Some(store_id.clone()),
             MallSettingsAuditAction::Update.into(),
             Some("mall_settings"),
             Some(store_id.clone()),
