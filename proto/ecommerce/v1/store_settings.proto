@@ -59,6 +59,11 @@ message StoreSettings {
   string logo_url = 27;
   string favicon_url = 28;
   string time_zone = 29;
+  bool bank_transfer_enabled = 30;
+  string storage_provider = 31; // s3 | gcs | empty
+  string storage_bucket = 32;
+  string storage_base_path = 33;
+  string storage_cdn_base_url = 34;
 }
 
 message MallSettings {

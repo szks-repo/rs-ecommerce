@@ -15,6 +15,12 @@ service BackofficeService {
   rpc CreateVariant(CreateVariantRequest) returns (CreateVariantResponse);
   rpc UpdateVariant(UpdateVariantRequest) returns (UpdateVariantResponse);
 
+  rpc ListMediaAssets(ListMediaAssetsRequest) returns (ListMediaAssetsResponse);
+  rpc CreateMediaAsset(CreateMediaAssetRequest) returns (CreateMediaAssetResponse);
+  rpc CreateMediaUploadUrl(CreateMediaUploadUrlRequest) returns (CreateMediaUploadUrlResponse);
+  rpc ListSkuImages(ListSkuImagesRequest) returns (ListSkuImagesResponse);
+  rpc SetSkuImages(SetSkuImagesRequest) returns (SetSkuImagesResponse);
+
   rpc SetInventory(SetInventoryRequest) returns (SetInventoryResponse);
 
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
@@ -69,6 +75,29 @@ message SkuAdmin {
   string fulfillment_type = 5;
   Money price = 6;
   string status = 7;
+}
+
+message MediaAsset {
+  string id = 1;
+  string public_url = 2;
+  string provider = 3;
+  string bucket = 4;
+  string object_key = 5;
+  string content_type = 6;
+  int64 size_bytes = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message SkuImage {
+  string asset_id = 1;
+  string public_url = 2;
+  int32 position = 3;
+  MediaAsset asset = 4;
+}
+
+message SkuImageInput {
+  string asset_id = 1;
+  int32 position = 2;
 }
 
 message InventoryAdmin {
@@ -202,6 +231,68 @@ message UpdateVariantRequest {
 
 message UpdateVariantResponse {
   VariantAdmin variant = 1;
+}
+
+message ListMediaAssetsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string query = 3;
+  PageInfo page = 4;
+}
+
+message ListMediaAssetsResponse {
+  repeated MediaAsset assets = 1;
+  PageResult page = 2;
+}
+
+message CreateMediaAssetRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  MediaAsset asset = 3;
+  ActorContext actor = 4;
+}
+
+message CreateMediaAssetResponse {
+  MediaAsset asset = 1;
+}
+
+message CreateMediaUploadUrlRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string filename = 3;
+  string content_type = 4;
+  int64 size_bytes = 5;
+}
+
+message CreateMediaUploadUrlResponse {
+  string upload_url = 1;
+  map<string, string> headers = 2;
+  string public_url = 3;
+  string provider = 4;
+  string bucket = 5;
+  string object_key = 6;
+}
+
+message ListSkuImagesRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+}
+
+message ListSkuImagesResponse {
+  repeated SkuImage images = 1;
+}
+
+message SetSkuImagesRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  repeated SkuImageInput images = 4;
+  ActorContext actor = 5;
+}
+
+message SetSkuImagesResponse {
+  repeated SkuImage images = 1;
 }
 
 message SetInventoryRequest {

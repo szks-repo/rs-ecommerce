@@ -220,6 +220,11 @@ pub async fn get_store_settings(
                 row.cod_fee_amount.unwrap_or_default(),
                 row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
             )),
+            bank_transfer_enabled: row.bank_transfer_enabled,
+            storage_provider: row.storage_provider,
+            storage_bucket: row.storage_bucket,
+            storage_base_path: row.storage_base_path,
+            storage_cdn_base_url: row.storage_cdn_base_url,
             bank_name: row.bank_name,
             bank_branch: row.bank_branch,
             bank_account_type: row.bank_account_type,
@@ -262,6 +267,11 @@ pub async fn get_store_settings(
                 row.cod_fee_amount.unwrap_or_default(),
                 row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
             )),
+            bank_transfer_enabled: row.bank_transfer_enabled,
+            storage_provider: row.storage_provider,
+            storage_bucket: row.storage_bucket,
+            storage_base_path: row.storage_base_path,
+            storage_cdn_base_url: row.storage_cdn_base_url,
             bank_name: row.bank_name,
             bank_branch: row.bank_branch,
             bank_account_type: row.bank_account_type,
@@ -283,7 +293,7 @@ pub async fn get_store_settings(
     Ok(default_store_settings(store_name))
 }
 
-fn default_store_settings(store_name: String) -> pb::StoreSettings {
+pub(crate) fn default_store_settings(store_name: String) -> pb::StoreSettings {
     pb::StoreSettings {
         store_name: store_name.clone(),
         legal_name: store_name,
@@ -304,6 +314,11 @@ fn default_store_settings(store_name: String) -> pb::StoreSettings {
         order_initial_status: "pending_payment".to_string(),
         cod_enabled: true,
         cod_fee: Some(money_from_parts(0, "JPY".to_string())),
+        bank_transfer_enabled: true,
+        storage_provider: "".to_string(),
+        storage_bucket: "".to_string(),
+        storage_base_path: "".to_string(),
+        storage_cdn_base_url: "".to_string(),
         bank_name: "".to_string(),
         bank_branch: "".to_string(),
         bank_account_type: "".to_string(),
@@ -317,7 +332,7 @@ fn default_store_settings(store_name: String) -> pb::StoreSettings {
     }
 }
 
-fn default_mall_settings() -> pb::MallSettings {
+pub(crate) fn default_mall_settings() -> pb::MallSettings {
     pb::MallSettings {
         enabled: false,
         commission_rate: 0.0,
@@ -332,20 +347,25 @@ pub async fn update_store_settings(
     settings: pb::StoreSettings,
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
-    validate_store_settings(&settings)?;
     let before = get_store_settings(state, store_id.clone(), tenant_id.clone())
         .await
         .ok();
+    let merged_settings = if let Some(existing) = before.clone() {
+        merge_store_settings(existing, settings)
+    } else {
+        settings
+    };
+    validate_store_settings_for_update(before.as_ref(), &merged_settings)?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
+    let (cod_fee_amount, cod_fee_currency) = money_to_parts(merged_settings.cod_fee.clone())?;
     let repo = PgStoreSettingsRepository::new(&state.db);
     let mut tx = state.db.begin().await.map_err(db::error)?;
     repo.upsert_store_settings_tx(
         &mut tx,
         &tenant_uuid.as_uuid(),
         &store_uuid.as_uuid(),
-        &settings,
+        &merged_settings,
         cod_fee_amount,
         cod_fee_currency,
     )
@@ -359,14 +379,111 @@ pub async fn update_store_settings(
             Some("store_settings"),
             Some(store_id.clone()),
             to_json_opt(before),
-            to_json_opt(Some(settings.clone())),
+            to_json_opt(Some(merged_settings.clone())),
             actor.clone(),
         ),
     )
     .await?;
     tx.commit().await.map_err(db::error)?;
 
-    Ok(settings)
+    Ok(merged_settings)
+}
+
+fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSettings) -> pb::StoreSettings {
+    if incoming.store_name.is_empty() {
+        incoming.store_name = existing.store_name;
+    }
+    if incoming.legal_name.is_empty() {
+        incoming.legal_name = existing.legal_name;
+    }
+    if incoming.contact_email.is_empty() {
+        incoming.contact_email = existing.contact_email;
+    }
+    if incoming.contact_phone.is_empty() {
+        incoming.contact_phone = existing.contact_phone;
+    }
+    if incoming.address_prefecture.is_empty() {
+        incoming.address_prefecture = existing.address_prefecture;
+    }
+    if incoming.address_city.is_empty() {
+        incoming.address_city = existing.address_city;
+    }
+    if incoming.address_line1.is_empty() {
+        incoming.address_line1 = existing.address_line1;
+    }
+    if incoming.address_line2.is_empty() {
+        incoming.address_line2 = existing.address_line2;
+    }
+    if incoming.legal_notice.is_empty() {
+        incoming.legal_notice = existing.legal_notice;
+    }
+    if incoming.default_language.is_empty() {
+        incoming.default_language = existing.default_language;
+    }
+    if incoming.primary_domain.is_empty() {
+        incoming.primary_domain = existing.primary_domain;
+    }
+    if incoming.subdomain.is_empty() {
+        incoming.subdomain = existing.subdomain;
+    }
+    if incoming.storage_provider.is_empty() {
+        incoming.storage_provider = existing.storage_provider;
+    }
+    if incoming.storage_bucket.is_empty() {
+        incoming.storage_bucket = existing.storage_bucket;
+    }
+    if incoming.storage_base_path.is_empty() {
+        incoming.storage_base_path = existing.storage_base_path;
+    }
+    if incoming.storage_cdn_base_url.is_empty() {
+        incoming.storage_cdn_base_url = existing.storage_cdn_base_url;
+    }
+    if incoming.currency.is_empty() {
+        incoming.currency = existing.currency;
+    }
+    if incoming.tax_mode.is_empty() {
+        incoming.tax_mode = existing.tax_mode;
+    }
+    if incoming.tax_rounding.is_empty() {
+        incoming.tax_rounding = existing.tax_rounding;
+    }
+    if incoming.order_initial_status.is_empty() {
+        incoming.order_initial_status = existing.order_initial_status;
+    }
+    if incoming.cod_fee.is_none() {
+        incoming.cod_fee = existing.cod_fee;
+    }
+    if incoming.bank_name.is_empty() {
+        incoming.bank_name = existing.bank_name;
+    }
+    if incoming.bank_branch.is_empty() {
+        incoming.bank_branch = existing.bank_branch;
+    }
+    if incoming.bank_account_type.is_empty() {
+        incoming.bank_account_type = existing.bank_account_type;
+    }
+    if incoming.bank_account_number.is_empty() {
+        incoming.bank_account_number = existing.bank_account_number;
+    }
+    if incoming.bank_account_name.is_empty() {
+        incoming.bank_account_name = existing.bank_account_name;
+    }
+    if incoming.theme.is_empty() {
+        incoming.theme = existing.theme;
+    }
+    if incoming.brand_color.is_empty() {
+        incoming.brand_color = existing.brand_color;
+    }
+    if incoming.logo_url.is_empty() {
+        incoming.logo_url = existing.logo_url;
+    }
+    if incoming.favicon_url.is_empty() {
+        incoming.favicon_url = existing.favicon_url;
+    }
+    if incoming.time_zone.is_empty() {
+        incoming.time_zone = existing.time_zone;
+    }
+    incoming
 }
 
 pub async fn initialize_store_settings(
@@ -794,6 +911,38 @@ pub fn validate_store_settings(
         ));
     }
     Ok(())
+}
+
+pub fn validate_store_settings_for_update(
+    before: Option<&pb::StoreSettings>,
+    settings: &pb::StoreSettings,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    let merged_missing = store_settings_missing_required(settings);
+    if !merged_missing {
+        return validate_store_settings(settings);
+    }
+    let before_missing = before.map(store_settings_missing_required).unwrap_or(true);
+    if before_missing {
+        return Ok(());
+    }
+    validate_store_settings(settings)
+}
+
+fn store_settings_missing_required(settings: &pb::StoreSettings) -> bool {
+    settings.store_name.is_empty()
+        || settings.legal_name.is_empty()
+        || settings.contact_email.is_empty()
+        || settings.contact_phone.is_empty()
+        || settings.address_prefecture.is_empty()
+        || settings.address_city.is_empty()
+        || settings.address_line1.is_empty()
+        || settings.legal_notice.is_empty()
+        || settings.default_language.is_empty()
+        || settings.currency.is_empty()
+        || settings.tax_mode.is_empty()
+        || settings.tax_rounding.is_empty()
+        || settings.order_initial_status.is_empty()
+        || settings.time_zone.is_empty()
 }
 
 pub fn validate_mall_settings(

@@ -25,7 +25,8 @@ type StoreSettingsSection =
   | "payment-cod"
   | "payment-bank"
   | "tax"
-  | "appearance";
+  | "appearance"
+  | "storage";
 
 export default function StoreSettingsForm({
   sections,
@@ -56,6 +57,11 @@ export default function StoreSettingsForm({
   const [codEnabled, setCodEnabled] = useState(false);
   const [codFeeAmount, setCodFeeAmount] = useState("0");
   const [codFeeCurrency, setCodFeeCurrency] = useState("JPY");
+  const [bankTransferEnabled, setBankTransferEnabled] = useState(false);
+  const [storageProvider, setStorageProvider] = useState("");
+  const [storageBucket, setStorageBucket] = useState("");
+  const [storageBasePath, setStorageBasePath] = useState("");
+  const [storageCdnBaseUrl, setStorageCdnBaseUrl] = useState("");
   const [bankName, setBankName] = useState("");
   const [bankBranch, setBankBranch] = useState("");
   const [bankAccountType, setBankAccountType] = useState("");
@@ -102,6 +108,11 @@ export default function StoreSettingsForm({
         setCodEnabled(Boolean(settings.codEnabled));
         setCodFeeAmount(settings.codFee ? settings.codFee.amount.toString() : "0");
         setCodFeeCurrency(settings.codFee?.currency || "JPY");
+        setBankTransferEnabled(Boolean(settings.bankTransferEnabled));
+        setStorageProvider(settings.storageProvider || "");
+        setStorageBucket(settings.storageBucket || "");
+        setStorageBasePath(settings.storageBasePath || "");
+        setStorageCdnBaseUrl(settings.storageCdnBaseUrl || "");
         setBankName(settings.bankName);
         setBankBranch(settings.bankBranch);
         setBankAccountType(settings.bankAccountType);
@@ -132,8 +143,9 @@ export default function StoreSettingsForm({
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
+      const needsCodValidation = visible.includes("payment") || visible.includes("payment-cod");
       const feeAmount = codFeeAmount.trim().length > 0 ? codFeeAmount.trim() : "0";
-      if (!/^-?\\d+$/.test(feeAmount)) {
+      if (needsCodValidation && !/^-?\\d+$/.test(feeAmount)) {
         throw new Error("COD fee amount must be an integer.");
       }
       await updateStoreSettings({
@@ -157,8 +169,13 @@ export default function StoreSettingsForm({
           taxRounding,
           orderInitialStatus,
           codEnabled,
-          codFeeAmount: feeAmount,
-          codFeeCurrency,
+          codFeeAmount: needsCodValidation ? feeAmount : "0",
+          codFeeCurrency: codFeeCurrency || "JPY",
+          bankTransferEnabled,
+          storageProvider,
+          storageBucket,
+          storageBasePath,
+          storageCdnBaseUrl,
           bankName,
           bankBranch,
           bankAccountType,
@@ -337,25 +354,66 @@ export default function StoreSettingsForm({
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="flex items-center justify-between md:col-span-2">
+              <div>
+                <Label htmlFor="bankTransferEnabled">Bank Transfer</Label>
+                <p className="text-xs text-neutral-500">Enable bank transfer payments.</p>
+              </div>
+              <Switch
+                id="bankTransferEnabled"
+                checked={bankTransferEnabled}
+                onCheckedChange={setBankTransferEnabled}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="bankName">Bank Name</Label>
-              <Input id="bankName" value={bankName} onChange={(e) => setBankName(e.target.value)} required />
+              <Input
+                id="bankName"
+                value={bankName}
+                onChange={(e) => setBankName(e.target.value)}
+                required
+                disabled={!bankTransferEnabled}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bankBranch">Bank Branch</Label>
-              <Input id="bankBranch" value={bankBranch} onChange={(e) => setBankBranch(e.target.value)} required />
+              <Input
+                id="bankBranch"
+                value={bankBranch}
+                onChange={(e) => setBankBranch(e.target.value)}
+                required
+                disabled={!bankTransferEnabled}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bankAccountType">Account Type</Label>
-              <Input id="bankAccountType" value={bankAccountType} onChange={(e) => setBankAccountType(e.target.value)} required />
+              <Input
+                id="bankAccountType"
+                value={bankAccountType}
+                onChange={(e) => setBankAccountType(e.target.value)}
+                required
+                disabled={!bankTransferEnabled}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="bankAccountNumber">Account Number</Label>
-              <Input id="bankAccountNumber" value={bankAccountNumber} onChange={(e) => setBankAccountNumber(e.target.value)} required />
+              <Input
+                id="bankAccountNumber"
+                value={bankAccountNumber}
+                onChange={(e) => setBankAccountNumber(e.target.value)}
+                required
+                disabled={!bankTransferEnabled}
+              />
             </div>
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="bankAccountName">Account Name</Label>
-              <Input id="bankAccountName" value={bankAccountName} onChange={(e) => setBankAccountName(e.target.value)} required />
+              <Input
+                id="bankAccountName"
+                value={bankAccountName}
+                onChange={(e) => setBankAccountName(e.target.value)}
+                required
+                disabled={!bankTransferEnabled}
+              />
             </div>
           </CardContent>
         </Card>
@@ -435,6 +493,57 @@ export default function StoreSettingsForm({
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="faviconUrl">Favicon URL</Label>
               <Input id="faviconUrl" value={faviconUrl} onChange={(e) => setFaviconUrl(e.target.value)} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {visible.includes("storage") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Storage</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Configure public storage for product images and assets.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="storageProvider">Provider</Label>
+              <Select
+                value={storageProvider || "none"}
+                onValueChange={(value) => setStorageProvider(value === "none" ? "" : value)}
+              >
+                <SelectTrigger id="storageProvider" className="bg-white">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="s3">S3</SelectItem>
+                  <SelectItem value="gcs">GCS</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="storageBucket">Bucket</Label>
+              <Input id="storageBucket" value={storageBucket} onChange={(e) => setStorageBucket(e.target.value)} />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="storageBasePath">Path Prefix (Base Path)</Label>
+              <Input
+                id="storageBasePath"
+                value={storageBasePath}
+                onChange={(e) => setStorageBasePath(e.target.value)}
+                placeholder="e.g. public/products"
+              />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="storageCdnBaseUrl">CDN Base URL</Label>
+              <Input
+                id="storageCdnBaseUrl"
+                value={storageCdnBaseUrl}
+                onChange={(e) => setStorageCdnBaseUrl(e.target.value)}
+                placeholder="https://cdn.example.com"
+              />
             </div>
           </CardContent>
         </Card>

@@ -14,6 +14,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { listAuctions } from "@/lib/auction";
 import { formatConnectError } from "@/lib/handle-error";
+import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { Auction } from "@/gen/ecommerce/v1/auction_pb";
 
@@ -26,17 +27,6 @@ const statusOptions = [
   "awaiting_approval",
   "approved",
 ] as const;
-
-function formatMoney(money?: { amount?: string | number | bigint; currency?: string }) {
-  if (!money || money.amount == null) {
-    return "-";
-  }
-  const amount = typeof money.amount === "bigint" ? Number(money.amount) : Number(money.amount);
-  if (!Number.isFinite(amount)) {
-    return "-";
-  }
-  return `${amount.toLocaleString("ja-JP")} ${money.currency || ""}`.trim();
-}
 
 export default function AuctionList() {
   const [status, setStatus] = useState<string>("all");

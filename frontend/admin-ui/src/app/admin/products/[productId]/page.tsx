@@ -8,6 +8,7 @@ import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import ProductUpdateForm from "@/components/product-update-form";
 import VariantUpdateForm from "@/components/variant-update-form";
+import SkuImageManager from "@/components/sku-image-manager";
 import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
@@ -169,6 +170,19 @@ export default function ProductDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {selectedVariant ? (
+        <SkuImageManager skuId={selectedVariant.id} />
+      ) : (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>SKU Images</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Select a variant to manage its images.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
     </div>
   );
 }

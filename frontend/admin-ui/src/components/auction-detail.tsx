@@ -6,19 +6,9 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { approveAuction, closeAuction, getAuction, listBids } from "@/lib/auction";
 import { formatConnectError } from "@/lib/handle-error";
+import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { Auction, AuctionBid } from "@/gen/ecommerce/v1/auction_pb";
-
-function formatMoney(money?: { amount?: string | number | bigint; currency?: string }) {
-  if (!money || money.amount == null) {
-    return "-";
-  }
-  const amount = typeof money.amount === "bigint" ? Number(money.amount) : Number(money.amount);
-  if (!Number.isFinite(amount)) {
-    return "-";
-  }
-  return `${amount.toLocaleString("ja-JP")} ${money.currency || ""}`.trim();
-}
 
 export default function AuctionDetail({ auctionId }: { auctionId: string }) {
   const [auction, setAuction] = useState<Auction | null>(null);

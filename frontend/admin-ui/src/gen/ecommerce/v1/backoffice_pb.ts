@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/backoffice.proto.
  */
 export const file_ecommerce_v1_backoffice: GenFile = /*@__PURE__*/
-  fileDesc("Ch1lY29tbWVyY2UvdjEvYmFja29mZmljZS5wcm90bxIMZWNvbW1lcmNlLnYxIrgBCgxQcm9kdWN0QWRtaW4SCgoCaWQYASABKAkSEQoJdmVuZG9yX2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEg4KBnN0YXR1cxgFIAEoCRIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghzdG9yZV9pZBgHIAEoCRITCgt0YXhfcnVsZV9pZBgIIAEoCSItCgtWYXJpYW50QXhpcxIMCgRuYW1lGAEgASgJEhAKCHBvc2l0aW9uGAIgASgNIpkBChNEZWZhdWx0VmFyaWFudElucHV0EgsKA3NrdRgBIAEoCRIYChBmdWxmaWxsbWVudF90eXBlGAIgASgJEiIKBXByaWNlGAMgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EicKCmNvbXBhcmVfYXQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJIrIBCgxWYXJpYW50QWRtaW4SCgoCaWQYASABKAkSEgoKcHJvZHVjdF9pZBgCIAEoCRILCgNza3UYAyABKAkSGAoQZnVsZmlsbG1lbnRfdHlwZRgEIAEoCRIiCgVwcmljZRgFIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAYgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgHIAEoCSKcAQoIU2t1QWRtaW4SCgoCaWQYASABKAkSCwoDc2t1GAIgASgJEhIKCnByb2R1Y3RfaWQYAyABKAkSFQoNcHJvZHVjdF90aXRsZRgEIAEoCRIYChBmdWxmaWxsbWVudF90eXBlGAUgASgJEiIKBXByaWNlGAYgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgHIAEoCSKKAQoOSW52ZW50b3J5QWRtaW4SEgoKdmFyaWFudF9pZBgBIAEoCRITCgtsb2NhdGlvbl9pZBgCIAEoCRINCgVzdG9jaxgDIAEoBRIQCghyZXNlcnZlZBgEIAEoBRIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLhAQoKT3JkZXJBZG1pbhIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS5lY29tbWVyY2UudjEuT3JkZXJTdGF0dXMSIgoFdG90YWwYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSMwoOcGF5bWVudF9tZXRob2QYBSABKA4yGy5lY29tbWVyY2UudjEuUGF5bWVudE1ldGhvZBIuCgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKUAQoNU2hpcG1lbnRBZG1pbhIKCgJpZBgBIAEoCRIQCghvcmRlcl9pZBgCIAEoCRIRCgl2ZW5kb3JfaWQYAyABKAkSLAoGc3RhdHVzGAQgASgOMhwuZWNvbW1lcmNlLnYxLlNoaXBtZW50U3RhdHVzEhMKC3RyYWNraW5nX25vGAUgASgJEg8KB2NhcnJpZXIYBiABKAki0QEKDlByb21vdGlvbkFkbWluEgoKAmlkGAEgASgJEgwKBGNvZGUYAiABKAkSFQoNZGlzY291bnRfdHlwZRgDIAEoCRIiCgV2YWx1ZRgEIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIOCgZzdGF0dXMYBSABKAkSLQoJc3RhcnRzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIrCgdlbmRzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKrAQoYTGlzdFByb2R1Y3RzQWRtaW5SZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhEKCXZlbmRvcl9pZBgCIAEoCRIkCgRwYWdlGAMgASgLMhYuZWNvbW1lcmNlLnYxLlBhZ2VJbmZvEikKBXN0b3JlGAogASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dCJxChlMaXN0UHJvZHVjdHNBZG1pblJlc3BvbnNlEiwKCHByb2R1Y3RzGAEgAygLMhouZWNvbW1lcmNlLnYxLlByb2R1Y3RBZG1pbhImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQirAEKGExpc3RWYXJpYW50c0FkbWluUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKcHJvZHVjdF9pZBgDIAEoCRIkCgRwYWdlGAQgASgLMhYuZWNvbW1lcmNlLnYxLlBhZ2VJbmZvInEKGUxpc3RWYXJpYW50c0FkbWluUmVzcG9uc2USLAoIdmFyaWFudHMYASADKAsyGi5lY29tbWVyY2UudjEuVmFyaWFudEFkbWluEiYKBHBhZ2UYAiABKAsyGC5lY29tbWVyY2UudjEuUGFnZVJlc3VsdCKjAQoUTGlzdFNrdXNBZG1pblJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg0KBXF1ZXJ5GAMgASgJEiQKBHBhZ2UYBCABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8iZQoVTGlzdFNrdXNBZG1pblJlc3BvbnNlEiQKBHNrdXMYASADKAsyFi5lY29tbWVyY2UudjEuU2t1QWRtaW4SJgoEcGFnZRgCIAEoCzIYLmVjb21tZXJjZS52MS5QYWdlUmVzdWx0IuICChRDcmVhdGVQcm9kdWN0UmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIRCgl2ZW5kb3JfaWQYAiABKAkSDQoFdGl0bGUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSDgoGc3RhdHVzGAUgASgJEikKBWFjdG9yGAYgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dBITCgt0YXhfcnVsZV9pZBgHIAEoCRIvCgx2YXJpYW50X2F4ZXMYCCADKAsyGS5lY29tbWVyY2UudjEuVmFyaWFudEF4aXMSOgoPZGVmYXVsdF92YXJpYW50GAkgASgLMiEuZWNvbW1lcmNlLnYxLkRlZmF1bHRWYXJpYW50SW5wdXQSKQoFc3RvcmUYCiABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0IkQKFUNyZWF0ZVByb2R1Y3RSZXNwb25zZRIrCgdwcm9kdWN0GAEgASgLMhouZWNvbW1lcmNlLnYxLlByb2R1Y3RBZG1pbiL2AQoUVXBkYXRlUHJvZHVjdFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKcHJvZHVjdF9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZzdGF0dXMYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0EhMKC3RheF9ydWxlX2lkGAcgASgJEikKBXN0b3JlGAogASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dCJEChVVcGRhdGVQcm9kdWN0UmVzcG9uc2USKwoHcHJvZHVjdBgBIAEoCzIaLmVjb21tZXJjZS52MS5Qcm9kdWN0QWRtaW4ihgIKFENyZWF0ZVZhcmlhbnRSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhIKCnByb2R1Y3RfaWQYAiABKAkSCwoDc2t1GAMgASgJEhgKEGZ1bGZpbGxtZW50X3R5cGUYBCABKAkSIgoFcHJpY2UYBSABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSJwoKY29tcGFyZV9hdBgGIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIOCgZzdGF0dXMYByABKAkSKQoFYWN0b3IYCCABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkQKFUNyZWF0ZVZhcmlhbnRSZXNwb25zZRIrCgd2YXJpYW50GAEgASgLMhouZWNvbW1lcmNlLnYxLlZhcmlhbnRBZG1pbiL5AQoUVXBkYXRlVmFyaWFudFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKdmFyaWFudF9pZBgCIAEoCRIiCgVwcmljZRgDIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgFIAEoCRIYChBmdWxmaWxsbWVudF90eXBlGAYgASgJEikKBWFjdG9yGAcgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJEChVVcGRhdGVWYXJpYW50UmVzcG9uc2USKwoHdmFyaWFudBgBIAEoCzIaLmVjb21tZXJjZS52MS5WYXJpYW50QWRtaW4i4gEKE1NldEludmVudG9yeVJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKdmFyaWFudF9pZBgCIAEoCRITCgtsb2NhdGlvbl9pZBgDIAEoCRINCgVzdG9jaxgEIAEoBRIQCghyZXNlcnZlZBgFIAEoBRIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQSKQoFc3RvcmUYCiABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0IkcKFFNldEludmVudG9yeVJlc3BvbnNlEi8KCWludmVudG9yeRgBIAEoCzIcLmVjb21tZXJjZS52MS5JbnZlbnRvcnlBZG1pbiKRAQoRTGlzdE9yZGVyc1JlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSKQoGc3RhdHVzGAIgASgOMhkuZWNvbW1lcmNlLnYxLk9yZGVyU3RhdHVzEiQKBHBhZ2UYAyABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8iZgoSTGlzdE9yZGVyc1Jlc3BvbnNlEigKBm9yZGVycxgBIAMoCzIYLmVjb21tZXJjZS52MS5PcmRlckFkbWluEiYKBHBhZ2UYAiABKAsyGC5lY29tbWVyY2UudjEuUGFnZVJlc3VsdCKvAQoYVXBkYXRlT3JkZXJTdGF0dXNSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhAKCG9yZGVyX2lkGAIgASgJEikKBnN0YXR1cxgDIAEoDjIZLmVjb21tZXJjZS52MS5PcmRlclN0YXR1cxIpCgVhY3RvchgEIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiRAoZVXBkYXRlT3JkZXJTdGF0dXNSZXNwb25zZRInCgVvcmRlchgBIAEoCzIYLmVjb21tZXJjZS52MS5PcmRlckFkbWluIugBChVDcmVhdGVTaGlwbWVudFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEAoIb3JkZXJfaWQYAiABKAkSEQoJdmVuZG9yX2lkGAMgASgJEiwKBnN0YXR1cxgEIAEoDjIcLmVjb21tZXJjZS52MS5TaGlwbWVudFN0YXR1cxITCgt0cmFja2luZ19ubxgFIAEoCRIPCgdjYXJyaWVyGAYgASgJEikKBWFjdG9yGAcgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJHChZDcmVhdGVTaGlwbWVudFJlc3BvbnNlEi0KCHNoaXBtZW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlNoaXBtZW50QWRtaW4i3gEKG1VwZGF0ZVNoaXBtZW50U3RhdHVzUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtzaGlwbWVudF9pZBgCIAEoCRIsCgZzdGF0dXMYAyABKA4yHC5lY29tbWVyY2UudjEuU2hpcG1lbnRTdGF0dXMSEwoLdHJhY2tpbmdfbm8YBCABKAkSDwoHY2FycmllchgFIAEoCRIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiTQocVXBkYXRlU2hpcG1lbnRTdGF0dXNSZXNwb25zZRItCghzaGlwbWVudBgBIAEoCzIbLmVjb21tZXJjZS52MS5TaGlwbWVudEFkbWluIqUCChZDcmVhdGVQcm9tb3Rpb25SZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EgwKBGNvZGUYAiABKAkSFQoNZGlzY291bnRfdHlwZRgDIAEoCRIiCgV2YWx1ZRgEIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIOCgZzdGF0dXMYBSABKAkSLQoJc3RhcnRzX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIrCgdlbmRzX2F0GAcgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIpCgVhY3RvchgIIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiSgoXQ3JlYXRlUHJvbW90aW9uUmVzcG9uc2USLwoJcHJvbW90aW9uGAEgASgLMhwuZWNvbW1lcmNlLnYxLlByb21vdGlvbkFkbWluIrsCChZVcGRhdGVQcm9tb3Rpb25SZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhQKDHByb21vdGlvbl9pZBgCIAEoCRIMCgRjb2RlGAMgASgJEhUKDWRpc2NvdW50X3R5cGUYBCABKAkSIgoFdmFsdWUYBSABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAYgASgJEi0KCXN0YXJ0c19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHZW5kc19hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKQoFYWN0b3IYCSABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkoKF1VwZGF0ZVByb21vdGlvblJlc3BvbnNlEi8KCXByb21vdGlvbhgBIAEoCzIcLmVjb21tZXJjZS52MS5Qcm9tb3Rpb25BZG1pbjKsCgoRQmFja29mZmljZVNlcnZpY2USXwoMTGlzdFByb2R1Y3RzEiYuZWNvbW1lcmNlLnYxLkxpc3RQcm9kdWN0c0FkbWluUmVxdWVzdBonLmVjb21tZXJjZS52MS5MaXN0UHJvZHVjdHNBZG1pblJlc3BvbnNlElgKDUNyZWF0ZVByb2R1Y3QSIi5lY29tbWVyY2UudjEuQ3JlYXRlUHJvZHVjdFJlcXVlc3QaIy5lY29tbWVyY2UudjEuQ3JlYXRlUHJvZHVjdFJlc3BvbnNlElgKDVVwZGF0ZVByb2R1Y3QSIi5lY29tbWVyY2UudjEuVXBkYXRlUHJvZHVjdFJlcXVlc3QaIy5lY29tbWVyY2UudjEuVXBkYXRlUHJvZHVjdFJlc3BvbnNlEl8KDExpc3RWYXJpYW50cxImLmVjb21tZXJjZS52MS5MaXN0VmFyaWFudHNBZG1pblJlcXVlc3QaJy5lY29tbWVyY2UudjEuTGlzdFZhcmlhbnRzQWRtaW5SZXNwb25zZRJTCghMaXN0U2t1cxIiLmVjb21tZXJjZS52MS5MaXN0U2t1c0FkbWluUmVxdWVzdBojLmVjb21tZXJjZS52MS5MaXN0U2t1c0FkbWluUmVzcG9uc2USWAoNQ3JlYXRlVmFyaWFudBIiLmVjb21tZXJjZS52MS5DcmVhdGVWYXJpYW50UmVxdWVzdBojLmVjb21tZXJjZS52MS5DcmVhdGVWYXJpYW50UmVzcG9uc2USWAoNVXBkYXRlVmFyaWFudBIiLmVjb21tZXJjZS52MS5VcGRhdGVWYXJpYW50UmVxdWVzdBojLmVjb21tZXJjZS52MS5VcGRhdGVWYXJpYW50UmVzcG9uc2USVQoMU2V0SW52ZW50b3J5EiEuZWNvbW1lcmNlLnYxLlNldEludmVudG9yeVJlcXVlc3QaIi5lY29tbWVyY2UudjEuU2V0SW52ZW50b3J5UmVzcG9uc2USTwoKTGlzdE9yZGVycxIfLmVjb21tZXJjZS52MS5MaXN0T3JkZXJzUmVxdWVzdBogLmVjb21tZXJjZS52MS5MaXN0T3JkZXJzUmVzcG9uc2USZAoRVXBkYXRlT3JkZXJTdGF0dXMSJi5lY29tbWVyY2UudjEuVXBkYXRlT3JkZXJTdGF0dXNSZXF1ZXN0GicuZWNvbW1lcmNlLnYxLlVwZGF0ZU9yZGVyU3RhdHVzUmVzcG9uc2USWwoOQ3JlYXRlU2hpcG1lbnQSIy5lY29tbWVyY2UudjEuQ3JlYXRlU2hpcG1lbnRSZXF1ZXN0GiQuZWNvbW1lcmNlLnYxLkNyZWF0ZVNoaXBtZW50UmVzcG9uc2USbQoUVXBkYXRlU2hpcG1lbnRTdGF0dXMSKS5lY29tbWVyY2UudjEuVXBkYXRlU2hpcG1lbnRTdGF0dXNSZXF1ZXN0GiouZWNvbW1lcmNlLnYxLlVwZGF0ZVNoaXBtZW50U3RhdHVzUmVzcG9uc2USXgoPQ3JlYXRlUHJvbW90aW9uEiQuZWNvbW1lcmNlLnYxLkNyZWF0ZVByb21vdGlvblJlcXVlc3QaJS5lY29tbWVyY2UudjEuQ3JlYXRlUHJvbW90aW9uUmVzcG9uc2USXgoPVXBkYXRlUHJvbW90aW9uEiQuZWNvbW1lcmNlLnYxLlVwZGF0ZVByb21vdGlvblJlcXVlc3QaJS5lY29tbWVyY2UudjEuVXBkYXRlUHJvbW90aW9uUmVzcG9uc2ViBnByb3RvMw", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
+  fileDesc("Ch1lY29tbWVyY2UvdjEvYmFja29mZmljZS5wcm90bxIMZWNvbW1lcmNlLnYxIrgBCgxQcm9kdWN0QWRtaW4SCgoCaWQYASABKAkSEQoJdmVuZG9yX2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEg4KBnN0YXR1cxgFIAEoCRIuCgp1cGRhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghzdG9yZV9pZBgHIAEoCRITCgt0YXhfcnVsZV9pZBgIIAEoCSItCgtWYXJpYW50QXhpcxIMCgRuYW1lGAEgASgJEhAKCHBvc2l0aW9uGAIgASgNIpkBChNEZWZhdWx0VmFyaWFudElucHV0EgsKA3NrdRgBIAEoCRIYChBmdWxmaWxsbWVudF90eXBlGAIgASgJEiIKBXByaWNlGAMgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EicKCmNvbXBhcmVfYXQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJIrIBCgxWYXJpYW50QWRtaW4SCgoCaWQYASABKAkSEgoKcHJvZHVjdF9pZBgCIAEoCRILCgNza3UYAyABKAkSGAoQZnVsZmlsbG1lbnRfdHlwZRgEIAEoCRIiCgVwcmljZRgFIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAYgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgHIAEoCSKcAQoIU2t1QWRtaW4SCgoCaWQYASABKAkSCwoDc2t1GAIgASgJEhIKCnByb2R1Y3RfaWQYAyABKAkSFQoNcHJvZHVjdF90aXRsZRgEIAEoCRIYChBmdWxmaWxsbWVudF90eXBlGAUgASgJEiIKBXByaWNlGAYgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgHIAEoCSK8AQoKTWVkaWFBc3NldBIKCgJpZBgBIAEoCRISCgpwdWJsaWNfdXJsGAIgASgJEhAKCHByb3ZpZGVyGAMgASgJEg4KBmJ1Y2tldBgEIAEoCRISCgpvYmplY3Rfa2V5GAUgASgJEhQKDGNvbnRlbnRfdHlwZRgGIAEoCRISCgpzaXplX2J5dGVzGAcgASgDEi4KCmNyZWF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wImsKCFNrdUltYWdlEhAKCGFzc2V0X2lkGAEgASgJEhIKCnB1YmxpY191cmwYAiABKAkSEAoIcG9zaXRpb24YAyABKAUSJwoFYXNzZXQYBCABKAsyGC5lY29tbWVyY2UudjEuTWVkaWFBc3NldCIzCg1Ta3VJbWFnZUlucHV0EhAKCGFzc2V0X2lkGAEgASgJEhAKCHBvc2l0aW9uGAIgASgFIooBCg5JbnZlbnRvcnlBZG1pbhISCgp2YXJpYW50X2lkGAEgASgJEhMKC2xvY2F0aW9uX2lkGAIgASgJEg0KBXN0b2NrGAMgASgFEhAKCHJlc2VydmVkGAQgASgFEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIuEBCgpPcmRlckFkbWluEgoKAmlkGAEgASgJEhMKC2N1c3RvbWVyX2lkGAIgASgJEikKBnN0YXR1cxgDIAEoDjIZLmVjb21tZXJjZS52MS5PcmRlclN0YXR1cxIiCgV0b3RhbBgEIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIzCg5wYXltZW50X21ldGhvZBgFIAEoDjIbLmVjb21tZXJjZS52MS5QYXltZW50TWV0aG9kEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpQBCg1TaGlwbWVudEFkbWluEgoKAmlkGAEgASgJEhAKCG9yZGVyX2lkGAIgASgJEhEKCXZlbmRvcl9pZBgDIAEoCRIsCgZzdGF0dXMYBCABKA4yHC5lY29tbWVyY2UudjEuU2hpcG1lbnRTdGF0dXMSEwoLdHJhY2tpbmdfbm8YBSABKAkSDwoHY2FycmllchgGIAEoCSLRAQoOUHJvbW90aW9uQWRtaW4SCgoCaWQYASABKAkSDAoEY29kZRgCIAEoCRIVCg1kaXNjb3VudF90eXBlGAMgASgJEiIKBXZhbHVlGAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgFIAEoCRItCglzdGFydHNfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKB2VuZHNfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIqsBChhMaXN0UHJvZHVjdHNBZG1pblJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEQoJdmVuZG9yX2lkGAIgASgJEiQKBHBhZ2UYAyABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8SKQoFc3RvcmUYCiABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0InEKGUxpc3RQcm9kdWN0c0FkbWluUmVzcG9uc2USLAoIcHJvZHVjdHMYASADKAsyGi5lY29tbWVyY2UudjEuUHJvZHVjdEFkbWluEiYKBHBhZ2UYAiABKAsyGC5lY29tbWVyY2UudjEuUGFnZVJlc3VsdCKsAQoYTGlzdFZhcmlhbnRzQWRtaW5SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBISCgpwcm9kdWN0X2lkGAMgASgJEiQKBHBhZ2UYBCABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8icQoZTGlzdFZhcmlhbnRzQWRtaW5SZXNwb25zZRIsCgh2YXJpYW50cxgBIAMoCzIaLmVjb21tZXJjZS52MS5WYXJpYW50QWRtaW4SJgoEcGFnZRgCIAEoCzIYLmVjb21tZXJjZS52MS5QYWdlUmVzdWx0IqMBChRMaXN0U2t1c0FkbWluUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDQoFcXVlcnkYAyABKAkSJAoEcGFnZRgEIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJlChVMaXN0U2t1c0FkbWluUmVzcG9uc2USJAoEc2t1cxgBIAMoCzIWLmVjb21tZXJjZS52MS5Ta3VBZG1pbhImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQi4gIKFENyZWF0ZVByb2R1Y3RSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhEKCXZlbmRvcl9pZBgCIAEoCRINCgV0aXRsZRgDIAEoCRITCgtkZXNjcmlwdGlvbhgEIAEoCRIOCgZzdGF0dXMYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0EhMKC3RheF9ydWxlX2lkGAcgASgJEi8KDHZhcmlhbnRfYXhlcxgIIAMoCzIZLmVjb21tZXJjZS52MS5WYXJpYW50QXhpcxI6Cg9kZWZhdWx0X3ZhcmlhbnQYCSABKAsyIS5lY29tbWVyY2UudjEuRGVmYXVsdFZhcmlhbnRJbnB1dBIpCgVzdG9yZRgKIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQiRAoVQ3JlYXRlUHJvZHVjdFJlc3BvbnNlEisKB3Byb2R1Y3QYASABKAsyGi5lY29tbWVyY2UudjEuUHJvZHVjdEFkbWluIvYBChRVcGRhdGVQcm9kdWN0UmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBISCgpwcm9kdWN0X2lkGAIgASgJEg0KBXRpdGxlGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEg4KBnN0YXR1cxgFIAEoCRIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQSEwoLdGF4X3J1bGVfaWQYByABKAkSKQoFc3RvcmUYCiABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0IkQKFVVwZGF0ZVByb2R1Y3RSZXNwb25zZRIrCgdwcm9kdWN0GAEgASgLMhouZWNvbW1lcmNlLnYxLlByb2R1Y3RBZG1pbiKGAgoUQ3JlYXRlVmFyaWFudFJlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEgoKcHJvZHVjdF9pZBgCIAEoCRILCgNza3UYAyABKAkSGAoQZnVsZmlsbG1lbnRfdHlwZRgEIAEoCRIiCgVwcmljZRgFIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRInCgpjb21wYXJlX2F0GAYgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgHIAEoCRIpCgVhY3RvchgIIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiRAoVQ3JlYXRlVmFyaWFudFJlc3BvbnNlEisKB3ZhcmlhbnQYASABKAsyGi5lY29tbWVyY2UudjEuVmFyaWFudEFkbWluIvkBChRVcGRhdGVWYXJpYW50UmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBISCgp2YXJpYW50X2lkGAIgASgJEiIKBXByaWNlGAMgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EicKCmNvbXBhcmVfYXQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJEhgKEGZ1bGZpbGxtZW50X3R5cGUYBiABKAkSKQoFYWN0b3IYByABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkQKFVVwZGF0ZVZhcmlhbnRSZXNwb25zZRIrCgd2YXJpYW50GAEgASgLMhouZWNvbW1lcmNlLnYxLlZhcmlhbnRBZG1pbiKlAQoWTGlzdE1lZGlhQXNzZXRzUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDQoFcXVlcnkYAyABKAkSJAoEcGFnZRgEIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJrChdMaXN0TWVkaWFBc3NldHNSZXNwb25zZRIoCgZhc3NldHMYASADKAsyGC5lY29tbWVyY2UudjEuTWVkaWFBc3NldBImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQixQEKF0NyZWF0ZU1lZGlhQXNzZXRSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBInCgVhc3NldBgDIAEoCzIYLmVjb21tZXJjZS52MS5NZWRpYUFzc2V0EikKBWFjdG9yGAQgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJDChhDcmVhdGVNZWRpYUFzc2V0UmVzcG9uc2USJwoFYXNzZXQYASABKAsyGC5lY29tbWVyY2UudjEuTWVkaWFBc3NldCKxAQobQ3JlYXRlTWVkaWFVcGxvYWRVcmxSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIQCghmaWxlbmFtZRgDIAEoCRIUCgxjb250ZW50X3R5cGUYBCABKAkSEgoKc2l6ZV9ieXRlcxgFIAEoAyL2AQocQ3JlYXRlTWVkaWFVcGxvYWRVcmxSZXNwb25zZRISCgp1cGxvYWRfdXJsGAEgASgJEkgKB2hlYWRlcnMYAiADKAsyNy5lY29tbWVyY2UudjEuQ3JlYXRlTWVkaWFVcGxvYWRVcmxSZXNwb25zZS5IZWFkZXJzRW50cnkSEgoKcHVibGljX3VybBgDIAEoCRIQCghwcm92aWRlchgEIAEoCRIOCgZidWNrZXQYBSABKAkSEgoKb2JqZWN0X2tleRgGIAEoCRouCgxIZWFkZXJzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ+ChRMaXN0U2t1SW1hZ2VzUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDgoGc2t1X2lkGAMgASgJIj8KFUxpc3RTa3VJbWFnZXNSZXNwb25zZRImCgZpbWFnZXMYASADKAsyFi5lY29tbWVyY2UudjEuU2t1SW1hZ2Ui1QEKE1NldFNrdUltYWdlc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg4KBnNrdV9pZBgDIAEoCRIrCgZpbWFnZXMYBCADKAsyGy5lY29tbWVyY2UudjEuU2t1SW1hZ2VJbnB1dBIpCgVhY3RvchgFIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiPgoUU2V0U2t1SW1hZ2VzUmVzcG9uc2USJgoGaW1hZ2VzGAEgAygLMhYuZWNvbW1lcmNlLnYxLlNrdUltYWdlIuIBChNTZXRJbnZlbnRvcnlSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhIKCnZhcmlhbnRfaWQYAiABKAkSEwoLbG9jYXRpb25faWQYAyABKAkSDQoFc3RvY2sYBCABKAUSEAoIcmVzZXJ2ZWQYBSABKAUSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0EikKBXN0b3JlGAogASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dCJHChRTZXRJbnZlbnRvcnlSZXNwb25zZRIvCglpbnZlbnRvcnkYASABKAsyHC5lY29tbWVyY2UudjEuSW52ZW50b3J5QWRtaW4ikQEKEUxpc3RPcmRlcnNSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EikKBnN0YXR1cxgCIAEoDjIZLmVjb21tZXJjZS52MS5PcmRlclN0YXR1cxIkCgRwYWdlGAMgASgLMhYuZWNvbW1lcmNlLnYxLlBhZ2VJbmZvImYKEkxpc3RPcmRlcnNSZXNwb25zZRIoCgZvcmRlcnMYASADKAsyGC5lY29tbWVyY2UudjEuT3JkZXJBZG1pbhImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQirwEKGFVwZGF0ZU9yZGVyU3RhdHVzUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIQCghvcmRlcl9pZBgCIAEoCRIpCgZzdGF0dXMYAyABKA4yGS5lY29tbWVyY2UudjEuT3JkZXJTdGF0dXMSKQoFYWN0b3IYBCABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkQKGVVwZGF0ZU9yZGVyU3RhdHVzUmVzcG9uc2USJwoFb3JkZXIYASABKAsyGC5lY29tbWVyY2UudjEuT3JkZXJBZG1pbiLoAQoVQ3JlYXRlU2hpcG1lbnRSZXF1ZXN0EisKBnRlbmFudBgBIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhAKCG9yZGVyX2lkGAIgASgJEhEKCXZlbmRvcl9pZBgDIAEoCRIsCgZzdGF0dXMYBCABKA4yHC5lY29tbWVyY2UudjEuU2hpcG1lbnRTdGF0dXMSEwoLdHJhY2tpbmdfbm8YBSABKAkSDwoHY2FycmllchgGIAEoCRIpCgVhY3RvchgHIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiRwoWQ3JlYXRlU2hpcG1lbnRSZXNwb25zZRItCghzaGlwbWVudBgBIAEoCzIbLmVjb21tZXJjZS52MS5TaGlwbWVudEFkbWluIt4BChtVcGRhdGVTaGlwbWVudFN0YXR1c1JlcXVlc3QSKwoGdGVuYW50GAEgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEwoLc2hpcG1lbnRfaWQYAiABKAkSLAoGc3RhdHVzGAMgASgOMhwuZWNvbW1lcmNlLnYxLlNoaXBtZW50U3RhdHVzEhMKC3RyYWNraW5nX25vGAQgASgJEg8KB2NhcnJpZXIYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0Ik0KHFVwZGF0ZVNoaXBtZW50U3RhdHVzUmVzcG9uc2USLQoIc2hpcG1lbnQYASABKAsyGy5lY29tbWVyY2UudjEuU2hpcG1lbnRBZG1pbiKlAgoWQ3JlYXRlUHJvbW90aW9uUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIMCgRjb2RlGAIgASgJEhUKDWRpc2NvdW50X3R5cGUYAyABKAkSIgoFdmFsdWUYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJEi0KCXN0YXJ0c19hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKwoHZW5kc19hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKQoFYWN0b3IYCCABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IkoKF0NyZWF0ZVByb21vdGlvblJlc3BvbnNlEi8KCXByb21vdGlvbhgBIAEoCzIcLmVjb21tZXJjZS52MS5Qcm9tb3Rpb25BZG1pbiK7AgoWVXBkYXRlUHJvbW90aW9uUmVxdWVzdBIrCgZ0ZW5hbnQYASABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBIUCgxwcm9tb3Rpb25faWQYAiABKAkSDAoEY29kZRgDIAEoCRIVCg1kaXNjb3VudF90eXBlGAQgASgJEiIKBXZhbHVlGAUgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Eg4KBnN0YXR1cxgGIAEoCRItCglzdGFydHNfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEisKB2VuZHNfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEikKBWFjdG9yGAkgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJKChdVcGRhdGVQcm9tb3Rpb25SZXNwb25zZRIvCglwcm9tb3Rpb24YASABKAsyHC5lY29tbWVyY2UudjEuUHJvbW90aW9uQWRtaW4yjw4KEUJhY2tvZmZpY2VTZXJ2aWNlEl8KDExpc3RQcm9kdWN0cxImLmVjb21tZXJjZS52MS5MaXN0UHJvZHVjdHNBZG1pblJlcXVlc3QaJy5lY29tbWVyY2UudjEuTGlzdFByb2R1Y3RzQWRtaW5SZXNwb25zZRJYCg1DcmVhdGVQcm9kdWN0EiIuZWNvbW1lcmNlLnYxLkNyZWF0ZVByb2R1Y3RSZXF1ZXN0GiMuZWNvbW1lcmNlLnYxLkNyZWF0ZVByb2R1Y3RSZXNwb25zZRJYCg1VcGRhdGVQcm9kdWN0EiIuZWNvbW1lcmNlLnYxLlVwZGF0ZVByb2R1Y3RSZXF1ZXN0GiMuZWNvbW1lcmNlLnYxLlVwZGF0ZVByb2R1Y3RSZXNwb25zZRJfCgxMaXN0VmFyaWFudHMSJi5lY29tbWVyY2UudjEuTGlzdFZhcmlhbnRzQWRtaW5SZXF1ZXN0GicuZWNvbW1lcmNlLnYxLkxpc3RWYXJpYW50c0FkbWluUmVzcG9uc2USUwoITGlzdFNrdXMSIi5lY29tbWVyY2UudjEuTGlzdFNrdXNBZG1pblJlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdFNrdXNBZG1pblJlc3BvbnNlElgKDUNyZWF0ZVZhcmlhbnQSIi5lY29tbWVyY2UudjEuQ3JlYXRlVmFyaWFudFJlcXVlc3QaIy5lY29tbWVyY2UudjEuQ3JlYXRlVmFyaWFudFJlc3BvbnNlElgKDVVwZGF0ZVZhcmlhbnQSIi5lY29tbWVyY2UudjEuVXBkYXRlVmFyaWFudFJlcXVlc3QaIy5lY29tbWVyY2UudjEuVXBkYXRlVmFyaWFudFJlc3BvbnNlEl4KD0xpc3RNZWRpYUFzc2V0cxIkLmVjb21tZXJjZS52MS5MaXN0TWVkaWFBc3NldHNSZXF1ZXN0GiUuZWNvbW1lcmNlLnYxLkxpc3RNZWRpYUFzc2V0c1Jlc3BvbnNlEmEKEENyZWF0ZU1lZGlhQXNzZXQSJS5lY29tbWVyY2UudjEuQ3JlYXRlTWVkaWFBc3NldFJlcXVlc3QaJi5lY29tbWVyY2UudjEuQ3JlYXRlTWVkaWFBc3NldFJlc3BvbnNlEm0KFENyZWF0ZU1lZGlhVXBsb2FkVXJsEikuZWNvbW1lcmNlLnYxLkNyZWF0ZU1lZGlhVXBsb2FkVXJsUmVxdWVzdBoqLmVjb21tZXJjZS52MS5DcmVhdGVNZWRpYVVwbG9hZFVybFJlc3BvbnNlElgKDUxpc3RTa3VJbWFnZXMSIi5lY29tbWVyY2UudjEuTGlzdFNrdUltYWdlc1JlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdFNrdUltYWdlc1Jlc3BvbnNlElUKDFNldFNrdUltYWdlcxIhLmVjb21tZXJjZS52MS5TZXRTa3VJbWFnZXNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLlNldFNrdUltYWdlc1Jlc3BvbnNlElUKDFNldEludmVudG9yeRIhLmVjb21tZXJjZS52MS5TZXRJbnZlbnRvcnlSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLlNldEludmVudG9yeVJlc3BvbnNlEk8KCkxpc3RPcmRlcnMSHy5lY29tbWVyY2UudjEuTGlzdE9yZGVyc1JlcXVlc3QaIC5lY29tbWVyY2UudjEuTGlzdE9yZGVyc1Jlc3BvbnNlEmQKEVVwZGF0ZU9yZGVyU3RhdHVzEiYuZWNvbW1lcmNlLnYxLlVwZGF0ZU9yZGVyU3RhdHVzUmVxdWVzdBonLmVjb21tZXJjZS52MS5VcGRhdGVPcmRlclN0YXR1c1Jlc3BvbnNlElsKDkNyZWF0ZVNoaXBtZW50EiMuZWNvbW1lcmNlLnYxLkNyZWF0ZVNoaXBtZW50UmVxdWVzdBokLmVjb21tZXJjZS52MS5DcmVhdGVTaGlwbWVudFJlc3BvbnNlEm0KFFVwZGF0ZVNoaXBtZW50U3RhdHVzEikuZWNvbW1lcmNlLnYxLlVwZGF0ZVNoaXBtZW50U3RhdHVzUmVxdWVzdBoqLmVjb21tZXJjZS52MS5VcGRhdGVTaGlwbWVudFN0YXR1c1Jlc3BvbnNlEl4KD0NyZWF0ZVByb21vdGlvbhIkLmVjb21tZXJjZS52MS5DcmVhdGVQcm9tb3Rpb25SZXF1ZXN0GiUuZWNvbW1lcmNlLnYxLkNyZWF0ZVByb21vdGlvblJlc3BvbnNlEl4KD1VwZGF0ZVByb21vdGlvbhIkLmVjb21tZXJjZS52MS5VcGRhdGVQcm9tb3Rpb25SZXF1ZXN0GiUuZWNvbW1lcmNlLnYxLlVwZGF0ZVByb21vdGlvblJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
 
 /**
  * @generated from message ecommerce.v1.ProductAdmin
@@ -226,6 +226,112 @@ export const SkuAdminSchema: GenMessage<SkuAdmin> = /*@__PURE__*/
   messageDesc(file_ecommerce_v1_backoffice, 4);
 
 /**
+ * @generated from message ecommerce.v1.MediaAsset
+ */
+export type MediaAsset = Message<"ecommerce.v1.MediaAsset"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string public_url = 2;
+   */
+  publicUrl: string;
+
+  /**
+   * @generated from field: string provider = 3;
+   */
+  provider: string;
+
+  /**
+   * @generated from field: string bucket = 4;
+   */
+  bucket: string;
+
+  /**
+   * @generated from field: string object_key = 5;
+   */
+  objectKey: string;
+
+  /**
+   * @generated from field: string content_type = 6;
+   */
+  contentType: string;
+
+  /**
+   * @generated from field: int64 size_bytes = 7;
+   */
+  sizeBytes: bigint;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 8;
+   */
+  createdAt?: Timestamp;
+};
+
+/**
+ * Describes the message ecommerce.v1.MediaAsset.
+ * Use `create(MediaAssetSchema)` to create a new message.
+ */
+export const MediaAssetSchema: GenMessage<MediaAsset> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 5);
+
+/**
+ * @generated from message ecommerce.v1.SkuImage
+ */
+export type SkuImage = Message<"ecommerce.v1.SkuImage"> & {
+  /**
+   * @generated from field: string asset_id = 1;
+   */
+  assetId: string;
+
+  /**
+   * @generated from field: string public_url = 2;
+   */
+  publicUrl: string;
+
+  /**
+   * @generated from field: int32 position = 3;
+   */
+  position: number;
+
+  /**
+   * @generated from field: ecommerce.v1.MediaAsset asset = 4;
+   */
+  asset?: MediaAsset;
+};
+
+/**
+ * Describes the message ecommerce.v1.SkuImage.
+ * Use `create(SkuImageSchema)` to create a new message.
+ */
+export const SkuImageSchema: GenMessage<SkuImage> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 6);
+
+/**
+ * @generated from message ecommerce.v1.SkuImageInput
+ */
+export type SkuImageInput = Message<"ecommerce.v1.SkuImageInput"> & {
+  /**
+   * @generated from field: string asset_id = 1;
+   */
+  assetId: string;
+
+  /**
+   * @generated from field: int32 position = 2;
+   */
+  position: number;
+};
+
+/**
+ * Describes the message ecommerce.v1.SkuImageInput.
+ * Use `create(SkuImageInputSchema)` to create a new message.
+ */
+export const SkuImageInputSchema: GenMessage<SkuImageInput> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 7);
+
+/**
  * @generated from message ecommerce.v1.InventoryAdmin
  */
 export type InventoryAdmin = Message<"ecommerce.v1.InventoryAdmin"> & {
@@ -260,7 +366,7 @@ export type InventoryAdmin = Message<"ecommerce.v1.InventoryAdmin"> & {
  * Use `create(InventoryAdminSchema)` to create a new message.
  */
 export const InventoryAdminSchema: GenMessage<InventoryAdmin> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 5);
+  messageDesc(file_ecommerce_v1_backoffice, 8);
 
 /**
  * @generated from message ecommerce.v1.OrderAdmin
@@ -302,7 +408,7 @@ export type OrderAdmin = Message<"ecommerce.v1.OrderAdmin"> & {
  * Use `create(OrderAdminSchema)` to create a new message.
  */
 export const OrderAdminSchema: GenMessage<OrderAdmin> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 6);
+  messageDesc(file_ecommerce_v1_backoffice, 9);
 
 /**
  * @generated from message ecommerce.v1.ShipmentAdmin
@@ -344,7 +450,7 @@ export type ShipmentAdmin = Message<"ecommerce.v1.ShipmentAdmin"> & {
  * Use `create(ShipmentAdminSchema)` to create a new message.
  */
 export const ShipmentAdminSchema: GenMessage<ShipmentAdmin> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 7);
+  messageDesc(file_ecommerce_v1_backoffice, 10);
 
 /**
  * @generated from message ecommerce.v1.PromotionAdmin
@@ -393,7 +499,7 @@ export type PromotionAdmin = Message<"ecommerce.v1.PromotionAdmin"> & {
  * Use `create(PromotionAdminSchema)` to create a new message.
  */
 export const PromotionAdminSchema: GenMessage<PromotionAdmin> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 8);
+  messageDesc(file_ecommerce_v1_backoffice, 11);
 
 /**
  * @generated from message ecommerce.v1.ListProductsAdminRequest
@@ -427,7 +533,7 @@ export type ListProductsAdminRequest = Message<"ecommerce.v1.ListProductsAdminRe
  * Use `create(ListProductsAdminRequestSchema)` to create a new message.
  */
 export const ListProductsAdminRequestSchema: GenMessage<ListProductsAdminRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 9);
+  messageDesc(file_ecommerce_v1_backoffice, 12);
 
 /**
  * @generated from message ecommerce.v1.ListProductsAdminResponse
@@ -449,7 +555,7 @@ export type ListProductsAdminResponse = Message<"ecommerce.v1.ListProductsAdminR
  * Use `create(ListProductsAdminResponseSchema)` to create a new message.
  */
 export const ListProductsAdminResponseSchema: GenMessage<ListProductsAdminResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 10);
+  messageDesc(file_ecommerce_v1_backoffice, 13);
 
 /**
  * @generated from message ecommerce.v1.ListVariantsAdminRequest
@@ -481,7 +587,7 @@ export type ListVariantsAdminRequest = Message<"ecommerce.v1.ListVariantsAdminRe
  * Use `create(ListVariantsAdminRequestSchema)` to create a new message.
  */
 export const ListVariantsAdminRequestSchema: GenMessage<ListVariantsAdminRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 11);
+  messageDesc(file_ecommerce_v1_backoffice, 14);
 
 /**
  * @generated from message ecommerce.v1.ListVariantsAdminResponse
@@ -503,7 +609,7 @@ export type ListVariantsAdminResponse = Message<"ecommerce.v1.ListVariantsAdminR
  * Use `create(ListVariantsAdminResponseSchema)` to create a new message.
  */
 export const ListVariantsAdminResponseSchema: GenMessage<ListVariantsAdminResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 12);
+  messageDesc(file_ecommerce_v1_backoffice, 15);
 
 /**
  * @generated from message ecommerce.v1.ListSkusAdminRequest
@@ -535,7 +641,7 @@ export type ListSkusAdminRequest = Message<"ecommerce.v1.ListSkusAdminRequest"> 
  * Use `create(ListSkusAdminRequestSchema)` to create a new message.
  */
 export const ListSkusAdminRequestSchema: GenMessage<ListSkusAdminRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 13);
+  messageDesc(file_ecommerce_v1_backoffice, 16);
 
 /**
  * @generated from message ecommerce.v1.ListSkusAdminResponse
@@ -557,7 +663,7 @@ export type ListSkusAdminResponse = Message<"ecommerce.v1.ListSkusAdminResponse"
  * Use `create(ListSkusAdminResponseSchema)` to create a new message.
  */
 export const ListSkusAdminResponseSchema: GenMessage<ListSkusAdminResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 14);
+  messageDesc(file_ecommerce_v1_backoffice, 17);
 
 /**
  * @generated from message ecommerce.v1.CreateProductRequest
@@ -619,7 +725,7 @@ export type CreateProductRequest = Message<"ecommerce.v1.CreateProductRequest"> 
  * Use `create(CreateProductRequestSchema)` to create a new message.
  */
 export const CreateProductRequestSchema: GenMessage<CreateProductRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 15);
+  messageDesc(file_ecommerce_v1_backoffice, 18);
 
 /**
  * @generated from message ecommerce.v1.CreateProductResponse
@@ -636,7 +742,7 @@ export type CreateProductResponse = Message<"ecommerce.v1.CreateProductResponse"
  * Use `create(CreateProductResponseSchema)` to create a new message.
  */
 export const CreateProductResponseSchema: GenMessage<CreateProductResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 16);
+  messageDesc(file_ecommerce_v1_backoffice, 19);
 
 /**
  * @generated from message ecommerce.v1.UpdateProductRequest
@@ -688,7 +794,7 @@ export type UpdateProductRequest = Message<"ecommerce.v1.UpdateProductRequest"> 
  * Use `create(UpdateProductRequestSchema)` to create a new message.
  */
 export const UpdateProductRequestSchema: GenMessage<UpdateProductRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 17);
+  messageDesc(file_ecommerce_v1_backoffice, 20);
 
 /**
  * @generated from message ecommerce.v1.UpdateProductResponse
@@ -705,7 +811,7 @@ export type UpdateProductResponse = Message<"ecommerce.v1.UpdateProductResponse"
  * Use `create(UpdateProductResponseSchema)` to create a new message.
  */
 export const UpdateProductResponseSchema: GenMessage<UpdateProductResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 18);
+  messageDesc(file_ecommerce_v1_backoffice, 21);
 
 /**
  * @generated from message ecommerce.v1.CreateVariantRequest
@@ -759,7 +865,7 @@ export type CreateVariantRequest = Message<"ecommerce.v1.CreateVariantRequest"> 
  * Use `create(CreateVariantRequestSchema)` to create a new message.
  */
 export const CreateVariantRequestSchema: GenMessage<CreateVariantRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 19);
+  messageDesc(file_ecommerce_v1_backoffice, 22);
 
 /**
  * @generated from message ecommerce.v1.CreateVariantResponse
@@ -776,7 +882,7 @@ export type CreateVariantResponse = Message<"ecommerce.v1.CreateVariantResponse"
  * Use `create(CreateVariantResponseSchema)` to create a new message.
  */
 export const CreateVariantResponseSchema: GenMessage<CreateVariantResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 20);
+  messageDesc(file_ecommerce_v1_backoffice, 23);
 
 /**
  * @generated from message ecommerce.v1.UpdateVariantRequest
@@ -825,7 +931,7 @@ export type UpdateVariantRequest = Message<"ecommerce.v1.UpdateVariantRequest"> 
  * Use `create(UpdateVariantRequestSchema)` to create a new message.
  */
 export const UpdateVariantRequestSchema: GenMessage<UpdateVariantRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 21);
+  messageDesc(file_ecommerce_v1_backoffice, 24);
 
 /**
  * @generated from message ecommerce.v1.UpdateVariantResponse
@@ -842,7 +948,287 @@ export type UpdateVariantResponse = Message<"ecommerce.v1.UpdateVariantResponse"
  * Use `create(UpdateVariantResponseSchema)` to create a new message.
  */
 export const UpdateVariantResponseSchema: GenMessage<UpdateVariantResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 22);
+  messageDesc(file_ecommerce_v1_backoffice, 25);
+
+/**
+ * @generated from message ecommerce.v1.ListMediaAssetsRequest
+ */
+export type ListMediaAssetsRequest = Message<"ecommerce.v1.ListMediaAssetsRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string query = 3;
+   */
+  query: string;
+
+  /**
+   * @generated from field: ecommerce.v1.PageInfo page = 4;
+   */
+  page?: PageInfo;
+};
+
+/**
+ * Describes the message ecommerce.v1.ListMediaAssetsRequest.
+ * Use `create(ListMediaAssetsRequestSchema)` to create a new message.
+ */
+export const ListMediaAssetsRequestSchema: GenMessage<ListMediaAssetsRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 26);
+
+/**
+ * @generated from message ecommerce.v1.ListMediaAssetsResponse
+ */
+export type ListMediaAssetsResponse = Message<"ecommerce.v1.ListMediaAssetsResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.MediaAsset assets = 1;
+   */
+  assets: MediaAsset[];
+
+  /**
+   * @generated from field: ecommerce.v1.PageResult page = 2;
+   */
+  page?: PageResult;
+};
+
+/**
+ * Describes the message ecommerce.v1.ListMediaAssetsResponse.
+ * Use `create(ListMediaAssetsResponseSchema)` to create a new message.
+ */
+export const ListMediaAssetsResponseSchema: GenMessage<ListMediaAssetsResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 27);
+
+/**
+ * @generated from message ecommerce.v1.CreateMediaAssetRequest
+ */
+export type CreateMediaAssetRequest = Message<"ecommerce.v1.CreateMediaAssetRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: ecommerce.v1.MediaAsset asset = 3;
+   */
+  asset?: MediaAsset;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 4;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateMediaAssetRequest.
+ * Use `create(CreateMediaAssetRequestSchema)` to create a new message.
+ */
+export const CreateMediaAssetRequestSchema: GenMessage<CreateMediaAssetRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 28);
+
+/**
+ * @generated from message ecommerce.v1.CreateMediaAssetResponse
+ */
+export type CreateMediaAssetResponse = Message<"ecommerce.v1.CreateMediaAssetResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.MediaAsset asset = 1;
+   */
+  asset?: MediaAsset;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateMediaAssetResponse.
+ * Use `create(CreateMediaAssetResponseSchema)` to create a new message.
+ */
+export const CreateMediaAssetResponseSchema: GenMessage<CreateMediaAssetResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 29);
+
+/**
+ * @generated from message ecommerce.v1.CreateMediaUploadUrlRequest
+ */
+export type CreateMediaUploadUrlRequest = Message<"ecommerce.v1.CreateMediaUploadUrlRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string filename = 3;
+   */
+  filename: string;
+
+  /**
+   * @generated from field: string content_type = 4;
+   */
+  contentType: string;
+
+  /**
+   * @generated from field: int64 size_bytes = 5;
+   */
+  sizeBytes: bigint;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateMediaUploadUrlRequest.
+ * Use `create(CreateMediaUploadUrlRequestSchema)` to create a new message.
+ */
+export const CreateMediaUploadUrlRequestSchema: GenMessage<CreateMediaUploadUrlRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 30);
+
+/**
+ * @generated from message ecommerce.v1.CreateMediaUploadUrlResponse
+ */
+export type CreateMediaUploadUrlResponse = Message<"ecommerce.v1.CreateMediaUploadUrlResponse"> & {
+  /**
+   * @generated from field: string upload_url = 1;
+   */
+  uploadUrl: string;
+
+  /**
+   * @generated from field: map<string, string> headers = 2;
+   */
+  headers: { [key: string]: string };
+
+  /**
+   * @generated from field: string public_url = 3;
+   */
+  publicUrl: string;
+
+  /**
+   * @generated from field: string provider = 4;
+   */
+  provider: string;
+
+  /**
+   * @generated from field: string bucket = 5;
+   */
+  bucket: string;
+
+  /**
+   * @generated from field: string object_key = 6;
+   */
+  objectKey: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateMediaUploadUrlResponse.
+ * Use `create(CreateMediaUploadUrlResponseSchema)` to create a new message.
+ */
+export const CreateMediaUploadUrlResponseSchema: GenMessage<CreateMediaUploadUrlResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 31);
+
+/**
+ * @generated from message ecommerce.v1.ListSkuImagesRequest
+ */
+export type ListSkuImagesRequest = Message<"ecommerce.v1.ListSkuImagesRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string sku_id = 3;
+   */
+  skuId: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.ListSkuImagesRequest.
+ * Use `create(ListSkuImagesRequestSchema)` to create a new message.
+ */
+export const ListSkuImagesRequestSchema: GenMessage<ListSkuImagesRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 32);
+
+/**
+ * @generated from message ecommerce.v1.ListSkuImagesResponse
+ */
+export type ListSkuImagesResponse = Message<"ecommerce.v1.ListSkuImagesResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.SkuImage images = 1;
+   */
+  images: SkuImage[];
+};
+
+/**
+ * Describes the message ecommerce.v1.ListSkuImagesResponse.
+ * Use `create(ListSkuImagesResponseSchema)` to create a new message.
+ */
+export const ListSkuImagesResponseSchema: GenMessage<ListSkuImagesResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 33);
+
+/**
+ * @generated from message ecommerce.v1.SetSkuImagesRequest
+ */
+export type SetSkuImagesRequest = Message<"ecommerce.v1.SetSkuImagesRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string sku_id = 3;
+   */
+  skuId: string;
+
+  /**
+   * @generated from field: repeated ecommerce.v1.SkuImageInput images = 4;
+   */
+  images: SkuImageInput[];
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 5;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.SetSkuImagesRequest.
+ * Use `create(SetSkuImagesRequestSchema)` to create a new message.
+ */
+export const SetSkuImagesRequestSchema: GenMessage<SetSkuImagesRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 34);
+
+/**
+ * @generated from message ecommerce.v1.SetSkuImagesResponse
+ */
+export type SetSkuImagesResponse = Message<"ecommerce.v1.SetSkuImagesResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.SkuImage images = 1;
+   */
+  images: SkuImage[];
+};
+
+/**
+ * Describes the message ecommerce.v1.SetSkuImagesResponse.
+ * Use `create(SetSkuImagesResponseSchema)` to create a new message.
+ */
+export const SetSkuImagesResponseSchema: GenMessage<SetSkuImagesResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_backoffice, 35);
 
 /**
  * @generated from message ecommerce.v1.SetInventoryRequest
@@ -889,7 +1275,7 @@ export type SetInventoryRequest = Message<"ecommerce.v1.SetInventoryRequest"> & 
  * Use `create(SetInventoryRequestSchema)` to create a new message.
  */
 export const SetInventoryRequestSchema: GenMessage<SetInventoryRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 23);
+  messageDesc(file_ecommerce_v1_backoffice, 36);
 
 /**
  * @generated from message ecommerce.v1.SetInventoryResponse
@@ -906,7 +1292,7 @@ export type SetInventoryResponse = Message<"ecommerce.v1.SetInventoryResponse"> 
  * Use `create(SetInventoryResponseSchema)` to create a new message.
  */
 export const SetInventoryResponseSchema: GenMessage<SetInventoryResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 24);
+  messageDesc(file_ecommerce_v1_backoffice, 37);
 
 /**
  * @generated from message ecommerce.v1.ListOrdersRequest
@@ -933,7 +1319,7 @@ export type ListOrdersRequest = Message<"ecommerce.v1.ListOrdersRequest"> & {
  * Use `create(ListOrdersRequestSchema)` to create a new message.
  */
 export const ListOrdersRequestSchema: GenMessage<ListOrdersRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 25);
+  messageDesc(file_ecommerce_v1_backoffice, 38);
 
 /**
  * @generated from message ecommerce.v1.ListOrdersResponse
@@ -955,7 +1341,7 @@ export type ListOrdersResponse = Message<"ecommerce.v1.ListOrdersResponse"> & {
  * Use `create(ListOrdersResponseSchema)` to create a new message.
  */
 export const ListOrdersResponseSchema: GenMessage<ListOrdersResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 26);
+  messageDesc(file_ecommerce_v1_backoffice, 39);
 
 /**
  * @generated from message ecommerce.v1.UpdateOrderStatusRequest
@@ -987,7 +1373,7 @@ export type UpdateOrderStatusRequest = Message<"ecommerce.v1.UpdateOrderStatusRe
  * Use `create(UpdateOrderStatusRequestSchema)` to create a new message.
  */
 export const UpdateOrderStatusRequestSchema: GenMessage<UpdateOrderStatusRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 27);
+  messageDesc(file_ecommerce_v1_backoffice, 40);
 
 /**
  * @generated from message ecommerce.v1.UpdateOrderStatusResponse
@@ -1004,7 +1390,7 @@ export type UpdateOrderStatusResponse = Message<"ecommerce.v1.UpdateOrderStatusR
  * Use `create(UpdateOrderStatusResponseSchema)` to create a new message.
  */
 export const UpdateOrderStatusResponseSchema: GenMessage<UpdateOrderStatusResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 28);
+  messageDesc(file_ecommerce_v1_backoffice, 41);
 
 /**
  * @generated from message ecommerce.v1.CreateShipmentRequest
@@ -1051,7 +1437,7 @@ export type CreateShipmentRequest = Message<"ecommerce.v1.CreateShipmentRequest"
  * Use `create(CreateShipmentRequestSchema)` to create a new message.
  */
 export const CreateShipmentRequestSchema: GenMessage<CreateShipmentRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 29);
+  messageDesc(file_ecommerce_v1_backoffice, 42);
 
 /**
  * @generated from message ecommerce.v1.CreateShipmentResponse
@@ -1068,7 +1454,7 @@ export type CreateShipmentResponse = Message<"ecommerce.v1.CreateShipmentRespons
  * Use `create(CreateShipmentResponseSchema)` to create a new message.
  */
 export const CreateShipmentResponseSchema: GenMessage<CreateShipmentResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 30);
+  messageDesc(file_ecommerce_v1_backoffice, 43);
 
 /**
  * @generated from message ecommerce.v1.UpdateShipmentStatusRequest
@@ -1110,7 +1496,7 @@ export type UpdateShipmentStatusRequest = Message<"ecommerce.v1.UpdateShipmentSt
  * Use `create(UpdateShipmentStatusRequestSchema)` to create a new message.
  */
 export const UpdateShipmentStatusRequestSchema: GenMessage<UpdateShipmentStatusRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 31);
+  messageDesc(file_ecommerce_v1_backoffice, 44);
 
 /**
  * @generated from message ecommerce.v1.UpdateShipmentStatusResponse
@@ -1127,7 +1513,7 @@ export type UpdateShipmentStatusResponse = Message<"ecommerce.v1.UpdateShipmentS
  * Use `create(UpdateShipmentStatusResponseSchema)` to create a new message.
  */
 export const UpdateShipmentStatusResponseSchema: GenMessage<UpdateShipmentStatusResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 32);
+  messageDesc(file_ecommerce_v1_backoffice, 45);
 
 /**
  * @generated from message ecommerce.v1.CreatePromotionRequest
@@ -1179,7 +1565,7 @@ export type CreatePromotionRequest = Message<"ecommerce.v1.CreatePromotionReques
  * Use `create(CreatePromotionRequestSchema)` to create a new message.
  */
 export const CreatePromotionRequestSchema: GenMessage<CreatePromotionRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 33);
+  messageDesc(file_ecommerce_v1_backoffice, 46);
 
 /**
  * @generated from message ecommerce.v1.CreatePromotionResponse
@@ -1196,7 +1582,7 @@ export type CreatePromotionResponse = Message<"ecommerce.v1.CreatePromotionRespo
  * Use `create(CreatePromotionResponseSchema)` to create a new message.
  */
 export const CreatePromotionResponseSchema: GenMessage<CreatePromotionResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 34);
+  messageDesc(file_ecommerce_v1_backoffice, 47);
 
 /**
  * @generated from message ecommerce.v1.UpdatePromotionRequest
@@ -1253,7 +1639,7 @@ export type UpdatePromotionRequest = Message<"ecommerce.v1.UpdatePromotionReques
  * Use `create(UpdatePromotionRequestSchema)` to create a new message.
  */
 export const UpdatePromotionRequestSchema: GenMessage<UpdatePromotionRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 35);
+  messageDesc(file_ecommerce_v1_backoffice, 48);
 
 /**
  * @generated from message ecommerce.v1.UpdatePromotionResponse
@@ -1270,7 +1656,7 @@ export type UpdatePromotionResponse = Message<"ecommerce.v1.UpdatePromotionRespo
  * Use `create(UpdatePromotionResponseSchema)` to create a new message.
  */
 export const UpdatePromotionResponseSchema: GenMessage<UpdatePromotionResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_backoffice, 36);
+  messageDesc(file_ecommerce_v1_backoffice, 49);
 
 /**
  * @generated from service ecommerce.v1.BackofficeService
@@ -1331,6 +1717,46 @@ export const BackofficeService: GenService<{
     methodKind: "unary";
     input: typeof UpdateVariantRequestSchema;
     output: typeof UpdateVariantResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.BackofficeService.ListMediaAssets
+   */
+  listMediaAssets: {
+    methodKind: "unary";
+    input: typeof ListMediaAssetsRequestSchema;
+    output: typeof ListMediaAssetsResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.BackofficeService.CreateMediaAsset
+   */
+  createMediaAsset: {
+    methodKind: "unary";
+    input: typeof CreateMediaAssetRequestSchema;
+    output: typeof CreateMediaAssetResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.BackofficeService.CreateMediaUploadUrl
+   */
+  createMediaUploadUrl: {
+    methodKind: "unary";
+    input: typeof CreateMediaUploadUrlRequestSchema;
+    output: typeof CreateMediaUploadUrlResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.BackofficeService.ListSkuImages
+   */
+  listSkuImages: {
+    methodKind: "unary";
+    input: typeof ListSkuImagesRequestSchema;
+    output: typeof ListSkuImagesResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.BackofficeService.SetSkuImages
+   */
+  setSkuImages: {
+    methodKind: "unary";
+    input: typeof SetSkuImagesRequestSchema;
+    output: typeof SetSkuImagesResponseSchema;
   },
   /**
    * @generated from rpc ecommerce.v1.BackofficeService.SetInventory

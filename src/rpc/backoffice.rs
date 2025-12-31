@@ -140,6 +140,87 @@ pub async fn update_variant(
     ))
 }
 
+pub async fn list_media_assets(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListMediaAssetsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListMediaAssetsRequest>(&headers, body)?;
+    let assets =
+        product::media::list_media_assets(&state, req.store, req.tenant, req.query).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListMediaAssetsResponse {
+            assets,
+            page: Some(pb::PageResult {
+                next_page_token: String::new(),
+            }),
+        }),
+    ))
+}
+
+pub async fn create_media_asset(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateMediaAssetResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateMediaAssetRequest>(&headers, body)?;
+    let _actor = req.actor.clone().or(actor_ctx);
+    let asset = product::media::create_media_asset(&state, req.store, req.tenant, req.asset.unwrap_or_default()).await?;
+    Ok((StatusCode::OK, Json(pb::CreateMediaAssetResponse { asset: Some(asset) })))
+}
+
+pub async fn create_media_upload_url(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateMediaUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateMediaUploadUrlRequest>(&headers, body)?;
+    let resp = product::media::create_media_upload_url(
+        &state,
+        req.store,
+        req.tenant,
+        req.filename,
+        req.content_type,
+        req.size_bytes,
+    )
+    .await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn list_sku_images(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListSkuImagesResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListSkuImagesRequest>(&headers, body)?;
+    let images = product::media::list_sku_images(&state, req.store, req.tenant, req.sku_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListSkuImagesResponse { images })))
+}
+
+pub async fn set_sku_images(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::SetSkuImagesResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::SetSkuImagesRequest>(&headers, body)?;
+    let _actor = req.actor.clone().or(actor_ctx);
+    let images = product::media::set_sku_images(
+        &state,
+        req.store,
+        req.tenant,
+        req.sku_id,
+        req.images,
+    )
+    .await?;
+    Ok((StatusCode::OK, Json(pb::SetSkuImagesResponse { images })))
+}
+
 pub async fn set_inventory(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

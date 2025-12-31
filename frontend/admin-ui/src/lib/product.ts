@@ -10,6 +10,11 @@ import {
   CreateVariantRequestSchema,
   UpdateVariantRequestSchema,
   SetInventoryRequestSchema,
+  ListMediaAssetsRequestSchema,
+  CreateMediaAssetRequestSchema,
+  CreateMediaUploadUrlRequestSchema,
+  ListSkuImagesRequestSchema,
+  SetSkuImagesRequestSchema,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 
 const client = createServiceClient(BackofficeService);
@@ -201,6 +206,67 @@ export async function setInventory(params: {
       locationId: params.locationId,
       stock: params.stock,
       reserved: params.reserved,
+    })
+  );
+}
+
+export async function listMediaAssets(params: { query?: string }) {
+  return client.listMediaAssets(
+    create(ListMediaAssetsRequestSchema, {
+      query: params.query || "",
+    })
+  );
+}
+
+export async function createMediaAsset(params: {
+  publicUrl: string;
+  provider?: string;
+  bucket?: string;
+  objectKey?: string;
+  contentType?: string;
+  sizeBytes?: number;
+}) {
+  return client.createMediaAsset(
+    create(CreateMediaAssetRequestSchema, {
+      asset: {
+        publicUrl: params.publicUrl,
+        provider: params.provider || "",
+        bucket: params.bucket || "",
+        objectKey: params.objectKey || "",
+        contentType: params.contentType || "",
+        sizeBytes: params.sizeBytes ?? 0,
+      },
+    })
+  );
+}
+
+export async function createMediaUploadUrl(params: {
+  filename: string;
+  contentType?: string;
+  sizeBytes?: number;
+}) {
+  return client.createMediaUploadUrl(
+    create(CreateMediaUploadUrlRequestSchema, {
+      filename: params.filename,
+      contentType: params.contentType || "",
+      sizeBytes: params.sizeBytes ?? 0,
+    })
+  );
+}
+
+export async function listSkuImages(params: { skuId: string }) {
+  return client.listSkuImages(
+    create(ListSkuImagesRequestSchema, {
+      skuId: params.skuId,
+    })
+  );
+}
+
+export async function setSkuImages(params: { skuId: string; images: { assetId: string; position: number }[] }) {
+  return client.setSkuImages(
+    create(SetSkuImagesRequestSchema, {
+      skuId: params.skuId,
+      images: params.images,
     })
   );
 }

@@ -45,6 +45,11 @@ export async function updateStoreSettings(params: {
     codEnabled: boolean;
     codFeeAmount: string;
     codFeeCurrency: string;
+    bankTransferEnabled: boolean;
+    storageProvider: string;
+    storageBucket: string;
+    storageBasePath: string;
+    storageCdnBaseUrl: string;
     bankName: string;
     bankBranch: string;
     bankAccountType: string;
@@ -80,6 +85,11 @@ export async function updateStoreSettings(params: {
       amount: BigInt(params.settings.codFeeAmount || "0"),
       currency: params.settings.codFeeCurrency || "JPY",
     }),
+    bankTransferEnabled: params.settings.bankTransferEnabled,
+    storageProvider: params.settings.storageProvider,
+    storageBucket: params.settings.storageBucket,
+    storageBasePath: params.settings.storageBasePath,
+    storageCdnBaseUrl: params.settings.storageCdnBaseUrl,
     bankName: params.settings.bankName,
     bankBranch: params.settings.bankBranch,
     bankAccountType: params.settings.bankAccountType,

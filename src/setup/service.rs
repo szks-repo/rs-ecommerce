@@ -1,5 +1,13 @@
 use crate::{
-    AppState, infrastructure::db, pb::pb, rpc::json::ConnectError, shared::validation::StoreCode,
+    AppState,
+    infrastructure::db,
+    pb::pb,
+    rpc::json::ConnectError,
+    shared::validation::StoreCode,
+    store_settings::{
+        repository::{PgStoreSettingsRepository, StoreSettingsRepository},
+        service::{default_mall_settings, default_store_settings},
+    },
 };
 use argon2::{
     Argon2,
@@ -105,6 +113,26 @@ pub async fn initialize_store(
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
+
+    let settings_repo = PgStoreSettingsRepository::new(&state.db);
+    let store_settings = default_store_settings(req.store_name.clone());
+    let (cod_fee_amount, cod_fee_currency) =
+        crate::shared::money::money_to_parts(store_settings.cod_fee.clone())?;
+    settings_repo
+        .insert_store_settings_if_absent_tx(
+            &mut tx,
+            &tenant_id,
+            &store_id,
+            &store_settings,
+            cod_fee_amount,
+            cod_fee_currency,
+        )
+        .await?;
+
+    let mall_settings = default_mall_settings();
+    settings_repo
+        .upsert_mall_settings_tx(&mut tx, &tenant_id, &store_id, &mall_settings)
+        .await?;
 
     let owner_role_id = uuid::Uuid::new_v4();
     let staff_role_id = uuid::Uuid::new_v4();

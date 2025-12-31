@@ -208,6 +208,56 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListMediaAssets",
+            post(backoffice::list_media_assets).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateMediaAsset",
+            post(backoffice::create_media_asset).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateMediaUploadUrl",
+            post(backoffice::create_media_upload_url).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListSkuImages",
+            post(backoffice::list_sku_images).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/SetSkuImages",
+            post(backoffice::set_sku_images).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
             "/rpc/ecommerce.v1.BackofficeService/SetInventory",
             post(backoffice::set_inventory).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(
