@@ -163,7 +163,7 @@ pub async fn initialize_store(
     .bind(owner_staff_id)
     .bind(store_id)
     .bind(&req.owner_email)
-    .bind(if req.owner_login_id.is_empty() { None } else { Some(req.owner_login_id.clone()) })
+    .bind(Option::<String>::None)
     .bind(Option::<String>::None)
     .bind(password_hash)
     .bind(owner_role_id)

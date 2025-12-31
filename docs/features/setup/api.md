@@ -7,7 +7,6 @@ Request fields:
 - store_name
 - owner_email
 - owner_password
-- owner_login_id (optional)
 - actor (optional)
 
 Response fields:

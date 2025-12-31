@@ -9,7 +9,6 @@ export async function initializeStore(params: {
   storeCode: string;
   ownerEmail: string;
   ownerPassword: string;
-  ownerLoginId?: string;
 }) {
   return client.initializeStore(
     create(InitializeStoreRequestSchema, {
@@ -17,7 +16,6 @@ export async function initializeStore(params: {
       storeCode: params.storeCode,
       ownerEmail: params.ownerEmail,
       ownerPassword: params.ownerPassword,
-      ownerLoginId: params.ownerLoginId || "",
     })
   );
 }

@@ -24,7 +24,6 @@ A step-based wizard. Each step validates before proceeding.
 #### Step 2: Owner Account
 - ownerEmail (required)
 - ownerPassword (required)
-- ownerLoginId (optional; for store staff without email)
 
 #### Final Step: Review + Submit
 - Show summary
@@ -47,7 +46,6 @@ Request payload (JSON mapping):
 - `storeName`
 - `ownerEmail`
 - `ownerPassword`
-- `ownerLoginId` (optional)
 
 ## Error Handling
 - Show API error `message` on submit

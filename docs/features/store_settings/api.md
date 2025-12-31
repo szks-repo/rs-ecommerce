@@ -67,5 +67,5 @@ ConnectRPC JSON-only endpoints under `/rpc/ecommerce.v1.StoreSettingsService/*`.
 
 ## Setup
 - InitializeStore (SetupService)
-  - input: store_name, owner_email, owner_password, owner_login_id
+- input: store_name, owner_email, owner_password
   - output: tenant_id, store_id, owner_staff_id, vendor_id

@@ -16,7 +16,6 @@ export default function InitPage() {
   const [storeCode, setStoreCode] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [ownerPassword, setOwnerPassword] = useState("");
-  const [ownerLoginId, setOwnerLoginId] = useState("");
   const [codeStatus, setCodeStatus] = useState<"idle" | "checking" | "available" | "unavailable">("idle");
   const [codeMessage, setCodeMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -71,7 +70,6 @@ export default function InitPage() {
         storeCode,
         ownerEmail,
         ownerPassword,
-        ownerLoginId: ownerLoginId || undefined,
       });
       sessionStorage.setItem("store_id", data.storeId);
       sessionStorage.setItem("tenant_id", data.tenantId);
@@ -167,15 +165,6 @@ export default function InitPage() {
                   value={ownerPassword}
                   onChange={(e) => setOwnerPassword(e.target.value)}
                   required
-                />
-              </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="ownerLoginId">Owner Login ID (optional)</Label>
-                <Input
-                  id="ownerLoginId"
-                  placeholder="owner-001"
-                  value={ownerLoginId}
-                  onChange={(e) => setOwnerLoginId(e.target.value)}
                 />
               </div>
             </CardContent>

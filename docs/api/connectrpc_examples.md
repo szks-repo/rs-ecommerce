@@ -158,7 +158,6 @@ Request:
   "storeName": "Example Store",
   "ownerEmail": "owner@example.com",
   "ownerPassword": "your-password",
-  "ownerLoginId": "owner-001",
   "actor": { "actorId": "admin_123", "actorType": "admin" }
 }
 ```
@@ -182,7 +181,6 @@ curl -X POST http://localhost:8080/rpc/ecommerce.v1.SetupService/InitializeStore
     "storeName": "Example Store",
     "ownerEmail": "owner@example.com",
     "ownerPassword": "your-password",
-    "ownerLoginId": "owner-001",
     "actor": { "actorId": "admin_123", "actorType": "admin" }
   }'
 ```
