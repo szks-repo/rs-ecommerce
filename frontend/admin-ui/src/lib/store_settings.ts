@@ -18,8 +18,60 @@ import { MoneySchema } from "@/gen/ecommerce/v1/common_pb";
 
 const client = createServiceClient(StoreSettingsService);
 
+function flattenStoreSettings(settings: any) {
+  const profile = settings.profile ?? {};
+  const contact = settings.contact ?? {};
+  const address = settings.address ?? {};
+  const domain = settings.domain ?? {};
+  const locale = settings.locale ?? {};
+  const tax = settings.tax ?? {};
+  const order = settings.order ?? {};
+  const payment = settings.payment ?? {};
+  const bank = payment.bankAccount ?? {};
+  const branding = settings.branding ?? {};
+  return {
+    storeName: profile.storeName || "",
+    legalName: profile.legalName || "",
+    legalNotice: profile.legalNotice || "",
+    contactEmail: contact.contactEmail || "",
+    contactPhone: contact.contactPhone || "",
+    addressPrefecture: address.addressPrefecture || "",
+    addressCity: address.addressCity || "",
+    addressLine1: address.addressLine1 || "",
+    addressLine2: address.addressLine2 || "",
+    defaultLanguage: locale.defaultLanguage || "ja",
+    primaryDomain: domain.primaryDomain || "",
+    subdomain: domain.subdomain || "",
+    httpsEnabled: Boolean(domain.httpsEnabled),
+    timeZone: locale.timeZone || "Asia/Tokyo",
+    currency: locale.currency || "JPY",
+    taxMode: tax.taxMode || "inclusive",
+    taxRounding: tax.taxRounding || "round",
+    orderInitialStatus: order.orderInitialStatus || "pending_payment",
+    codEnabled: Boolean(payment.codEnabled),
+    codFee: payment.codFee,
+    bankTransferEnabled: Boolean(payment.bankTransferEnabled),
+    bankName: bank.bankName || "",
+    bankBranch: bank.bankBranch || "",
+    bankAccountType: bank.bankAccountType || "",
+    bankAccountNumber: bank.bankAccountNumber || "",
+    bankAccountName: bank.bankAccountName || "",
+    theme: branding.theme || "default",
+    brandColor: branding.brandColor || "#111827",
+    logoUrl: branding.logoUrl || "",
+    faviconUrl: branding.faviconUrl || "",
+  };
+}
+
 export async function getStoreSettings() {
-  return client.getStoreSettings(create(GetStoreSettingsRequestSchema, {}));
+  const resp = await client.getStoreSettings(create(GetStoreSettingsRequestSchema, {}));
+  const settings = resp.settings;
+  if (!settings) {
+    return { settings: undefined };
+  }
+  return {
+    settings: flattenStoreSettings(settings),
+  };
 }
 
 export async function updateStoreSettings(params: {
@@ -46,10 +98,6 @@ export async function updateStoreSettings(params: {
     codFeeAmount: string;
     codFeeCurrency: string;
     bankTransferEnabled: boolean;
-    storageProvider: string;
-    storageBucket: string;
-    storageBasePath: string;
-    storageCdnBaseUrl: string;
     bankName: string;
     bankBranch: string;
     bankAccountType: string;
@@ -62,45 +110,62 @@ export async function updateStoreSettings(params: {
   };
 }) {
   const settings = create(StoreSettingsSchema, {
-    storeName: params.settings.storeName,
-    legalName: params.settings.legalName,
-    contactEmail: params.settings.contactEmail,
-    contactPhone: params.settings.contactPhone,
-    addressPrefecture: params.settings.addressPrefecture,
-    addressCity: params.settings.addressCity,
-    addressLine1: params.settings.addressLine1,
-    addressLine2: params.settings.addressLine2 || "",
-    legalNotice: params.settings.legalNotice,
-    defaultLanguage: params.settings.defaultLanguage,
-    primaryDomain: params.settings.primaryDomain || "",
-    subdomain: params.settings.subdomain || "",
-    httpsEnabled: params.settings.httpsEnabled,
-    timeZone: params.settings.timeZone || "Asia/Tokyo",
-    currency: params.settings.currency,
-    taxMode: params.settings.taxMode,
-    taxRounding: params.settings.taxRounding,
-    orderInitialStatus: params.settings.orderInitialStatus,
-    codEnabled: params.settings.codEnabled,
-    codFee: create(MoneySchema, {
-      amount: BigInt(params.settings.codFeeAmount || "0"),
-      currency: params.settings.codFeeCurrency || "JPY",
-    }),
-    bankTransferEnabled: params.settings.bankTransferEnabled,
-    storageProvider: params.settings.storageProvider,
-    storageBucket: params.settings.storageBucket,
-    storageBasePath: params.settings.storageBasePath,
-    storageCdnBaseUrl: params.settings.storageCdnBaseUrl,
-    bankName: params.settings.bankName,
-    bankBranch: params.settings.bankBranch,
-    bankAccountType: params.settings.bankAccountType,
-    bankAccountNumber: params.settings.bankAccountNumber,
-    bankAccountName: params.settings.bankAccountName,
-    theme: params.settings.theme,
-    brandColor: params.settings.brandColor,
-    logoUrl: params.settings.logoUrl || "",
-    faviconUrl: params.settings.faviconUrl || "",
+    profile: {
+      storeName: params.settings.storeName,
+      legalName: params.settings.legalName,
+      legalNotice: params.settings.legalNotice,
+    },
+    contact: {
+      contactEmail: params.settings.contactEmail,
+      contactPhone: params.settings.contactPhone,
+    },
+    address: {
+      addressPrefecture: params.settings.addressPrefecture,
+      addressCity: params.settings.addressCity,
+      addressLine1: params.settings.addressLine1,
+      addressLine2: params.settings.addressLine2 || "",
+    },
+    domain: {
+      primaryDomain: params.settings.primaryDomain || "",
+      subdomain: params.settings.subdomain || "",
+      httpsEnabled: params.settings.httpsEnabled,
+    },
+    locale: {
+      defaultLanguage: params.settings.defaultLanguage,
+      currency: params.settings.currency,
+      timeZone: params.settings.timeZone || "Asia/Tokyo",
+    },
+    tax: {
+      taxMode: params.settings.taxMode,
+      taxRounding: params.settings.taxRounding,
+    },
+    order: {
+      orderInitialStatus: params.settings.orderInitialStatus,
+    },
+    payment: {
+      codEnabled: params.settings.codEnabled,
+      codFee: create(MoneySchema, {
+        amount: BigInt(params.settings.codFeeAmount || "0"),
+        currency: params.settings.codFeeCurrency || "JPY",
+      }),
+      bankTransferEnabled: params.settings.bankTransferEnabled,
+      bankAccount: {
+        bankName: params.settings.bankName,
+        bankBranch: params.settings.bankBranch,
+        bankAccountType: params.settings.bankAccountType,
+        bankAccountNumber: params.settings.bankAccountNumber,
+        bankAccountName: params.settings.bankAccountName,
+      },
+    },
+    branding: {
+      theme: params.settings.theme,
+      brandColor: params.settings.brandColor,
+      logoUrl: params.settings.logoUrl || "",
+      faviconUrl: params.settings.faviconUrl || "",
+    },
   });
-  return client.updateStoreSettings(create(UpdateStoreSettingsRequestSchema, { settings }));
+  const resp = await client.updateStoreSettings(create(UpdateStoreSettingsRequestSchema, { settings }));
+  return { settings: resp.settings ? flattenStoreSettings(resp.settings) : undefined };
 }
 
 export async function listStoreLocations() {

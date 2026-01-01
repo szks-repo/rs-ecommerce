@@ -7,7 +7,7 @@ use std::{collections::HashMap, net::IpAddr, time::Duration};
 
 use crate::{
     AppState,
-    infrastructure::db,
+    infrastructure::{db, storage},
     pb::pb,
     rpc::json::ConnectError,
     shared::{ids::parse_uuid, time::chrono_to_timestamp},
@@ -42,14 +42,6 @@ fn sanitize_filename(name: &str) -> String {
         })
         .collect();
     sanitized
-}
-
-fn join_path(base: &str, suffix: &str) -> String {
-    let base = base.trim().trim_matches('/');
-    if base.is_empty() {
-        return suffix.to_string();
-    }
-    format!("{}/{}", base, suffix)
 }
 
 fn is_private_ip(ip: &IpAddr) -> bool {
@@ -218,17 +210,18 @@ async fn download_external_image(
 async fn import_external_asset(
     state: &AppState,
     store_id: &str,
+    tenant_id: &str,
     public_url: &str,
     object_key_hint: &str,
 ) -> Result<pb::MediaAsset, (StatusCode, Json<ConnectError>)> {
     let url = validate_external_url(public_url)?;
-    let (provider, bucket, base_path, cdn_base_url) = load_storage_settings(state, store_id).await?;
-    if provider.is_empty() || bucket.is_empty() {
+    let storage_config = storage::public_config();
+    if !storage_config.is_configured() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
                 code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                message: "storage settings are not configured".to_string(),
+                message: "storage is not configured".to_string(),
             }),
         ));
     }
@@ -239,15 +232,20 @@ async fn import_external_asset(
     } else {
         object_key_hint.trim().to_string()
     };
-    let object_key = join_path(&base_path, &filename);
+    let object_key =
+        storage::build_object_key(&storage_config.base_path, tenant_id, store_id, &filename);
 
-    match provider.as_str() {
+    match storage_config.provider.as_str() {
         "s3" => {
-            let config = aws_config::load_from_env().await;
+            let mut loader = aws_config::from_env();
+            if !storage_config.region.is_empty() {
+                loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
+            }
+            let config = loader.load().await;
             let client = aws_sdk_s3::Client::new(&config);
             client
                 .put_object()
-                .bucket(&bucket)
+                .bucket(&storage_config.bucket)
                 .key(&object_key)
                 .body(ByteStream::from(bytes.clone()))
                 .content_type(content_type.clone())
@@ -283,59 +281,25 @@ async fn import_external_asset(
         }
     }
 
-    let public_base = if cdn_base_url.is_empty() {
-        match provider.as_str() {
-            "s3" => format!("https://{}.s3.amazonaws.com", bucket),
+    let public_base = if storage_config.cdn_base_url.is_empty() {
+        match storage_config.provider.as_str() {
+            "s3" => format!("https://{}.s3.amazonaws.com", storage_config.bucket),
             _ => "".to_string(),
         }
     } else {
-        cdn_base_url.trim_end_matches('/').to_string()
+        storage_config.cdn_base_url.trim_end_matches('/').to_string()
     };
     let public_url = format!("{}/{}", public_base, object_key);
     Ok(pb::MediaAsset {
         id: "".to_string(),
         public_url,
-        provider,
-        bucket,
+        provider: storage_config.provider,
+        bucket: storage_config.bucket,
         object_key,
         content_type,
         size_bytes: bytes.len() as i64,
         created_at: None,
     })
-}
-
-async fn load_storage_settings(
-    state: &AppState,
-    store_id: &str,
-) -> Result<(String, String, String, String), (StatusCode, Json<ConnectError>)> {
-    let store_uuid = parse_uuid(store_id, "store_id")?;
-    let row = sqlx::query(
-        r#"
-        SELECT storage_provider, storage_bucket, storage_base_path, storage_cdn_base_url
-        FROM store_storage_settings
-        WHERE store_id = $1
-        "#,
-    )
-    .bind(store_uuid)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
-
-    let Some(row) = row else {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::FailedPrecondition,
-                message: "storage settings are not configured".to_string(),
-            }),
-        ));
-    };
-    Ok((
-        row.get::<String, _>("storage_provider"),
-        row.get::<String, _>("storage_bucket"),
-        row.get::<String, _>("storage_base_path"),
-        row.get::<String, _>("storage_cdn_base_url"),
-    ))
 }
 
 pub async fn create_media_upload_url(
@@ -346,10 +310,10 @@ pub async fn create_media_upload_url(
     content_type: String,
     size_bytes: i64,
 ) -> Result<pb::CreateMediaUploadUrlResponse, (StatusCode, Json<ConnectError>)> {
-    let (store_id, _tenant_id) =
+    let (store_id, tenant_id) =
         resolve_store_context(state, store.clone(), tenant.clone()).await?;
-    let (provider, bucket, base_path, cdn_base_url) = load_storage_settings(state, &store_id).await?;
-    if provider.is_empty() || bucket.is_empty() {
+    let storage_config = storage::public_config();
+    if !storage_config.is_configured() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
@@ -360,15 +324,24 @@ pub async fn create_media_upload_url(
     }
 
     let file_name = sanitize_filename(&filename);
-    let object_key = join_path(&base_path, &format!("{}-{}", uuid::Uuid::new_v4(), file_name));
+    let object_key = storage::build_object_key(
+        &storage_config.base_path,
+        &tenant_id,
+        &store_id,
+        &format!("{}-{}", uuid::Uuid::new_v4(), file_name),
+    );
 
-    match provider.as_str() {
+    match storage_config.provider.as_str() {
         "s3" => {
-            let config = aws_config::load_from_env().await;
+            let mut loader = aws_config::from_env();
+            if !storage_config.region.is_empty() {
+                loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
+            }
+            let config = loader.load().await;
             let client = aws_sdk_s3::Client::new(&config);
             let mut put_req = client
                 .put_object()
-                .bucket(&bucket)
+                .bucket(&storage_config.bucket)
                 .key(&object_key);
             if !content_type.is_empty() {
                 put_req = put_req.content_type(content_type.clone());
@@ -402,18 +375,18 @@ pub async fn create_media_upload_url(
             for (key, value) in presigned.headers() {
                 headers.insert(key.to_string(), value.to_string());
             }
-            let public_base = if cdn_base_url.is_empty() {
-                format!("https://{}.s3.amazonaws.com", bucket)
+            let public_base = if storage_config.cdn_base_url.is_empty() {
+                format!("https://{}.s3.amazonaws.com", storage_config.bucket)
             } else {
-                cdn_base_url.trim_end_matches('/').to_string()
+                storage_config.cdn_base_url.trim_end_matches('/').to_string()
             };
             let public_url = format!("{}/{}", public_base, object_key);
             Ok(pb::CreateMediaUploadUrlResponse {
                 upload_url: presigned.uri().to_string(),
                 headers,
                 public_url,
-                provider,
-                bucket,
+                provider: storage_config.provider,
+                bucket: storage_config.bucket,
                 object_key,
             })
         }
@@ -551,7 +524,14 @@ pub async fn create_media_asset(
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let mut asset = asset;
     if asset.provider.is_empty() && !asset.public_url.is_empty() {
-        let imported = import_external_asset(state, &store_id, &asset.public_url, &asset.object_key).await?;
+        let imported = import_external_asset(
+            state,
+            &store_id,
+            &tenant_id,
+            &asset.public_url,
+            &asset.object_key,
+        )
+        .await?;
         asset = imported;
     }
     validate_store_asset_input(&asset)?;

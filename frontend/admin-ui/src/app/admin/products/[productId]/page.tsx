@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import ProductUpdateForm from "@/components/product-update-form";
 import VariantUpdateForm from "@/components/variant-update-form";
 import SkuImageManager from "@/components/sku-image-manager";
+import SkuDigitalAssetManager from "@/components/sku-digital-asset-manager";
 import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
@@ -172,7 +173,12 @@ export default function ProductDetailPage() {
       </Card>
 
       {selectedVariant ? (
-        <SkuImageManager skuId={selectedVariant.id} />
+        <div className="space-y-6">
+          <SkuImageManager skuId={selectedVariant.id} />
+          {selectedVariant.fulfillmentType === "digital" ? (
+            <SkuDigitalAssetManager skuId={selectedVariant.id} />
+          ) : null}
+        </div>
       ) : (
         <Card className="border-neutral-200 bg-white text-neutral-900">
           <CardHeader>

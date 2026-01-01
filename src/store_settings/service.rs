@@ -14,7 +14,7 @@ use crate::{
     },
     store_settings::{
         locations,
-        repository::{PgStoreSettingsRepository, StoreSettingsRepository},
+        repository::{PgStoreSettingsRepository, StoreSettingsRecord, StoreSettingsRepository},
         shipping, tax,
     },
 };
@@ -197,45 +197,7 @@ pub async fn get_store_settings(
         .await?;
 
     if let Some(row) = row {
-        return Ok(pb::StoreSettings {
-            store_name: row.store_name,
-            legal_name: row.legal_name,
-            contact_email: row.contact_email,
-            contact_phone: row.contact_phone,
-            address_prefecture: row.address_prefecture,
-            address_city: row.address_city,
-            address_line1: row.address_line1,
-            address_line2: row.address_line2.unwrap_or_default(),
-            legal_notice: row.legal_notice,
-            default_language: row.default_language,
-            primary_domain: row.primary_domain.unwrap_or_default(),
-            subdomain: row.subdomain.unwrap_or_default(),
-            https_enabled: row.https_enabled,
-            currency: row.currency,
-            tax_mode: row.tax_mode,
-            tax_rounding: row.tax_rounding,
-            order_initial_status: row.order_initial_status,
-            cod_enabled: row.cod_enabled,
-            cod_fee: Some(money_from_parts(
-                row.cod_fee_amount.unwrap_or_default(),
-                row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
-            )),
-            bank_transfer_enabled: row.bank_transfer_enabled,
-            storage_provider: row.storage_provider,
-            storage_bucket: row.storage_bucket,
-            storage_base_path: row.storage_base_path,
-            storage_cdn_base_url: row.storage_cdn_base_url,
-            bank_name: row.bank_name,
-            bank_branch: row.bank_branch,
-            bank_account_type: row.bank_account_type,
-            bank_account_number: row.bank_account_number,
-            bank_account_name: row.bank_account_name,
-            theme: row.theme,
-            brand_color: row.brand_color,
-            logo_url: row.logo_url.unwrap_or_default(),
-            favicon_url: row.favicon_url.unwrap_or_default(),
-            time_zone: row.time_zone,
-        });
+        return Ok(store_settings_from_record(row));
     }
 
     let tenant_uuid = TenantId::parse(&tenant_id)?;
@@ -244,45 +206,7 @@ pub async fn get_store_settings(
         .await?;
 
     if let Some(row) = fallback_row {
-        return Ok(pb::StoreSettings {
-            store_name: row.store_name,
-            legal_name: row.legal_name,
-            contact_email: row.contact_email,
-            contact_phone: row.contact_phone,
-            address_prefecture: row.address_prefecture,
-            address_city: row.address_city,
-            address_line1: row.address_line1,
-            address_line2: row.address_line2.unwrap_or_default(),
-            legal_notice: row.legal_notice,
-            default_language: row.default_language,
-            primary_domain: row.primary_domain.unwrap_or_default(),
-            subdomain: row.subdomain.unwrap_or_default(),
-            https_enabled: row.https_enabled,
-            currency: row.currency,
-            tax_mode: row.tax_mode,
-            tax_rounding: row.tax_rounding,
-            order_initial_status: row.order_initial_status,
-            cod_enabled: row.cod_enabled,
-            cod_fee: Some(money_from_parts(
-                row.cod_fee_amount.unwrap_or_default(),
-                row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
-            )),
-            bank_transfer_enabled: row.bank_transfer_enabled,
-            storage_provider: row.storage_provider,
-            storage_bucket: row.storage_bucket,
-            storage_base_path: row.storage_base_path,
-            storage_cdn_base_url: row.storage_cdn_base_url,
-            bank_name: row.bank_name,
-            bank_branch: row.bank_branch,
-            bank_account_type: row.bank_account_type,
-            bank_account_number: row.bank_account_number,
-            bank_account_name: row.bank_account_name,
-            theme: row.theme,
-            brand_color: row.brand_color,
-            logo_url: row.logo_url.unwrap_or_default(),
-            favicon_url: row.favicon_url.unwrap_or_default(),
-            time_zone: row.time_zone,
-        });
+        return Ok(store_settings_from_record(row));
     }
 
     let store_name = repo
@@ -295,40 +219,114 @@ pub async fn get_store_settings(
 
 pub(crate) fn default_store_settings(store_name: String) -> pb::StoreSettings {
     pb::StoreSettings {
-        store_name: store_name.clone(),
-        legal_name: store_name,
-        contact_email: "".to_string(),
-        contact_phone: "".to_string(),
-        address_prefecture: "".to_string(),
-        address_city: "".to_string(),
-        address_line1: "".to_string(),
-        address_line2: "".to_string(),
-        legal_notice: "".to_string(),
-        default_language: "ja".to_string(),
-        primary_domain: "".to_string(),
-        subdomain: "".to_string(),
-        https_enabled: true,
-        currency: "JPY".to_string(),
-        tax_mode: "exclusive".to_string(),
-        tax_rounding: "round".to_string(),
-        order_initial_status: "pending_payment".to_string(),
-        cod_enabled: true,
-        cod_fee: Some(money_from_parts(0, "JPY".to_string())),
-        bank_transfer_enabled: true,
-        storage_provider: "".to_string(),
-        storage_bucket: "".to_string(),
-        storage_base_path: "".to_string(),
-        storage_cdn_base_url: "".to_string(),
-        bank_name: "".to_string(),
-        bank_branch: "".to_string(),
-        bank_account_type: "".to_string(),
-        bank_account_number: "".to_string(),
-        bank_account_name: "".to_string(),
-        theme: "default".to_string(),
-        brand_color: "#111827".to_string(),
-        logo_url: "".to_string(),
-        favicon_url: "".to_string(),
-        time_zone: "Asia/Tokyo".to_string(),
+        profile: Some(pb::StoreProfile {
+            store_name: store_name.clone(),
+            legal_name: store_name,
+            legal_notice: "".to_string(),
+        }),
+        contact: Some(pb::StoreContact {
+            contact_email: "".to_string(),
+            contact_phone: "".to_string(),
+        }),
+        address: Some(pb::StoreAddress {
+            address_prefecture: "".to_string(),
+            address_city: "".to_string(),
+            address_line1: "".to_string(),
+            address_line2: "".to_string(),
+        }),
+        domain: Some(pb::StoreDomain {
+            primary_domain: "".to_string(),
+            subdomain: "".to_string(),
+            https_enabled: true,
+        }),
+        locale: Some(pb::StoreLocale {
+            default_language: "ja".to_string(),
+            currency: "JPY".to_string(),
+            time_zone: "Asia/Tokyo".to_string(),
+        }),
+        tax: Some(pb::StoreTax {
+            tax_mode: "exclusive".to_string(),
+            tax_rounding: "round".to_string(),
+        }),
+        order: Some(pb::StoreOrder {
+            order_initial_status: "pending_payment".to_string(),
+        }),
+        payment: Some(pb::StorePayment {
+            cod_enabled: true,
+            cod_fee: Some(money_from_parts(0, "JPY".to_string())),
+            bank_transfer_enabled: true,
+            bank_account: Some(pb::BankAccount {
+                bank_name: "".to_string(),
+                bank_branch: "".to_string(),
+                bank_account_type: "".to_string(),
+                bank_account_number: "".to_string(),
+                bank_account_name: "".to_string(),
+            }),
+        }),
+        branding: Some(pb::StoreBranding {
+            theme: "default".to_string(),
+            brand_color: "#111827".to_string(),
+            logo_url: "".to_string(),
+            favicon_url: "".to_string(),
+        }),
+    }
+}
+
+fn store_settings_from_record(row: StoreSettingsRecord) -> pb::StoreSettings {
+    pb::StoreSettings {
+        profile: Some(pb::StoreProfile {
+            store_name: row.store_name,
+            legal_name: row.legal_name,
+            legal_notice: row.legal_notice,
+        }),
+        contact: Some(pb::StoreContact {
+            contact_email: row.contact_email,
+            contact_phone: row.contact_phone,
+        }),
+        address: Some(pb::StoreAddress {
+            address_prefecture: row.address_prefecture,
+            address_city: row.address_city,
+            address_line1: row.address_line1,
+            address_line2: row.address_line2.unwrap_or_default(),
+        }),
+        domain: Some(pb::StoreDomain {
+            primary_domain: row.primary_domain.unwrap_or_default(),
+            subdomain: row.subdomain.unwrap_or_default(),
+            https_enabled: row.https_enabled,
+        }),
+        locale: Some(pb::StoreLocale {
+            default_language: row.default_language,
+            currency: row.currency,
+            time_zone: row.time_zone,
+        }),
+        tax: Some(pb::StoreTax {
+            tax_mode: row.tax_mode,
+            tax_rounding: row.tax_rounding,
+        }),
+        order: Some(pb::StoreOrder {
+            order_initial_status: row.order_initial_status,
+        }),
+        payment: Some(pb::StorePayment {
+            cod_enabled: row.cod_enabled,
+            cod_fee: Some(money_from_parts(
+                row.cod_fee_amount.unwrap_or_default(),
+                row.cod_fee_currency.unwrap_or_else(|| "JPY".to_string()),
+            )),
+            bank_transfer_enabled: row.bank_transfer_enabled,
+            bank_account: Some(pb::BankAccount {
+                bank_name: row.bank_name,
+                bank_branch: row.bank_branch,
+                bank_account_type: row.bank_account_type,
+                bank_account_number: row.bank_account_number,
+                bank_account_name: row.bank_account_name,
+            }),
+        }),
+        branding: Some(pb::StoreBranding {
+            theme: row.theme,
+            brand_color: row.brand_color,
+            logo_url: row.logo_url.unwrap_or_default(),
+            favicon_url: row.favicon_url.unwrap_or_default(),
+        }),
     }
 }
 
@@ -358,7 +356,8 @@ pub async fn update_store_settings(
     validate_store_settings_for_update(before.as_ref(), &merged_settings)?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let (cod_fee_amount, cod_fee_currency) = money_to_parts(merged_settings.cod_fee.clone())?;
+    let payment = merged_settings.payment.clone().unwrap_or_default();
+    let (cod_fee_amount, cod_fee_currency) = money_to_parts(payment.cod_fee.clone())?;
     let repo = PgStoreSettingsRepository::new(&state.db);
     let mut tx = state.db.begin().await.map_err(db::error)?;
     repo.upsert_store_settings_tx(
@@ -390,18 +389,48 @@ pub async fn update_store_settings(
 }
 
 fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSettings) -> pb::StoreSettings {
+    incoming.profile = Some(merge_profile(existing.profile, incoming.profile));
+    incoming.contact = Some(merge_contact(existing.contact, incoming.contact));
+    incoming.address = Some(merge_address(existing.address, incoming.address));
+    incoming.domain = Some(merge_domain(existing.domain, incoming.domain));
+    incoming.locale = Some(merge_locale(existing.locale, incoming.locale));
+    incoming.tax = Some(merge_tax(existing.tax, incoming.tax));
+    incoming.order = Some(merge_order(existing.order, incoming.order));
+    incoming.payment = Some(merge_payment(existing.payment, incoming.payment));
+    incoming.branding = Some(merge_branding(existing.branding, incoming.branding));
+    incoming
+}
+
+fn merge_profile(existing: Option<pb::StoreProfile>, incoming: Option<pb::StoreProfile>) -> pb::StoreProfile {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.store_name.is_empty() {
         incoming.store_name = existing.store_name;
     }
     if incoming.legal_name.is_empty() {
         incoming.legal_name = existing.legal_name;
     }
+    if incoming.legal_notice.is_empty() {
+        incoming.legal_notice = existing.legal_notice;
+    }
+    incoming
+}
+
+fn merge_contact(existing: Option<pb::StoreContact>, incoming: Option<pb::StoreContact>) -> pb::StoreContact {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.contact_email.is_empty() {
         incoming.contact_email = existing.contact_email;
     }
     if incoming.contact_phone.is_empty() {
         incoming.contact_phone = existing.contact_phone;
     }
+    incoming
+}
+
+fn merge_address(existing: Option<pb::StoreAddress>, incoming: Option<pb::StoreAddress>) -> pb::StoreAddress {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.address_prefecture.is_empty() {
         incoming.address_prefecture = existing.address_prefecture;
     }
@@ -414,60 +443,72 @@ fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSett
     if incoming.address_line2.is_empty() {
         incoming.address_line2 = existing.address_line2;
     }
-    if incoming.legal_notice.is_empty() {
-        incoming.legal_notice = existing.legal_notice;
-    }
-    if incoming.default_language.is_empty() {
-        incoming.default_language = existing.default_language;
-    }
+    incoming
+}
+
+fn merge_domain(existing: Option<pb::StoreDomain>, incoming: Option<pb::StoreDomain>) -> pb::StoreDomain {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.primary_domain.is_empty() {
         incoming.primary_domain = existing.primary_domain;
     }
     if incoming.subdomain.is_empty() {
         incoming.subdomain = existing.subdomain;
     }
-    if incoming.storage_provider.is_empty() {
-        incoming.storage_provider = existing.storage_provider;
-    }
-    if incoming.storage_bucket.is_empty() {
-        incoming.storage_bucket = existing.storage_bucket;
-    }
-    if incoming.storage_base_path.is_empty() {
-        incoming.storage_base_path = existing.storage_base_path;
-    }
-    if incoming.storage_cdn_base_url.is_empty() {
-        incoming.storage_cdn_base_url = existing.storage_cdn_base_url;
+    incoming
+}
+
+fn merge_locale(existing: Option<pb::StoreLocale>, incoming: Option<pb::StoreLocale>) -> pb::StoreLocale {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
+    if incoming.default_language.is_empty() {
+        incoming.default_language = existing.default_language;
     }
     if incoming.currency.is_empty() {
         incoming.currency = existing.currency;
     }
+    if incoming.time_zone.is_empty() {
+        incoming.time_zone = existing.time_zone;
+    }
+    incoming
+}
+
+fn merge_tax(existing: Option<pb::StoreTax>, incoming: Option<pb::StoreTax>) -> pb::StoreTax {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.tax_mode.is_empty() {
         incoming.tax_mode = existing.tax_mode;
     }
     if incoming.tax_rounding.is_empty() {
         incoming.tax_rounding = existing.tax_rounding;
     }
+    incoming
+}
+
+fn merge_order(existing: Option<pb::StoreOrder>, incoming: Option<pb::StoreOrder>) -> pb::StoreOrder {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.order_initial_status.is_empty() {
         incoming.order_initial_status = existing.order_initial_status;
     }
+    incoming
+}
+
+fn merge_payment(existing: Option<pb::StorePayment>, incoming: Option<pb::StorePayment>) -> pb::StorePayment {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.cod_fee.is_none() {
         incoming.cod_fee = existing.cod_fee;
     }
-    if incoming.bank_name.is_empty() {
-        incoming.bank_name = existing.bank_name;
+    if incoming.bank_account.is_none() {
+        incoming.bank_account = existing.bank_account;
     }
-    if incoming.bank_branch.is_empty() {
-        incoming.bank_branch = existing.bank_branch;
-    }
-    if incoming.bank_account_type.is_empty() {
-        incoming.bank_account_type = existing.bank_account_type;
-    }
-    if incoming.bank_account_number.is_empty() {
-        incoming.bank_account_number = existing.bank_account_number;
-    }
-    if incoming.bank_account_name.is_empty() {
-        incoming.bank_account_name = existing.bank_account_name;
-    }
+    incoming
+}
+
+fn merge_branding(existing: Option<pb::StoreBranding>, incoming: Option<pb::StoreBranding>) -> pb::StoreBranding {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
     if incoming.theme.is_empty() {
         incoming.theme = existing.theme;
     }
@@ -479,9 +520,6 @@ fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSett
     }
     if incoming.favicon_url.is_empty() {
         incoming.favicon_url = existing.favicon_url;
-    }
-    if incoming.time_zone.is_empty() {
-        incoming.time_zone = existing.time_zone;
     }
     incoming
 }
@@ -498,7 +536,8 @@ pub async fn initialize_store_settings(
     validate_mall_settings(&mall)?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let (cod_fee_amount, cod_fee_currency) = money_to_parts(settings.cod_fee.clone())?;
+    let payment = settings.payment.clone().unwrap_or_default();
+    let (cod_fee_amount, cod_fee_currency) = money_to_parts(payment.cod_fee.clone())?;
     let repo = PgStoreSettingsRepository::new(&state.db);
     let mut tx = state.db.begin().await.map_err(db::error)?;
     repo.insert_store_settings_if_absent_tx(
@@ -887,20 +926,24 @@ pub async fn resolve_store_context(
 pub fn validate_store_settings(
     settings: &pb::StoreSettings,
 ) -> Result<(), (StatusCode, Json<ConnectError>)> {
-    if settings.store_name.is_empty()
-        || settings.legal_name.is_empty()
-        || settings.contact_email.is_empty()
-        || settings.contact_phone.is_empty()
-        || settings.address_prefecture.is_empty()
-        || settings.address_city.is_empty()
-        || settings.address_line1.is_empty()
-        || settings.legal_notice.is_empty()
-        || settings.default_language.is_empty()
-        || settings.currency.is_empty()
-        || settings.tax_mode.is_empty()
-        || settings.tax_rounding.is_empty()
-        || settings.order_initial_status.is_empty()
-        || settings.time_zone.is_empty()
+    let profile = settings.profile.as_ref();
+    let contact = settings.contact.as_ref();
+    let address = settings.address.as_ref();
+    let locale = settings.locale.as_ref();
+    let tax = settings.tax.as_ref();
+    let order = settings.order.as_ref();
+    if profile.is_none()
+        || contact.is_none()
+        || address.is_none()
+        || locale.is_none()
+        || tax.is_none()
+        || order.is_none()
+        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
+        || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
+        || address.is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
+        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
+        || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
+        || order.is_some_and(|o| o.order_initial_status.is_empty())
     {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -929,20 +972,24 @@ pub fn validate_store_settings_for_update(
 }
 
 fn store_settings_missing_required(settings: &pb::StoreSettings) -> bool {
-    settings.store_name.is_empty()
-        || settings.legal_name.is_empty()
-        || settings.contact_email.is_empty()
-        || settings.contact_phone.is_empty()
-        || settings.address_prefecture.is_empty()
-        || settings.address_city.is_empty()
-        || settings.address_line1.is_empty()
-        || settings.legal_notice.is_empty()
-        || settings.default_language.is_empty()
-        || settings.currency.is_empty()
-        || settings.tax_mode.is_empty()
-        || settings.tax_rounding.is_empty()
-        || settings.order_initial_status.is_empty()
-        || settings.time_zone.is_empty()
+    let profile = settings.profile.as_ref();
+    let contact = settings.contact.as_ref();
+    let address = settings.address.as_ref();
+    let locale = settings.locale.as_ref();
+    let tax = settings.tax.as_ref();
+    let order = settings.order.as_ref();
+    profile.is_none()
+        || contact.is_none()
+        || address.is_none()
+        || locale.is_none()
+        || tax.is_none()
+        || order.is_none()
+        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
+        || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
+        || address.is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
+        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
+        || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
+        || order.is_some_and(|o| o.order_initial_status.is_empty())
 }
 
 pub fn validate_mall_settings(

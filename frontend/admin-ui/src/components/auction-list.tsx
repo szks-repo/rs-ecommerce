@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { listAuctions } from "@/lib/auction";
+import { listAuctions, listAutoBids } from "@/lib/auction";
 import { formatConnectError } from "@/lib/handle-error";
 import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
@@ -31,6 +31,7 @@ const statusOptions = [
 export default function AuctionList() {
   const [status, setStatus] = useState<string>("all");
   const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [autoBidCounts, setAutoBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
   const { push } = useToast();
 
@@ -39,7 +40,24 @@ export default function AuctionList() {
     try {
       const selected = (nextStatus ?? status) === "all" ? "" : nextStatus ?? status;
       const data = await listAuctions({ status: selected });
-      setAuctions(data.auctions ?? []);
+      const nextAuctions = data.auctions ?? [];
+      setAuctions(nextAuctions);
+      const ids = nextAuctions.map((auction) => auction.id).filter((id) => id);
+      if (ids.length === 0) {
+        setAutoBidCounts({});
+      } else {
+        const results = await Promise.all(
+          ids.map(async (auctionId) => {
+            try {
+              const res = await listAutoBids({ auctionId });
+              return [auctionId, (res.autoBids ?? []).length] as const;
+            } catch {
+              return [auctionId, 0] as const;
+            }
+          })
+        );
+        setAutoBidCounts(Object.fromEntries(results));
+      }
     } catch (err) {
       const uiError = formatConnectError(err, "Load failed", "Failed to load auctions");
       push({
@@ -113,6 +131,9 @@ export default function AuctionList() {
                     <div className="text-xs text-neutral-600">
                       Start: {formatMoney(auction.startPrice)} / Current:{" "}
                       {formatMoney(auction.currentPrice)}
+                    </div>
+                    <div className="text-xs text-neutral-500">
+                      Auto-bids: {auction.id ? autoBidCounts[auction.id] ?? 0 : "-"}
                     </div>
                   </div>
                   <div className="flex flex-col gap-2 text-xs">

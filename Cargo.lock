@@ -3091,6 +3091,7 @@ dependencies = [
  "aws-config",
  "aws-sdk-s3",
  "axum",
+ "bytes",
  "chrono",
  "hex",
  "jsonwebtoken 9.3.1",

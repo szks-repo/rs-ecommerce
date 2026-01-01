@@ -29,41 +29,77 @@ service StoreSettingsService {
   rpc DeleteTaxRule(DeleteTaxRuleRequest) returns (DeleteTaxRuleResponse);
 }
 
-message StoreSettings {
+message StoreProfile {
   string store_name = 1;
   string legal_name = 2;
-  string contact_email = 3;
-  string contact_phone = 4;
-  string address_prefecture = 5;
-  string address_city = 6;
-  string address_line1 = 7;
-  string address_line2 = 8;
-  string legal_notice = 9;
-  string default_language = 10;
-  string primary_domain = 11;
-  string subdomain = 12;
-  bool https_enabled = 13;
-  string currency = 14;
-  string tax_mode = 15; // inclusive | exclusive
-  string tax_rounding = 16; // floor | round | ceil
-  string order_initial_status = 17; // pending_payment | pending_shipment
-  bool cod_enabled = 18;
-  Money cod_fee = 19;
-  string bank_name = 20;
-  string bank_branch = 21;
-  string bank_account_type = 22;
-  string bank_account_number = 23;
-  string bank_account_name = 24;
-  string theme = 25;
-  string brand_color = 26;
-  string logo_url = 27;
-  string favicon_url = 28;
-  string time_zone = 29;
-  bool bank_transfer_enabled = 30;
-  string storage_provider = 31; // s3 | gcs | empty
-  string storage_bucket = 32;
-  string storage_base_path = 33;
-  string storage_cdn_base_url = 34;
+  string legal_notice = 3;
+}
+
+message StoreContact {
+  string contact_email = 1;
+  string contact_phone = 2;
+}
+
+message StoreAddress {
+  string address_prefecture = 1;
+  string address_city = 2;
+  string address_line1 = 3;
+  string address_line2 = 4;
+}
+
+message StoreDomain {
+  string primary_domain = 1;
+  string subdomain = 2;
+  bool https_enabled = 3;
+}
+
+message StoreLocale {
+  string default_language = 1;
+  string currency = 2;
+  string time_zone = 3;
+}
+
+message StoreTax {
+  string tax_mode = 1; // inclusive | exclusive
+  string tax_rounding = 2; // floor | round | ceil
+}
+
+message StoreOrder {
+  string order_initial_status = 1; // pending_payment | pending_shipment
+}
+
+message BankAccount {
+  string bank_name = 1;
+  string bank_branch = 2;
+  string bank_account_type = 3;
+  string bank_account_number = 4;
+  string bank_account_name = 5;
+}
+
+message StorePayment {
+  bool cod_enabled = 1;
+  Money cod_fee = 2;
+  bool bank_transfer_enabled = 3;
+  BankAccount bank_account = 4;
+}
+
+message StoreBranding {
+  string theme = 1;
+  string brand_color = 2;
+  string logo_url = 3;
+  string favicon_url = 4;
+}
+
+message StoreSettings {
+  StoreProfile profile = 1;
+  StoreContact contact = 2;
+  StoreAddress address = 3;
+  StoreDomain domain = 4;
+  StoreLocale locale = 5;
+  StoreTax tax = 6;
+  StoreOrder order = 7;
+  StorePayment payment = 8;
+  StoreBranding branding = 9;
 }
 
 message MallSettings {

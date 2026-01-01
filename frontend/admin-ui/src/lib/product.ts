@@ -15,6 +15,10 @@ import {
   CreateMediaUploadUrlRequestSchema,
   ListSkuImagesRequestSchema,
   SetSkuImagesRequestSchema,
+  ListDigitalAssetsRequestSchema,
+  CreateDigitalAssetRequestSchema,
+  CreateDigitalUploadUrlRequestSchema,
+  CreateDigitalDownloadUrlRequestSchema,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 
 const client = createServiceClient(BackofficeService);
@@ -250,6 +254,60 @@ export async function createMediaUploadUrl(params: {
       filename: params.filename,
       contentType: params.contentType || "",
       sizeBytes: params.sizeBytes ?? 0,
+    })
+  );
+}
+
+export async function listDigitalAssets(params: { skuId: string }) {
+  return client.listDigitalAssets(
+    create(ListDigitalAssetsRequestSchema, {
+      skuId: params.skuId,
+    })
+  );
+}
+
+export async function createDigitalAsset(params: {
+  skuId: string;
+  provider: string;
+  bucket: string;
+  objectKey: string;
+  contentType?: string;
+  sizeBytes?: number;
+}) {
+  return client.createDigitalAsset(
+    create(CreateDigitalAssetRequestSchema, {
+      skuId: params.skuId,
+      asset: {
+        provider: params.provider,
+        bucket: params.bucket,
+        objectKey: params.objectKey,
+        contentType: params.contentType || "",
+        sizeBytes: params.sizeBytes ?? 0,
+      },
+    })
+  );
+}
+
+export async function createDigitalUploadUrl(params: {
+  skuId: string;
+  filename: string;
+  contentType?: string;
+  sizeBytes?: number;
+}) {
+  return client.createDigitalUploadUrl(
+    create(CreateDigitalUploadUrlRequestSchema, {
+      skuId: params.skuId,
+      filename: params.filename,
+      contentType: params.contentType || "",
+      sizeBytes: params.sizeBytes ?? 0,
+    })
+  );
+}
+
+export async function createDigitalDownloadUrl(params: { assetId: string }) {
+  return client.createDigitalDownloadUrl(
+    create(CreateDigitalDownloadUrlRequestSchema, {
+      assetId: params.assetId,
     })
   );
 }

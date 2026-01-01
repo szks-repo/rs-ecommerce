@@ -1,6 +1,6 @@
 use axum::{Json, http::StatusCode};
 use chrono::{DateTime, Utc};
-use sqlx::Row;
+use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
     AppState,
@@ -26,6 +26,17 @@ const STATUS_RUNNING: &str = "running";
 const STATUS_ENDED: &str = "ended";
 const STATUS_AWAITING_APPROVAL: &str = "awaiting_approval";
 const STATUS_APPROVED: &str = "approved";
+
+const AUTO_BID_STATUS_ACTIVE: &str = "active";
+const AUTO_BID_STATUS_DISABLED: &str = "disabled";
+
+#[derive(Debug, Clone)]
+struct AutoBidCandidate {
+    id: uuid::Uuid,
+    customer_id: uuid::Uuid,
+    max_amount: i64,
+    created_at: DateTime<Utc>,
+}
 
 pub async fn get_auction_settings(
     state: &AppState,
@@ -574,9 +585,406 @@ pub async fn place_bid(
     )
     .await?;
 
+    let auto_updated = apply_auto_bids_tx(&mut tx, &store_uuid.as_uuid(), auction_uuid).await?;
+    let auction = auto_updated.unwrap_or(auction);
+
     tx.commit().await.map_err(db_error)?;
 
     Ok((auction, bid))
+}
+
+pub async fn set_auto_bid(
+    state: &AppState,
+    store_id: String,
+    auction_id: String,
+    customer_id: String,
+    max_amount: Option<pb::Money>,
+    enabled: bool,
+    actor: Option<pb::ActorContext>,
+) -> Result<(pb::Auction, pb::AuctionAutoBid), (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let auction_uuid = parse_uuid(&auction_id, "auction_id")?;
+    let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
+
+    let mut tx = state.db.begin().await.map_err(db_error)?;
+    let auction_row = sqlx::query("SELECT * FROM auctions WHERE id = $1 AND store_id = $2 FOR UPDATE")
+        .bind(auction_uuid)
+        .bind(store_uuid.as_uuid())
+        .fetch_one(tx.as_mut())
+        .await
+        .map_err(db_error)?;
+    let auction = auction_from_row(&auction_row);
+    let auction_type: String = auction_row.get("auction_type");
+    if auction_type != AUCTION_TYPE_OPEN {
+        return Err(invalid_arg("auto bid is only available for open auctions"));
+    }
+
+    let start_price_amount: i64 = auction_row.get("start_price_amount");
+    let start_price_currency: String = auction_row.get("start_price_currency");
+
+    let (max_amount_value, max_currency) = if enabled {
+        let (amount, currency) = money_to_parts(max_amount)?;
+        if currency != start_price_currency {
+            return Err(invalid_arg("currency mismatch"));
+        }
+        if amount < start_price_amount {
+            return Err(invalid_arg("max_amount must be >= start_price"));
+        }
+        (amount, currency)
+    } else {
+        (0, start_price_currency.clone())
+    };
+
+    let eligible = sqlx::query(
+        r#"
+        SELECT 1
+        FROM customer_profiles cp
+        JOIN customers c ON c.id = cp.customer_id
+        WHERE cp.store_id = $1
+          AND cp.customer_id = $2
+          AND cp.status = 'active'
+          AND c.status = 'active'
+        LIMIT 1
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(customer_uuid)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+    if eligible.is_none() {
+        return Err(permission_denied("customer is not eligible to bid"));
+    }
+
+    let status = if enabled {
+        AUTO_BID_STATUS_ACTIVE
+    } else {
+        AUTO_BID_STATUS_DISABLED
+    };
+
+    let row = sqlx::query(
+        r#"
+        INSERT INTO auction_auto_bids (
+            id, auction_id, store_id, customer_id, max_amount, currency, status
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        ON CONFLICT (auction_id, customer_id)
+        DO UPDATE SET max_amount = EXCLUDED.max_amount,
+                      currency = EXCLUDED.currency,
+                      status = EXCLUDED.status,
+                      updated_at = now()
+        RETURNING id, auction_id, customer_id, max_amount, currency, status, created_at, updated_at
+        "#,
+    )
+    .bind(uuid::Uuid::new_v4())
+    .bind(auction_uuid)
+    .bind(store_uuid.as_uuid())
+    .bind(customer_uuid)
+    .bind(max_amount_value)
+    .bind(max_currency.as_str())
+    .bind(status)
+    .fetch_one(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    let auto_bid = pb::AuctionAutoBid {
+        id: row.get::<uuid::Uuid, _>("id").to_string(),
+        auction_id: row.get::<uuid::Uuid, _>("auction_id").to_string(),
+        customer_id: row.get::<uuid::Uuid, _>("customer_id").to_string(),
+        max_amount: Some(money_from_parts(
+            row.get::<i64, _>("max_amount"),
+            row.get::<String, _>("currency"),
+        )),
+        status: row.get("status"),
+        created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+        updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+    };
+
+    audit::record_tx(
+        &mut tx,
+        audit_input(
+            Some(store_id.clone()),
+            AuctionAuditAction::Bid.into(),
+            Some("auction_auto_bid"),
+            Some(auto_bid.id.clone()),
+            None,
+            to_json_opt(Some(auto_bid.clone())),
+            actor,
+        ),
+    )
+    .await?;
+
+    let auto_updated = apply_auto_bids_tx(&mut tx, &store_uuid.as_uuid(), auction_uuid).await?;
+    let auction = auto_updated.unwrap_or(auction);
+
+    tx.commit().await.map_err(db_error)?;
+
+    Ok((auction, auto_bid))
+}
+
+pub async fn list_auto_bids(
+    state: &AppState,
+    store_id: String,
+    auction_id: String,
+) -> Result<Vec<pb::AuctionAutoBid>, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let auction_uuid = parse_uuid(&auction_id, "auction_id")?;
+    let rows = sqlx::query(
+        r#"
+        SELECT id, auction_id, customer_id, max_amount, currency, status, created_at, updated_at
+        FROM auction_auto_bids
+        WHERE auction_id = $1 AND store_id = $2
+        ORDER BY created_at DESC
+        "#,
+    )
+    .bind(auction_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db_error)?;
+
+    Ok(rows
+        .into_iter()
+        .map(|row| pb::AuctionAutoBid {
+            id: row.get::<uuid::Uuid, _>("id").to_string(),
+            auction_id: row.get::<uuid::Uuid, _>("auction_id").to_string(),
+            customer_id: row.get::<uuid::Uuid, _>("customer_id").to_string(),
+            max_amount: Some(money_from_parts(
+                row.get::<i64, _>("max_amount"),
+                row.get::<String, _>("currency"),
+            )),
+            status: row.get("status"),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+        })
+        .collect())
+}
+
+pub async fn run_scheduled_auctions(
+    state: &AppState,
+    batch_size: i64,
+) -> Result<usize, (StatusCode, Json<ConnectError>)> {
+    let mut tx = state.db.begin().await.map_err(db_error)?;
+    let rows = sqlx::query(
+        r#"
+        WITH cte AS (
+            SELECT id
+            FROM auctions
+            WHERE status = 'scheduled' AND start_at <= now()
+            ORDER BY start_at ASC
+            LIMIT $1
+            FOR UPDATE SKIP LOCKED
+        )
+        UPDATE auctions AS a
+        SET status = 'running',
+            current_price_amount = COALESCE(a.current_price_amount, a.start_price_amount),
+            current_price_currency = COALESCE(a.current_price_currency, a.start_price_currency),
+            updated_at = now()
+        FROM cte
+        WHERE a.id = cte.id
+        RETURNING a.id as id, a.store_id as store_id
+        "#,
+    )
+    .bind(batch_size)
+    .fetch_all(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+    tx.commit().await.map_err(db_error)?;
+
+    for row in rows.iter() {
+        let auction_id: uuid::Uuid = row.get("id");
+        let store_id: uuid::Uuid = row.get("store_id");
+        let mut tx = state.db.begin().await.map_err(db_error)?;
+        let _ = apply_auto_bids_tx(&mut tx, &store_id, auction_id).await?;
+        tx.commit().await.map_err(db_error)?;
+    }
+
+    Ok(rows.len())
+}
+
+async fn apply_auto_bids_tx(
+    tx: &mut Transaction<'_, Postgres>,
+    store_uuid: &uuid::Uuid,
+    auction_uuid: uuid::Uuid,
+) -> Result<Option<pb::Auction>, (StatusCode, Json<ConnectError>)> {
+    let row = sqlx::query(
+        r#"
+        SELECT *
+        FROM auctions
+        WHERE id = $1 AND store_id = $2
+        FOR UPDATE
+        "#,
+    )
+    .bind(auction_uuid)
+    .bind(store_uuid)
+    .fetch_one(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    let auction_type: String = row.get("auction_type");
+    let status: String = row.get("status");
+    if auction_type != AUCTION_TYPE_OPEN || status != STATUS_RUNNING {
+        return Ok(None);
+    }
+
+    let start_price_amount: i64 = row.get("start_price_amount");
+    let start_price_currency: String = row.get("start_price_currency");
+    let increment_amount: i64 = row.get("bid_increment_amount");
+    let current_price_amount: Option<i64> = row.get("current_price_amount");
+    let current_bid_id: Option<uuid::Uuid> = row.get("current_bid_id");
+    let buyout_amount: Option<i64> = row.get("buyout_price_amount");
+    let buyout_currency: Option<String> = row.get("buyout_price_currency");
+
+    let current_bid_customer_id = if let Some(bid_id) = current_bid_id {
+        sqlx::query("SELECT customer_id FROM auction_bids WHERE id = $1")
+            .bind(bid_id)
+            .fetch_optional(tx.as_mut())
+            .await
+            .map_err(db_error)?
+            .and_then(|r| r.get::<Option<uuid::Uuid>, _>("customer_id"))
+    } else {
+        None
+    };
+
+    let candidates = sqlx::query(
+        r#"
+        SELECT id, customer_id, max_amount, currency, created_at
+        FROM auction_auto_bids
+        WHERE auction_id = $1
+          AND store_id = $2
+          AND status = $3
+          AND currency = $4
+        ORDER BY max_amount DESC, created_at ASC
+        LIMIT 2
+        "#,
+    )
+    .bind(auction_uuid)
+    .bind(store_uuid)
+    .bind(AUTO_BID_STATUS_ACTIVE)
+    .bind(start_price_currency.as_str())
+    .fetch_all(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    if candidates.is_empty() {
+        return Ok(None);
+    }
+
+    let to_candidate = |row: &sqlx::postgres::PgRow| AutoBidCandidate {
+        id: row.get("id"),
+        customer_id: row.get("customer_id"),
+        max_amount: row.get("max_amount"),
+        created_at: row.get("created_at"),
+    };
+    let top = to_candidate(&candidates[0]);
+    if top.max_amount < start_price_amount {
+        return Ok(None);
+    }
+    let second = candidates.get(1).map(to_candidate);
+
+    let has_current_bid = current_bid_id.is_some();
+    let current_amount = current_price_amount.unwrap_or(0);
+    let min_next = if has_current_bid {
+        current_amount + increment_amount
+    } else {
+        start_price_amount
+    };
+    let mut target_amount = if let Some(second) = second {
+        std::cmp::min(top.max_amount, second.max_amount + increment_amount)
+    } else {
+        std::cmp::min(top.max_amount, min_next)
+    };
+    if target_amount < start_price_amount {
+        target_amount = start_price_amount;
+    }
+    let compare_amount = if has_current_bid { current_amount } else { 0 };
+    if target_amount <= compare_amount {
+        return Ok(None);
+    }
+    if current_bid_customer_id == Some(top.customer_id) && current_amount >= target_amount {
+        return Ok(None);
+    }
+
+    let bid_id = uuid::Uuid::new_v4();
+    let now = Utc::now();
+    sqlx::query(
+        r#"
+        INSERT INTO auction_bids
+            (id, auction_id, store_id, customer_id, amount, currency)
+        VALUES ($1,$2,$3,$4,$5,$6)
+        "#,
+    )
+    .bind(bid_id)
+    .bind(auction_uuid)
+    .bind(store_uuid)
+    .bind(top.customer_id)
+    .bind(target_amount)
+    .bind(start_price_currency.as_str())
+    .execute(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    let mut next_status = status.clone();
+    if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone()) {
+        if cur == start_price_currency && target_amount >= buyout {
+            next_status = STATUS_AWAITING_APPROVAL.to_string();
+        }
+    }
+
+    sqlx::query(
+        r#"
+        UPDATE auctions
+        SET status = $1,
+            current_bid_id = $2,
+            current_price_amount = $3,
+            current_price_currency = $4,
+            winning_bid_id = $5,
+            winning_price_amount = $6,
+            winning_price_currency = $7,
+            updated_at = now()
+        WHERE id = $8
+        "#,
+    )
+    .bind(next_status.as_str())
+    .bind(bid_id)
+    .bind(target_amount)
+    .bind(start_price_currency.as_str())
+    .bind(bid_id)
+    .bind(target_amount)
+    .bind(start_price_currency.as_str())
+    .bind(auction_uuid)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    let updated_row = sqlx::query("SELECT * FROM auctions WHERE id = $1")
+        .bind(auction_uuid)
+        .fetch_one(tx.as_mut())
+        .await
+        .map_err(db_error)?;
+    let auction = auction_from_row(&updated_row);
+    let bid = pb::AuctionBid {
+        id: bid_id.to_string(),
+        auction_id: auction.id.clone(),
+        customer_id: top.customer_id.to_string(),
+        amount: Some(money_from_parts(target_amount, start_price_currency.clone())),
+        created_at: chrono_to_timestamp(Some(now)),
+    };
+
+    audit::record_tx(
+        tx,
+        audit_input(
+            Some(auction.store_id.clone()),
+            AuctionAuditAction::Bid.into(),
+            Some("auction_auto_bid"),
+            Some(bid.id.clone()),
+            None,
+            to_json_opt(Some(bid)),
+            None,
+        ),
+    )
+    .await?;
+
+    Ok(Some(auction))
 }
 
 pub async fn close_auction(

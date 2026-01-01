@@ -11,6 +11,8 @@ service AuctionService {
   rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse);
   rpc PlaceBid(PlaceBidRequest) returns (PlaceBidResponse);
   rpc ListBids(ListBidsRequest) returns (ListBidsResponse);
+  rpc SetAutoBid(SetAutoBidRequest) returns (SetAutoBidResponse);
+  rpc ListAutoBids(ListAutoBidsRequest) returns (ListAutoBidsResponse);
   rpc CloseAuction(CloseAuctionRequest) returns (CloseAuctionResponse);
   rpc ApproveAuction(ApproveAuctionRequest) returns (ApproveAuctionResponse);
   rpc GetAuctionSettings(GetAuctionSettingsRequest) returns (GetAuctionSettingsResponse);
@@ -47,6 +49,16 @@ message AuctionBid {
   string customer_id = 3;
   Money amount = 4;
   google.protobuf.Timestamp created_at = 5;
+}
+
+message AuctionAutoBid {
+  string id = 1;
+  string auction_id = 2;
+  string customer_id = 3;
+  Money max_amount = 4;
+  string status = 5; // active | disabled
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
 }
 
 message AuctionSettings {
@@ -117,6 +129,29 @@ message ListBidsRequest {
 
 message ListBidsResponse {
   repeated AuctionBid bids = 1;
+}
+
+message SetAutoBidRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+  string customer_id = 3;
+  Money max_amount = 4;
+  bool enabled = 5;
+  ActorContext actor = 6;
+}
+
+message SetAutoBidResponse {
+  Auction auction = 1;
+  AuctionAutoBid auto_bid = 2;
+}
+
+message ListAutoBidsRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+}
+
+message ListAutoBidsResponse {
+  repeated AuctionAutoBid auto_bids = 1;
 }
 
 message CloseAuctionRequest {

@@ -89,6 +89,45 @@ pub async fn list_bids(
     Ok((StatusCode::OK, Json(pb::ListBidsResponse { bids })))
 }
 
+pub async fn set_auto_bid(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::SetAutoBidResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::SetAutoBidRequest>(&headers, body)?;
+    let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let (auction, auto_bid) = auction::service::set_auto_bid(
+        &state,
+        store_id,
+        req.auction_id,
+        req.customer_id,
+        req.max_amount,
+        req.enabled,
+        actor,
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::SetAutoBidResponse {
+            auction: Some(auction),
+            auto_bid: Some(auto_bid),
+        }),
+    ))
+}
+
+pub async fn list_auto_bids(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListAutoBidsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListAutoBidsRequest>(&headers, body)?;
+    let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
+    let auto_bids = auction::service::list_auto_bids(&state, store_id, req.auction_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListAutoBidsResponse { auto_bids })))
+}
+
 pub async fn close_auction(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

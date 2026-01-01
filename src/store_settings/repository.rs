@@ -7,6 +7,46 @@ pub struct PgStoreSettingsRepository<'a> {
     db: &'a sqlx::PgPool,
 }
 
+fn profile(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreProfile {
+    settings.profile.clone().unwrap_or_default()
+}
+
+fn contact(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreContact {
+    settings.contact.clone().unwrap_or_default()
+}
+
+fn address(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreAddress {
+    settings.address.clone().unwrap_or_default()
+}
+
+fn domain(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreDomain {
+    settings.domain.clone().unwrap_or_default()
+}
+
+fn locale(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreLocale {
+    settings.locale.clone().unwrap_or_default()
+}
+
+fn tax(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreTax {
+    settings.tax.clone().unwrap_or_default()
+}
+
+fn order(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreOrder {
+    settings.order.clone().unwrap_or_default()
+}
+
+fn payment(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StorePayment {
+    settings.payment.clone().unwrap_or_default()
+}
+
+fn branding(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreBranding {
+    settings.branding.clone().unwrap_or_default()
+}
+
+fn bank_account(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::BankAccount {
+    payment(settings).bank_account.unwrap_or_default()
+}
+
 #[derive(Debug, Clone)]
 pub struct StoreSettingsRecord {
     pub store_name: String,
@@ -30,10 +70,6 @@ pub struct StoreSettingsRecord {
     pub cod_fee_amount: Option<i64>,
     pub cod_fee_currency: Option<String>,
     pub bank_transfer_enabled: bool,
-    pub storage_provider: String,
-    pub storage_bucket: String,
-    pub storage_base_path: String,
-    pub storage_cdn_base_url: String,
     pub bank_name: String,
     pub bank_branch: String,
     pub bank_account_type: String,
@@ -418,16 +454,11 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
                    COALESCE(app.theme, 'default') AS theme,
                    COALESCE(app.brand_color, '#111827') AS brand_color,
                    COALESCE(app.logo_url, '') AS logo_url,
-                   COALESCE(app.favicon_url, '') AS favicon_url,
-                   COALESCE(stor.storage_provider, '') AS storage_provider,
-                   COALESCE(stor.storage_bucket, '') AS storage_bucket,
-                   COALESCE(stor.storage_base_path, '') AS storage_base_path,
-                   COALESCE(stor.storage_cdn_base_url, '') AS storage_cdn_base_url
+                   COALESCE(app.favicon_url, '') AS favicon_url
             FROM store_profile_settings p
             LEFT JOIN store_tax_settings t ON t.store_id = p.store_id
             LEFT JOIN store_payment_settings pay ON pay.store_id = p.store_id
             LEFT JOIN store_appearance_settings app ON app.store_id = p.store_id
-            LEFT JOIN store_storage_settings stor ON stor.store_id = p.store_id
             WHERE p.store_id = $1
             "#,
         )
@@ -458,10 +489,6 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             cod_fee_amount: row.get("cod_fee_amount"),
             cod_fee_currency: row.get("cod_fee_currency"),
             bank_transfer_enabled: row.get("bank_transfer_enabled"),
-            storage_provider: row.get("storage_provider"),
-            storage_bucket: row.get("storage_bucket"),
-            storage_base_path: row.get("storage_base_path"),
-            storage_cdn_base_url: row.get("storage_cdn_base_url"),
             bank_name: row.get("bank_name"),
             bank_branch: row.get("bank_branch"),
             bank_account_type: row.get("bank_account_type"),
@@ -499,16 +526,11 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
                    COALESCE(app.theme, 'default') AS theme,
                    COALESCE(app.brand_color, '#111827') AS brand_color,
                    COALESCE(app.logo_url, '') AS logo_url,
-                   COALESCE(app.favicon_url, '') AS favicon_url,
-                   COALESCE(stor.storage_provider, '') AS storage_provider,
-                   COALESCE(stor.storage_bucket, '') AS storage_bucket,
-                   COALESCE(stor.storage_base_path, '') AS storage_base_path,
-                   COALESCE(stor.storage_cdn_base_url, '') AS storage_cdn_base_url
+                   COALESCE(app.favicon_url, '') AS favicon_url
             FROM store_profile_settings p
             LEFT JOIN store_tax_settings t ON t.store_id = p.store_id
             LEFT JOIN store_payment_settings pay ON pay.store_id = p.store_id
             LEFT JOIN store_appearance_settings app ON app.store_id = p.store_id
-            LEFT JOIN store_storage_settings stor ON stor.store_id = p.store_id
             WHERE p.tenant_id = $1
             ORDER BY p.created_at ASC
             LIMIT 1
@@ -541,10 +563,6 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             cod_fee_amount: row.get("cod_fee_amount"),
             cod_fee_currency: row.get("cod_fee_currency"),
             bank_transfer_enabled: row.get("bank_transfer_enabled"),
-            storage_provider: row.get("storage_provider"),
-            storage_bucket: row.get("storage_bucket"),
-            storage_base_path: row.get("storage_base_path"),
-            storage_cdn_base_url: row.get("storage_cdn_base_url"),
             bank_name: row.get("bank_name"),
             bank_branch: row.get("bank_branch"),
             bank_account_type: row.get("bank_account_type"),
@@ -601,6 +619,16 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         cod_fee_amount: i64,
         cod_fee_currency: String,
     ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        let profile = profile(settings);
+        let contact = contact(settings);
+        let address = address(settings);
+        let domain = domain(settings);
+        let locale = locale(settings);
+        let order = order(settings);
+        let tax = tax(settings);
+        let payment = payment(settings);
+        let bank = bank_account(settings);
+        let branding = branding(settings);
         sqlx::query(
             r#"
             INSERT INTO store_profile_settings (
@@ -636,22 +664,22 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.store_name)
-        .bind(&settings.legal_name)
-        .bind(&settings.contact_email)
-        .bind(&settings.contact_phone)
-        .bind(&settings.address_prefecture)
-        .bind(&settings.address_city)
-        .bind(&settings.address_line1)
-        .bind(&settings.address_line2)
-        .bind(&settings.legal_notice)
-        .bind(&settings.default_language)
-        .bind(&settings.primary_domain)
-        .bind(&settings.subdomain)
-        .bind(settings.https_enabled)
-        .bind(&settings.currency)
-        .bind(&settings.order_initial_status)
-        .bind(&settings.time_zone)
+        .bind(&profile.store_name)
+        .bind(&profile.legal_name)
+        .bind(&contact.contact_email)
+        .bind(&contact.contact_phone)
+        .bind(&address.address_prefecture)
+        .bind(&address.address_city)
+        .bind(&address.address_line1)
+        .bind(&address.address_line2)
+        .bind(&profile.legal_notice)
+        .bind(&locale.default_language)
+        .bind(&domain.primary_domain)
+        .bind(&domain.subdomain)
+        .bind(domain.https_enabled)
+        .bind(&locale.currency)
+        .bind(&order.order_initial_status)
+        .bind(&locale.time_zone)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -669,8 +697,8 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.tax_mode)
-        .bind(&settings.tax_rounding)
+        .bind(&tax.tax_mode)
+        .bind(&tax.tax_rounding)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -698,15 +726,15 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(settings.cod_enabled)
+        .bind(payment.cod_enabled)
         .bind(cod_fee_amount)
         .bind(cod_fee_currency)
-        .bind(settings.bank_transfer_enabled)
-        .bind(&settings.bank_name)
-        .bind(&settings.bank_branch)
-        .bind(&settings.bank_account_type)
-        .bind(&settings.bank_account_number)
-        .bind(&settings.bank_account_name)
+        .bind(payment.bank_transfer_enabled)
+        .bind(&bank.bank_name)
+        .bind(&bank.bank_branch)
+        .bind(&bank.bank_account_type)
+        .bind(&bank.bank_account_number)
+        .bind(&bank.bank_account_name)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -728,35 +756,10 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.theme)
-        .bind(&settings.brand_color)
-        .bind(&settings.logo_url)
-        .bind(&settings.favicon_url)
-        .execute(exec.as_mut())
-        .await
-        .map_err(db::error)?;
-
-        sqlx::query(
-            r#"
-            INSERT INTO store_storage_settings (
-                store_id, tenant_id, storage_provider, storage_bucket, storage_base_path, storage_cdn_base_url
-            )
-            VALUES ($1,$2,$3,$4,$5,$6)
-            ON CONFLICT (store_id)
-            DO UPDATE SET tenant_id = EXCLUDED.tenant_id,
-                          storage_provider = EXCLUDED.storage_provider,
-                          storage_bucket = EXCLUDED.storage_bucket,
-                          storage_base_path = EXCLUDED.storage_base_path,
-                          storage_cdn_base_url = EXCLUDED.storage_cdn_base_url,
-                          updated_at = now()
-            "#,
-        )
-        .bind(store_uuid)
-        .bind(tenant_uuid)
-        .bind(&settings.storage_provider)
-        .bind(&settings.storage_bucket)
-        .bind(&settings.storage_base_path)
-        .bind(&settings.storage_cdn_base_url)
+        .bind(&branding.theme)
+        .bind(&branding.brand_color)
+        .bind(&branding.logo_url)
+        .bind(&branding.favicon_url)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -794,6 +797,16 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         cod_fee_amount: i64,
         cod_fee_currency: String,
     ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+        let profile = profile(settings);
+        let contact = contact(settings);
+        let address = address(settings);
+        let domain = domain(settings);
+        let locale = locale(settings);
+        let order = order(settings);
+        let tax = tax(settings);
+        let payment = payment(settings);
+        let bank = bank_account(settings);
+        let branding = branding(settings);
         sqlx::query(
             r#"
             INSERT INTO store_profile_settings (
@@ -810,22 +823,22 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.store_name)
-        .bind(&settings.legal_name)
-        .bind(&settings.contact_email)
-        .bind(&settings.contact_phone)
-        .bind(&settings.address_prefecture)
-        .bind(&settings.address_city)
-        .bind(&settings.address_line1)
-        .bind(&settings.address_line2)
-        .bind(&settings.legal_notice)
-        .bind(&settings.default_language)
-        .bind(&settings.primary_domain)
-        .bind(&settings.subdomain)
-        .bind(settings.https_enabled)
-        .bind(&settings.currency)
-        .bind(&settings.order_initial_status)
-        .bind(&settings.time_zone)
+        .bind(&profile.store_name)
+        .bind(&profile.legal_name)
+        .bind(&contact.contact_email)
+        .bind(&contact.contact_phone)
+        .bind(&address.address_prefecture)
+        .bind(&address.address_city)
+        .bind(&address.address_line1)
+        .bind(&address.address_line2)
+        .bind(&profile.legal_notice)
+        .bind(&locale.default_language)
+        .bind(&domain.primary_domain)
+        .bind(&domain.subdomain)
+        .bind(domain.https_enabled)
+        .bind(&locale.currency)
+        .bind(&order.order_initial_status)
+        .bind(&locale.time_zone)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -839,8 +852,8 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.tax_mode)
-        .bind(&settings.tax_rounding)
+        .bind(&tax.tax_mode)
+        .bind(&tax.tax_rounding)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -856,15 +869,15 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(settings.cod_enabled)
+        .bind(payment.cod_enabled)
         .bind(cod_fee_amount)
         .bind(cod_fee_currency)
-        .bind(settings.bank_transfer_enabled)
-        .bind(&settings.bank_name)
-        .bind(&settings.bank_branch)
-        .bind(&settings.bank_account_type)
-        .bind(&settings.bank_account_number)
-        .bind(&settings.bank_account_name)
+        .bind(payment.bank_transfer_enabled)
+        .bind(&bank.bank_name)
+        .bind(&bank.bank_branch)
+        .bind(&bank.bank_account_type)
+        .bind(&bank.bank_account_number)
+        .bind(&bank.bank_account_name)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;
@@ -879,28 +892,10 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         )
         .bind(store_uuid)
         .bind(tenant_uuid)
-        .bind(&settings.theme)
-        .bind(&settings.brand_color)
-        .bind(&settings.logo_url)
-        .bind(&settings.favicon_url)
-        .execute(exec.as_mut())
-        .await
-        .map_err(db::error)?;
-
-        sqlx::query(
-            r#"
-            INSERT INTO store_storage_settings (
-                store_id, tenant_id, storage_provider, storage_bucket, storage_base_path, storage_cdn_base_url
-            ) VALUES ($1,$2,$3,$4,$5,$6)
-            ON CONFLICT (store_id) DO NOTHING
-            "#,
-        )
-        .bind(store_uuid)
-        .bind(tenant_uuid)
-        .bind(&settings.storage_provider)
-        .bind(&settings.storage_bucket)
-        .bind(&settings.storage_base_path)
-        .bind(&settings.storage_cdn_base_url)
+        .bind(&branding.theme)
+        .bind(&branding.brand_color)
+        .bind(&branding.logo_url)
+        .bind(&branding.favicon_url)
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;

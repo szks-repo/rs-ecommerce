@@ -116,8 +116,9 @@ pub async fn initialize_store(
 
     let settings_repo = PgStoreSettingsRepository::new(&state.db);
     let store_settings = default_store_settings(req.store_name.clone());
+    let payment = store_settings.payment.clone().unwrap_or_default();
     let (cod_fee_amount, cod_fee_currency) =
-        crate::shared::money::money_to_parts(store_settings.cod_fee.clone())?;
+        crate::shared::money::money_to_parts(payment.cod_fee.clone())?;
     settings_repo
         .insert_store_settings_if_absent_tx(
             &mut tx,

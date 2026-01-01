@@ -7,6 +7,7 @@ import {
   GetAuctionRequestSchema,
   CreateAuctionRequestSchema,
   ListBidsRequestSchema,
+  ListAutoBidsRequestSchema,
   CloseAuctionRequestSchema,
   ApproveAuctionRequestSchema,
   GetAuctionSettingsRequestSchema,
@@ -96,6 +97,14 @@ export async function createAuction(params: {
 export async function listBids(params: { auctionId: string }) {
   return client.listBids(
     create(ListBidsRequestSchema, {
+      auctionId: params.auctionId,
+    })
+  );
+}
+
+export async function listAutoBids(params: { auctionId: string }) {
+  return client.listAutoBids(
+    create(ListAutoBidsRequestSchema, {
       auctionId: params.auctionId,
     })
   );

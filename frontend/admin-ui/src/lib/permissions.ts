@@ -30,6 +30,14 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    label: "Auctions",
+    description: "Auction settings, listings, and bids",
+    permissions: [
+      { key: "auction.read", label: "Read auctions" },
+      { key: "auction.write", label: "Write auctions" },
+    ],
+  },
+  {
     label: "Settings",
     description: "Store settings and configurations",
     permissions: [

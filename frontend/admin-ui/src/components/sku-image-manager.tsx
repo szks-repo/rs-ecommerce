@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { formatConnectError } from "@/lib/handle-error";
 import { createMediaAsset, createMediaUploadUrl, listMediaAssets, listSkuImages, setSkuImages } from "@/lib/product";
-import { getStoreSettings } from "@/lib/store_settings";
 import type { MediaAsset } from "@/gen/ecommerce/v1/backoffice_pb";
 
 type SelectedImage = {
@@ -24,7 +23,6 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
   const [isCreatingAsset, setIsCreatingAsset] = useState(false);
   const [publicUrl, setPublicUrl] = useState("");
   const [objectKey, setObjectKey] = useState("");
-  const [storageConfigured, setStorageConfigured] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { push } = useToast();
@@ -70,19 +68,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
     }
   }
 
-  async function loadStorageSettings() {
-    try {
-      const res = await getStoreSettings();
-      const provider = res.settings?.storageProvider ?? "";
-      const bucket = res.settings?.storageBucket ?? "";
-      setStorageConfigured(Boolean(provider && bucket));
-    } catch {
-      setStorageConfigured(false);
-    }
-  }
-
   useEffect(() => {
-    void loadStorageSettings();
     void loadAssets("");
     void loadSkuImages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,14 +134,6 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
         variant: "error",
         title: "Invalid input",
         description: "Public URL is required.",
-      });
-      return;
-    }
-    if (!storageConfigured) {
-      push({
-        variant: "error",
-        title: "Storage not configured",
-        description: "Configure storage settings before importing external images.",
       });
       return;
     }
@@ -253,12 +231,6 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!storageConfigured && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              Storage settings are not configured. External URLs cannot be imported until storage is
-              set up.
-            </div>
-          )}
           <div className="space-y-2">
             <Label htmlFor="mediaPublicUrl">Register existing image URL</Label>
             <div className="flex flex-col gap-2 md:flex-row">

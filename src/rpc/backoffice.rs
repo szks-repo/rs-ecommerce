@@ -221,6 +221,70 @@ pub async fn set_sku_images(
     Ok((StatusCode::OK, Json(pb::SetSkuImagesResponse { images })))
 }
 
+pub async fn list_digital_assets(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListDigitalAssetsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListDigitalAssetsRequest>(&headers, body)?;
+    let assets =
+        product::digital::list_digital_assets(&state, req.store, req.tenant, req.sku_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListDigitalAssetsResponse { assets })))
+}
+
+pub async fn create_digital_asset(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateDigitalAssetResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateDigitalAssetRequest>(&headers, body)?;
+    let _actor = req.actor.clone().or(actor_ctx);
+    let asset = product::digital::create_digital_asset(
+        &state,
+        req.store,
+        req.tenant,
+        req.sku_id,
+        req.asset.unwrap_or_default(),
+    )
+    .await?;
+    Ok((StatusCode::OK, Json(pb::CreateDigitalAssetResponse { asset: Some(asset) })))
+}
+
+pub async fn create_digital_upload_url(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateDigitalUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateDigitalUploadUrlRequest>(&headers, body)?;
+    let resp = product::digital::create_digital_upload_url(
+        &state,
+        req.store,
+        req.tenant,
+        req.sku_id,
+        req.filename,
+        req.content_type,
+        req.size_bytes,
+    )
+    .await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
+pub async fn create_digital_download_url(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateDigitalDownloadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateDigitalDownloadUrlRequest>(&headers, body)?;
+    let resp =
+        product::digital::create_digital_download_url(&state, req.store, req.tenant, req.asset_id)
+            .await?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
 pub async fn set_inventory(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

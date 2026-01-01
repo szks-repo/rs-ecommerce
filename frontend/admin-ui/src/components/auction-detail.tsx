@@ -4,15 +4,16 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
-import { approveAuction, closeAuction, getAuction, listBids } from "@/lib/auction";
+import { approveAuction, closeAuction, getAuction, listAutoBids, listBids } from "@/lib/auction";
 import { formatConnectError } from "@/lib/handle-error";
 import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
-import type { Auction, AuctionBid } from "@/gen/ecommerce/v1/auction_pb";
+import type { Auction, AuctionAutoBid, AuctionBid } from "@/gen/ecommerce/v1/auction_pb";
 
 export default function AuctionDetail({ auctionId }: { auctionId: string }) {
   const [auction, setAuction] = useState<Auction | null>(null);
   const [bids, setBids] = useState<AuctionBid[]>([]);
+  const [autoBids, setAutoBids] = useState<AuctionAutoBid[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const { push } = useToast();
@@ -24,6 +25,7 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
     if (!isValidId) {
       setAuction(null);
       setBids([]);
+      setAutoBids([]);
       push({
         variant: "error",
         title: "Invalid auction ID",
@@ -33,12 +35,14 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
     }
     setIsLoading(true);
     try {
-      const [auctionRes, bidsRes] = await Promise.all([
+      const [auctionRes, bidsRes, autoRes] = await Promise.all([
         getAuction({ auctionId }),
         listBids({ auctionId }),
+        listAutoBids({ auctionId }),
       ]);
       setAuction(auctionRes.auction ?? null);
       setBids(bidsRes.bids ?? []);
+      setAutoBids(autoRes.autoBids ?? []);
     } catch (err) {
       const uiError = formatConnectError(err, "Load failed", "Failed to load auction");
       push({
@@ -200,6 +204,39 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
                     </div>
                     <div className="text-xs text-neutral-500">
                       {formatTimestampWithStoreTz(bid.createdAt?.seconds, bid.createdAt?.nanos)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-neutral-200 bg-white text-neutral-900">
+        <CardHeader>
+          <CardTitle>Auto-bid settings (read-only)</CardTitle>
+          <CardDescription className="text-neutral-500">
+            Auto-bid configuration is managed by end users. This view is for auditing only.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {autoBids.length === 0 ? (
+            <div className="text-sm text-neutral-600">No auto-bid rules registered.</div>
+          ) : (
+            <div className="space-y-2 text-sm text-neutral-700">
+              {autoBids.map((autoBid) => (
+                <div key={autoBid.id} className="rounded-lg border border-neutral-200 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-2">
+                    <div>
+                      <div className="font-medium text-neutral-900">
+                        max: {formatMoney(autoBid.maxAmount)}
+                      </div>
+                      <div className="text-xs text-neutral-500">customer: {autoBid.customerId || "-"}</div>
+                      <div className="text-xs text-neutral-500">status: {autoBid.status || "-"}</div>
+                    </div>
+                    <div className="text-xs text-neutral-500">
+                      updated: {formatTimestampWithStoreTz(autoBid.updatedAt?.seconds, autoBid.updatedAt?.nanos)}
                     </div>
                   </div>
                 </div>

@@ -152,6 +152,12 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.AuctionService/ListAutoBids",
+            post(auction::list_auto_bids).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+            })),
+        )
+        .route(
             "/rpc/ecommerce.v1.AuctionService/CreateAuction",
             post(auction::create_auction).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
@@ -160,6 +166,12 @@ pub fn router(state: AppState) -> Router<()> {
         .route(
             "/rpc/ecommerce.v1.AuctionService/PlaceBid",
             post(auction::place_bid).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.AuctionService/SetAutoBid",
+            post(auction::set_auto_bid).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
             })),
         )
@@ -254,6 +266,46 @@ pub fn router(state: AppState) -> Router<()> {
                     req,
                     next,
                     permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListDigitalAssets",
+            post(backoffice::list_digital_assets).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateDigitalAsset",
+            post(backoffice::create_digital_asset).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateDigitalUploadUrl",
+            post(backoffice::create_digital_upload_url).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateDigitalDownloadUrl",
+            post(backoffice::create_digital_download_url).route_layer(middleware::from_fn(|req, next| {
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
                 )
             })),
         )

@@ -20,6 +20,10 @@ service BackofficeService {
   rpc CreateMediaUploadUrl(CreateMediaUploadUrlRequest) returns (CreateMediaUploadUrlResponse);
   rpc ListSkuImages(ListSkuImagesRequest) returns (ListSkuImagesResponse);
   rpc SetSkuImages(SetSkuImagesRequest) returns (SetSkuImagesResponse);
+  rpc ListDigitalAssets(ListDigitalAssetsRequest) returns (ListDigitalAssetsResponse);
+  rpc CreateDigitalAsset(CreateDigitalAssetRequest) returns (CreateDigitalAssetResponse);
+  rpc CreateDigitalUploadUrl(CreateDigitalUploadUrlRequest) returns (CreateDigitalUploadUrlResponse);
+  rpc CreateDigitalDownloadUrl(CreateDigitalDownloadUrlRequest) returns (CreateDigitalDownloadUrlResponse);
 
   rpc SetInventory(SetInventoryRequest) returns (SetInventoryResponse);
 
@@ -293,6 +297,67 @@ message SetSkuImagesRequest {
 
 message SetSkuImagesResponse {
   repeated SkuImage images = 1;
+}
+
+message DigitalAsset {
+  string id = 1;
+  string sku_id = 2;
+  string provider = 3; // s3 | gcs
+  string bucket = 4;
+  string object_key = 5;
+  string content_type = 6;
+  int64 size_bytes = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+
+message ListDigitalAssetsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+}
+
+message ListDigitalAssetsResponse {
+  repeated DigitalAsset assets = 1;
+}
+
+message CreateDigitalAssetRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  DigitalAsset asset = 4;
+  ActorContext actor = 5;
+}
+
+message CreateDigitalAssetResponse {
+  DigitalAsset asset = 1;
+}
+
+message CreateDigitalUploadUrlRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  string filename = 4;
+  string content_type = 5;
+  int64 size_bytes = 6;
+}
+
+message CreateDigitalUploadUrlResponse {
+  string upload_url = 1;
+  map<string, string> headers = 2;
+  string provider = 3;
+  string bucket = 4;
+  string object_key = 5;
+}
+
+message CreateDigitalDownloadUrlRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string asset_id = 3;
+}
+
+message CreateDigitalDownloadUrlResponse {
+  string download_url = 1;
+  google.protobuf.Timestamp expires_at = 2;
 }
 
 message SetInventoryRequest {

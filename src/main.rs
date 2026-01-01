@@ -1,6 +1,7 @@
 use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
-use rs_common::telemetry;
+use rs_common::{env, telemetry};
 use sqlx::{PgPool, postgres::PgPoolOptions};
+use std::time::Duration;
 
 mod audit;
 mod auction;
@@ -38,6 +39,29 @@ async fn main() -> Result<(), anyhow::Error> {
         .expect("meilisearch settings");
 
     let app_state = AppState { db, search };
+    let scheduler_state = app_state.clone();
+    tokio::spawn(async move {
+        let batch_size = env::env_usize("AUCTION_WORKER_BATCH_SIZE", 50) as i64;
+        let sleep_ms = env::env_u64("AUCTION_WORKER_SLEEP_MS", 1000);
+        let oneshot = env::env_bool("AUCTION_WORKER_ONESHOT", false);
+        loop {
+            match auction::service::run_scheduled_auctions(&scheduler_state, batch_size).await {
+                Ok(done) => {
+                    if done > 0 {
+                        tracing::info!(done, "auction auto-bid scheduler executed");
+                    }
+                }
+                Err(err) => {
+                    let message = err.1.0.message.clone();
+                    tracing::warn!(error = %message, "auction auto-bid scheduler failed");
+                }
+            }
+            if oneshot {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
+        }
+    });
     let app = Router::new()
         .route("/health", get(health))
         .with_state(app_state.clone())

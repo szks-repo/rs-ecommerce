@@ -67,19 +67,6 @@ export default function SettingsPage() {
             </Link>
           </CardContent>
         </Card>
-        <Card className="border-neutral-200 bg-white text-neutral-900">
-          <CardHeader>
-            <CardTitle>Storage</CardTitle>
-            <CardDescription className="text-neutral-500">
-              Public buckets and CDN settings.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Link className="text-sm font-medium text-neutral-900 hover:underline" href="/admin/settings/storage">
-              Open Storage Settings
-            </Link>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
