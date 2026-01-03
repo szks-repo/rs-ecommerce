@@ -121,8 +121,8 @@ pub async fn delete_store_location(
     if deleted {
         audit::record_tx(
             &mut tx,
-        audit_input(
-            Some(store_id.clone()),
+            audit_input(
+                Some(store_id.clone()),
                 StoreLocationAuditAction::Delete.into(),
                 Some("store_location"),
                 Some(location_id),

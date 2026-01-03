@@ -388,7 +388,10 @@ pub async fn update_store_settings(
     Ok(merged_settings)
 }
 
-fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSettings) -> pb::StoreSettings {
+fn merge_store_settings(
+    existing: pb::StoreSettings,
+    mut incoming: pb::StoreSettings,
+) -> pb::StoreSettings {
     incoming.profile = Some(merge_profile(existing.profile, incoming.profile));
     incoming.contact = Some(merge_contact(existing.contact, incoming.contact));
     incoming.address = Some(merge_address(existing.address, incoming.address));
@@ -401,7 +404,10 @@ fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSett
     incoming
 }
 
-fn merge_profile(existing: Option<pb::StoreProfile>, incoming: Option<pb::StoreProfile>) -> pb::StoreProfile {
+fn merge_profile(
+    existing: Option<pb::StoreProfile>,
+    incoming: Option<pb::StoreProfile>,
+) -> pb::StoreProfile {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.store_name.is_empty() {
@@ -416,7 +422,10 @@ fn merge_profile(existing: Option<pb::StoreProfile>, incoming: Option<pb::StoreP
     incoming
 }
 
-fn merge_contact(existing: Option<pb::StoreContact>, incoming: Option<pb::StoreContact>) -> pb::StoreContact {
+fn merge_contact(
+    existing: Option<pb::StoreContact>,
+    incoming: Option<pb::StoreContact>,
+) -> pb::StoreContact {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.contact_email.is_empty() {
@@ -428,7 +437,10 @@ fn merge_contact(existing: Option<pb::StoreContact>, incoming: Option<pb::StoreC
     incoming
 }
 
-fn merge_address(existing: Option<pb::StoreAddress>, incoming: Option<pb::StoreAddress>) -> pb::StoreAddress {
+fn merge_address(
+    existing: Option<pb::StoreAddress>,
+    incoming: Option<pb::StoreAddress>,
+) -> pb::StoreAddress {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.address_prefecture.is_empty() {
@@ -446,7 +458,10 @@ fn merge_address(existing: Option<pb::StoreAddress>, incoming: Option<pb::StoreA
     incoming
 }
 
-fn merge_domain(existing: Option<pb::StoreDomain>, incoming: Option<pb::StoreDomain>) -> pb::StoreDomain {
+fn merge_domain(
+    existing: Option<pb::StoreDomain>,
+    incoming: Option<pb::StoreDomain>,
+) -> pb::StoreDomain {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.primary_domain.is_empty() {
@@ -458,7 +473,10 @@ fn merge_domain(existing: Option<pb::StoreDomain>, incoming: Option<pb::StoreDom
     incoming
 }
 
-fn merge_locale(existing: Option<pb::StoreLocale>, incoming: Option<pb::StoreLocale>) -> pb::StoreLocale {
+fn merge_locale(
+    existing: Option<pb::StoreLocale>,
+    incoming: Option<pb::StoreLocale>,
+) -> pb::StoreLocale {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.default_language.is_empty() {
@@ -485,7 +503,10 @@ fn merge_tax(existing: Option<pb::StoreTax>, incoming: Option<pb::StoreTax>) -> 
     incoming
 }
 
-fn merge_order(existing: Option<pb::StoreOrder>, incoming: Option<pb::StoreOrder>) -> pb::StoreOrder {
+fn merge_order(
+    existing: Option<pb::StoreOrder>,
+    incoming: Option<pb::StoreOrder>,
+) -> pb::StoreOrder {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.order_initial_status.is_empty() {
@@ -494,7 +515,10 @@ fn merge_order(existing: Option<pb::StoreOrder>, incoming: Option<pb::StoreOrder
     incoming
 }
 
-fn merge_payment(existing: Option<pb::StorePayment>, incoming: Option<pb::StorePayment>) -> pb::StorePayment {
+fn merge_payment(
+    existing: Option<pb::StorePayment>,
+    incoming: Option<pb::StorePayment>,
+) -> pb::StorePayment {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.cod_fee.is_none() {
@@ -506,7 +530,10 @@ fn merge_payment(existing: Option<pb::StorePayment>, incoming: Option<pb::StoreP
     incoming
 }
 
-fn merge_branding(existing: Option<pb::StoreBranding>, incoming: Option<pb::StoreBranding>) -> pb::StoreBranding {
+fn merge_branding(
+    existing: Option<pb::StoreBranding>,
+    incoming: Option<pb::StoreBranding>,
+) -> pb::StoreBranding {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.theme.is_empty() {
@@ -938,10 +965,18 @@ pub fn validate_store_settings(
         || locale.is_none()
         || tax.is_none()
         || order.is_none()
-        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
+        || profile.is_some_and(|p| {
+            p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty()
+        })
         || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
-        || address.is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
-        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
+        || address.is_some_and(|a| {
+            a.address_prefecture.is_empty()
+                || a.address_city.is_empty()
+                || a.address_line1.is_empty()
+        })
+        || locale.is_some_and(|l| {
+            l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty()
+        })
         || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
         || order.is_some_and(|o| o.order_initial_status.is_empty())
     {
@@ -984,10 +1019,18 @@ fn store_settings_missing_required(settings: &pb::StoreSettings) -> bool {
         || locale.is_none()
         || tax.is_none()
         || order.is_none()
-        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
+        || profile.is_some_and(|p| {
+            p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty()
+        })
         || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
-        || address.is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
-        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
+        || address.is_some_and(|a| {
+            a.address_prefecture.is_empty()
+                || a.address_city.is_empty()
+                || a.address_line1.is_empty()
+        })
+        || locale.is_some_and(|l| {
+            l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty()
+        })
         || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
         || order.is_some_and(|o| o.order_initial_status.is_empty())
 }

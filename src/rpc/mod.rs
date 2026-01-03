@@ -10,8 +10,8 @@ use tracing::info_span;
 use crate::AppState;
 
 pub(crate) mod actor;
-mod audit;
 mod auction;
+mod audit;
 mod backoffice;
 mod customer;
 mod identity;
@@ -136,67 +136,111 @@ pub fn router(state: AppState) -> Router<()> {
         .route(
             "/rpc/ecommerce.v1.AuctionService/ListAuctions",
             post(auction::list_auctions).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionRead,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/GetAuction",
             post(auction::get_auction).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionRead,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/ListBids",
             post(auction::list_bids).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionRead,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/ListAutoBids",
             post(auction::list_auto_bids).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionRead,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/CreateAuction",
             post(auction::create_auction).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/PlaceBid",
             post(auction::place_bid).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/SetAutoBid",
             post(auction::set_auto_bid).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/CloseAuction",
             post(auction::close_auction).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/ApproveAuction",
             post(auction::approve_auction).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/GetAuctionSettings",
             post(auction::get_auction_settings).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionRead)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionRead,
+                )
             })),
         )
         .route(
             "/rpc/ecommerce.v1.AuctionService/UpdateAuctionSettings",
             post(auction::update_auction_settings).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(req, next, permissions::PermissionKey::AuctionWrite)
+                permissions::require_permission_key(
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
             })),
         )
         .route(
@@ -241,13 +285,15 @@ pub fn router(state: AppState) -> Router<()> {
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateMediaUploadUrl",
-            post(backoffice::create_media_upload_url).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(
-                    req,
-                    next,
-                    permissions::PermissionKey::CatalogWrite,
-                )
-            })),
+            post(backoffice::create_media_upload_url).route_layer(middleware::from_fn(
+                |req, next| {
+                    permissions::require_permission_key(
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogWrite,
+                    )
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListSkuImages",
@@ -291,23 +337,27 @@ pub fn router(state: AppState) -> Router<()> {
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateDigitalUploadUrl",
-            post(backoffice::create_digital_upload_url).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(
-                    req,
-                    next,
-                    permissions::PermissionKey::CatalogWrite,
-                )
-            })),
+            post(backoffice::create_digital_upload_url).route_layer(middleware::from_fn(
+                |req, next| {
+                    permissions::require_permission_key(
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogWrite,
+                    )
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateDigitalDownloadUrl",
-            post(backoffice::create_digital_download_url).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(
-                    req,
-                    next,
-                    permissions::PermissionKey::CatalogRead,
-                )
-            })),
+            post(backoffice::create_digital_download_url).route_layer(middleware::from_fn(
+                |req, next| {
+                    permissions::require_permission_key(
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogRead,
+                    )
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/SetInventory",

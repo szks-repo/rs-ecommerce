@@ -3,10 +3,10 @@ use argon2::{
     password_hash::{PasswordHasher, SaltString},
 };
 use chrono::{Duration, Utc};
-use sha2::{Digest, Sha256};
 use jsonwebtoken::{EncodingKey, Header, encode};
 use rand_core::OsRng;
 use serde::Serialize;
+use sha2::{Digest, Sha256};
 use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
@@ -278,14 +278,24 @@ pub async fn list_staff_sessions(
         .map(|row| pb::IdentityStaffSession {
             session_id: row.get("session_id"),
             staff_id: row.get("staff_id"),
-            display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
+            display_name: row
+                .get::<Option<String>, _>("display_name")
+                .unwrap_or_default(),
             email: row.get::<Option<String>, _>("email").unwrap_or_default(),
             role_key: row.get::<Option<String>, _>("role_key").unwrap_or_default(),
             status: row.get("status"),
-            ip_address: row.get::<Option<String>, _>("ip_address").unwrap_or_default(),
-            user_agent: row.get::<Option<String>, _>("user_agent").unwrap_or_default(),
-            last_seen_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("last_seen_at"))),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            ip_address: row
+                .get::<Option<String>, _>("ip_address")
+                .unwrap_or_default(),
+            user_agent: row
+                .get::<Option<String>, _>("user_agent")
+                .unwrap_or_default(),
+            last_seen_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("last_seen_at"),
+            )),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         })
         .collect();
 
@@ -296,7 +306,8 @@ pub async fn force_sign_out_staff(
     state: &AppState,
     req: pb::IdentityForceSignOutStaffRequest,
 ) -> IdentityResult<pb::IdentityForceSignOutStaffResponse> {
-    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, _tenant_id) =
+        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     if req.staff_id.is_empty() {
         return Err(IdentityError::invalid_argument("staff_id is required"));
     }
@@ -332,7 +343,10 @@ pub async fn force_sign_out_staff(
 
     if revoked {
         let actor = req.actor.clone();
-        let actor_id = actor.as_ref().map(|a| a.actor_id.clone()).filter(|v| !v.is_empty());
+        let actor_id = actor
+            .as_ref()
+            .map(|a| a.actor_id.clone())
+            .filter(|v| !v.is_empty());
         let actor_type = actor
             .as_ref()
             .map(|a| a.actor_type.clone())
@@ -912,7 +926,9 @@ pub async fn refresh_token(
         return Err(IdentityError::unauthenticated("staff is inactive"));
     }
 
-    let role_key: String = staff_row.get::<Option<String>, _>("role_key").unwrap_or_default();
+    let role_key: String = staff_row
+        .get::<Option<String>, _>("role_key")
+        .unwrap_or_default();
     let staff_id_str: String = staff_row.get("staff_id");
 
     let jwt_secret = std::env::var("AUTH_JWT_SECRET")
@@ -1090,7 +1106,8 @@ pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
 ) -> IdentityResult<pb::IdentityCreateRoleResponse> {
-    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, _tenant_id) =
+        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let key = req.key.clone();
@@ -1602,7 +1619,10 @@ async fn sign_in_core(
     )
     .bind(session_id)
     .bind(store_uuid.as_uuid())
-    .bind(parse_uuid(&staff_id, "staff_id").map_err(|_| IdentityError::internal("invalid staff_id"))?)
+    .bind(
+        parse_uuid(&staff_id, "staff_id")
+            .map_err(|_| IdentityError::internal("invalid staff_id"))?,
+    )
     .bind(ip_address)
     .bind(user_agent)
     .bind(exp)
@@ -1619,7 +1639,10 @@ async fn sign_in_core(
     )
     .bind(refresh_token_id)
     .bind(store_uuid.as_uuid())
-    .bind(parse_uuid(&staff_id, "staff_id").map_err(|_| IdentityError::internal("invalid staff_id"))?)
+    .bind(
+        parse_uuid(&staff_id, "staff_id")
+            .map_err(|_| IdentityError::internal("invalid staff_id"))?,
+    )
     .bind(session_id)
     .bind(refresh_hash)
     .bind(refresh_expires_at)

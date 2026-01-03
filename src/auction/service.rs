@@ -4,13 +4,13 @@ use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
     AppState,
-    pb::pb,
     infrastructure::audit,
+    pb::pb,
     rpc::json::ConnectError,
     shared::{
         audit_action::AuctionAuditAction,
         audit_helpers::{audit_input, to_json_opt},
-        ids::{parse_uuid, StoreId},
+        ids::{StoreId, parse_uuid},
         money::{money_from_parts, money_to_parts, money_to_parts_opt},
         time::chrono_to_timestamp,
     },
@@ -67,7 +67,9 @@ pub async fn get_auction_settings(
                 row.get::<String, _>("bid_increment_currency"),
             )),
             fee_rate_percent: row.get::<f64, _>("fee_rate_percent"),
-            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+            updated_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+            )),
         })
     } else {
         Ok(pb::AuctionSettings {
@@ -255,10 +257,20 @@ pub async fn create_auction(
         status,
         start_at: chrono_to_timestamp(Some(start_at)),
         end_at: chrono_to_timestamp(Some(end_at)),
-        bid_increment: Some(money_from_parts(increment_amount, increment_currency.clone())),
-        start_price: Some(money_from_parts(start_price_amount, start_price_currency.clone())),
-        reserve_price: reserve_amount.zip(reserve_currency.clone()).map(|(amt, cur)| money_from_parts(amt, cur)),
-        buyout_price: buyout_amount.zip(buyout_currency.clone()).map(|(amt, cur)| money_from_parts(amt, cur)),
+        bid_increment: Some(money_from_parts(
+            increment_amount,
+            increment_currency.clone(),
+        )),
+        start_price: Some(money_from_parts(
+            start_price_amount,
+            start_price_currency.clone(),
+        )),
+        reserve_price: reserve_amount
+            .zip(reserve_currency.clone())
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
+        buyout_price: buyout_amount
+            .zip(buyout_currency.clone())
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
         current_price: current_price_amount
             .zip(current_price_currency.clone())
             .map(|(amt, cur)| money_from_parts(amt, cur)),
@@ -328,10 +340,7 @@ pub async fn list_auctions(
         .map_err(db_error)?
     };
 
-    Ok(rows
-        .into_iter()
-        .map(|row| auction_from_row(&row))
-        .collect())
+    Ok(rows.into_iter().map(|row| auction_from_row(&row)).collect())
 }
 
 pub async fn get_auction(
@@ -385,12 +394,16 @@ pub async fn list_bids(
         .map(|row| pb::AuctionBid {
             id: row.get("id"),
             auction_id: row.get("auction_id"),
-            customer_id: row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
+            customer_id: row
+                .get::<Option<String>, _>("customer_id")
+                .unwrap_or_default(),
             amount: Some(money_from_parts(
                 row.get::<i64, _>("amount"),
                 row.get::<String, _>("currency"),
             )),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         })
         .collect())
 }
@@ -548,7 +561,11 @@ pub async fn place_bid(
     .bind(next_status.as_str())
     .bind(current_bid_id)
     .bind(current_price_amount)
-    .bind(if current_price_amount.is_some() { Some(bid_currency.as_str()) } else { None })
+    .bind(if current_price_amount.is_some() {
+        Some(bid_currency.as_str())
+    } else {
+        None
+    })
     .bind(winning_bid_id)
     .bind(winning_amount)
     .bind(winning_amount.map(|_| bid_currency.as_str()))
@@ -607,12 +624,13 @@ pub async fn set_auto_bid(
     let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
 
     let mut tx = state.db.begin().await.map_err(db_error)?;
-    let auction_row = sqlx::query("SELECT * FROM auctions WHERE id = $1 AND store_id = $2 FOR UPDATE")
-        .bind(auction_uuid)
-        .bind(store_uuid.as_uuid())
-        .fetch_one(tx.as_mut())
-        .await
-        .map_err(db_error)?;
+    let auction_row =
+        sqlx::query("SELECT * FROM auctions WHERE id = $1 AND store_id = $2 FOR UPDATE")
+            .bind(auction_uuid)
+            .bind(store_uuid.as_uuid())
+            .fetch_one(tx.as_mut())
+            .await
+            .map_err(db_error)?;
     let auction = auction_from_row(&auction_row);
     let auction_type: String = auction_row.get("auction_type");
     if auction_type != AUCTION_TYPE_OPEN {
@@ -753,8 +771,12 @@ pub async fn list_auto_bids(
                 row.get::<String, _>("currency"),
             )),
             status: row.get("status"),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
+            updated_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
+            )),
         })
         .collect())
 }
@@ -966,7 +988,10 @@ async fn apply_auto_bids_tx(
         id: bid_id.to_string(),
         auction_id: auction.id.clone(),
         customer_id: top.customer_id.to_string(),
-        amount: Some(money_from_parts(target_amount, start_price_currency.clone())),
+        amount: Some(money_from_parts(
+            target_amount,
+            start_price_currency.clone(),
+        )),
         created_at: chrono_to_timestamp(Some(now)),
     };
 
@@ -1107,7 +1132,13 @@ pub async fn approve_auction(
 
     let approved_by = actor
         .as_ref()
-        .and_then(|a| if a.actor_id.is_empty() { None } else { Some(a.actor_id.as_str()) })
+        .and_then(|a| {
+            if a.actor_id.is_empty() {
+                None
+            } else {
+                Some(a.actor_id.as_str())
+            }
+        })
         .map(|id| parse_uuid(id, "approved_by"))
         .transpose()?;
 
@@ -1186,7 +1217,10 @@ fn auction_from_row(row: &sqlx::postgres::PgRow) -> pb::Auction {
     pb::Auction {
         id: row.get::<uuid::Uuid, _>("id").to_string(),
         store_id: row.get::<uuid::Uuid, _>("store_id").to_string(),
-        product_id: row.get::<Option<uuid::Uuid>, _>("product_id").map(|v| v.to_string()).unwrap_or_default(),
+        product_id: row
+            .get::<Option<uuid::Uuid>, _>("product_id")
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
         sku_id: row.get::<uuid::Uuid, _>("sku_id").to_string(),
         auction_type: row.get("auction_type"),
         status: row.get("status"),
@@ -1200,13 +1234,29 @@ fn auction_from_row(row: &sqlx::postgres::PgRow) -> pb::Auction {
             row.get::<i64, _>("start_price_amount"),
             row.get::<String, _>("start_price_currency"),
         )),
-        reserve_price: reserve_amount.zip(reserve_currency).map(|(amt, cur)| money_from_parts(amt, cur)),
-        buyout_price: buyout_amount.zip(buyout_currency).map(|(amt, cur)| money_from_parts(amt, cur)),
-        current_price: current_amount.zip(current_currency).map(|(amt, cur)| money_from_parts(amt, cur)),
-        winning_price: winning_amount.zip(winning_currency).map(|(amt, cur)| money_from_parts(amt, cur)),
-        winning_bid_id: row.get::<Option<uuid::Uuid>, _>("winning_bid_id").map(|v| v.to_string()).unwrap_or_default(),
-        approved_by: row.get::<Option<uuid::Uuid>, _>("approved_by").map(|v| v.to_string()).unwrap_or_default(),
-        approved_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<Utc>>, _>("approved_at")),
+        reserve_price: reserve_amount
+            .zip(reserve_currency)
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
+        buyout_price: buyout_amount
+            .zip(buyout_currency)
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
+        current_price: current_amount
+            .zip(current_currency)
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
+        winning_price: winning_amount
+            .zip(winning_currency)
+            .map(|(amt, cur)| money_from_parts(amt, cur)),
+        winning_bid_id: row
+            .get::<Option<uuid::Uuid>, _>("winning_bid_id")
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        approved_by: row
+            .get::<Option<uuid::Uuid>, _>("approved_by")
+            .map(|v| v.to_string())
+            .unwrap_or_default(),
+        approved_at: chrono_to_timestamp(
+            row.get::<Option<chrono::DateTime<Utc>>, _>("approved_at"),
+        ),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
         title: row.get::<String, _>("title"),

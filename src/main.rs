@@ -3,8 +3,8 @@ use rs_common::{env, telemetry};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
 
-mod audit;
 mod auction;
+mod audit;
 mod cart;
 mod customer;
 mod identity;

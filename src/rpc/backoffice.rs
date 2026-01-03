@@ -168,8 +168,17 @@ pub async fn create_media_asset(
 ) -> Result<(StatusCode, Json<pb::CreateMediaAssetResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateMediaAssetRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
-    let asset = product::media::create_media_asset(&state, req.store, req.tenant, req.asset.unwrap_or_default()).await?;
-    Ok((StatusCode::OK, Json(pb::CreateMediaAssetResponse { asset: Some(asset) })))
+    let asset = product::media::create_media_asset(
+        &state,
+        req.store,
+        req.tenant,
+        req.asset.unwrap_or_default(),
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateMediaAssetResponse { asset: Some(asset) }),
+    ))
 }
 
 pub async fn create_media_upload_url(
@@ -177,7 +186,8 @@ pub async fn create_media_upload_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::CreateMediaUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::CreateMediaUploadUrlResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::CreateMediaUploadUrlRequest>(&headers, body)?;
     let resp = product::media::create_media_upload_url(
         &state,
@@ -210,14 +220,9 @@ pub async fn set_sku_images(
 ) -> Result<(StatusCode, Json<pb::SetSkuImagesResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::SetSkuImagesRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
-    let images = product::media::set_sku_images(
-        &state,
-        req.store,
-        req.tenant,
-        req.sku_id,
-        req.images,
-    )
-    .await?;
+    let images =
+        product::media::set_sku_images(&state, req.store, req.tenant, req.sku_id, req.images)
+            .await?;
     Ok((StatusCode::OK, Json(pb::SetSkuImagesResponse { images })))
 }
 
@@ -230,7 +235,10 @@ pub async fn list_digital_assets(
     let req = parse_request::<pb::ListDigitalAssetsRequest>(&headers, body)?;
     let assets =
         product::digital::list_digital_assets(&state, req.store, req.tenant, req.sku_id).await?;
-    Ok((StatusCode::OK, Json(pb::ListDigitalAssetsResponse { assets })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListDigitalAssetsResponse { assets }),
+    ))
 }
 
 pub async fn create_digital_asset(
@@ -249,7 +257,10 @@ pub async fn create_digital_asset(
         req.asset.unwrap_or_default(),
     )
     .await?;
-    Ok((StatusCode::OK, Json(pb::CreateDigitalAssetResponse { asset: Some(asset) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateDigitalAssetResponse { asset: Some(asset) }),
+    ))
 }
 
 pub async fn create_digital_upload_url(
@@ -257,7 +268,8 @@ pub async fn create_digital_upload_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::CreateDigitalUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::CreateDigitalUploadUrlResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::CreateDigitalUploadUrlRequest>(&headers, body)?;
     let resp = product::digital::create_digital_upload_url(
         &state,
@@ -277,7 +289,10 @@ pub async fn create_digital_download_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::CreateDigitalDownloadUrlResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<
+    (StatusCode, Json<pb::CreateDigitalDownloadUrlResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
     let req = parse_request::<pb::CreateDigitalDownloadUrlRequest>(&headers, body)?;
     let resp =
         product::digital::create_digital_download_url(&state, req.store, req.tenant, req.asset_id)

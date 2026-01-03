@@ -7,11 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 
-use crate::{
-    AppState,
-    rpc::actor::AuthContext,
-    rpc::json::ConnectError,
-};
+use crate::{AppState, rpc::actor::AuthContext, rpc::json::ConnectError};
 use sqlx::Row;
 
 pub async fn require_active_staff_session(

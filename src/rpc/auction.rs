@@ -7,8 +7,7 @@ use axum::{
 };
 
 use crate::{
-    AppState,
-    auction,
+    AppState, auction,
     pb::pb,
     rpc::json::{ConnectError, parse_request},
 };
@@ -23,7 +22,12 @@ pub async fn create_auction(
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let actor = req.actor.clone().or(actor_ctx);
     let auction = auction::service::create_auction(&state, store_id, req, actor).await?;
-    Ok((StatusCode::OK, Json(pb::CreateAuctionResponse { auction: Some(auction) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateAuctionResponse {
+            auction: Some(auction),
+        }),
+    ))
 }
 
 pub async fn list_auctions(
@@ -34,7 +38,13 @@ pub async fn list_auctions(
     let req = parse_request::<pb::ListAuctionsRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let auctions = auction::service::list_auctions(&state, store_id, req.status).await?;
-    Ok((StatusCode::OK, Json(pb::ListAuctionsResponse { auctions, page: None })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListAuctionsResponse {
+            auctions,
+            page: None,
+        }),
+    ))
 }
 
 pub async fn get_auction(
@@ -45,7 +55,12 @@ pub async fn get_auction(
     let req = parse_request::<pb::GetAuctionRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let auction = auction::service::get_auction(&state, store_id, req.auction_id).await?;
-    Ok((StatusCode::OK, Json(pb::GetAuctionResponse { auction: Some(auction) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::GetAuctionResponse {
+            auction: Some(auction),
+        }),
+    ))
 }
 
 pub async fn place_bid(
@@ -75,7 +90,13 @@ pub async fn place_bid(
         actor,
     )
     .await?;
-    Ok((StatusCode::OK, Json(pb::PlaceBidResponse { auction: Some(auction), bid: Some(bid) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::PlaceBidResponse {
+            auction: Some(auction),
+            bid: Some(bid),
+        }),
+    ))
 }
 
 pub async fn list_bids(
@@ -138,7 +159,12 @@ pub async fn close_auction(
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let actor = req.actor.clone().or(actor_ctx);
     let auction = auction::service::close_auction(&state, store_id, req.auction_id, actor).await?;
-    Ok((StatusCode::OK, Json(pb::CloseAuctionResponse { auction: Some(auction) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::CloseAuctionResponse {
+            auction: Some(auction),
+        }),
+    ))
 }
 
 pub async fn approve_auction(
@@ -150,8 +176,14 @@ pub async fn approve_auction(
     let req = parse_request::<pb::ApproveAuctionRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let actor = req.actor.or(actor_ctx);
-    let auction = auction::service::approve_auction(&state, store_id, req.auction_id, actor).await?;
-    Ok((StatusCode::OK, Json(pb::ApproveAuctionResponse { auction: Some(auction) })))
+    let auction =
+        auction::service::approve_auction(&state, store_id, req.auction_id, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ApproveAuctionResponse {
+            auction: Some(auction),
+        }),
+    ))
 }
 
 pub async fn get_auction_settings(
@@ -162,7 +194,12 @@ pub async fn get_auction_settings(
     let req = parse_request::<pb::GetAuctionSettingsRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let settings = auction::service::get_auction_settings(&state, store_id).await?;
-    Ok((StatusCode::OK, Json(pb::GetAuctionSettingsResponse { settings: Some(settings) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::GetAuctionSettingsResponse {
+            settings: Some(settings),
+        }),
+    ))
 }
 
 pub async fn update_auction_settings(
@@ -170,7 +207,8 @@ pub async fn update_auction_settings(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::UpdateAuctionSettingsResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::UpdateAuctionSettingsResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::UpdateAuctionSettingsRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let settings = req.settings.ok_or_else(|| {
@@ -183,5 +221,10 @@ pub async fn update_auction_settings(
         )
     })?;
     let settings = auction::service::update_auction_settings(&state, store_id, settings).await?;
-    Ok((StatusCode::OK, Json(pb::UpdateAuctionSettingsResponse { settings: Some(settings) })))
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateAuctionSettingsResponse {
+            settings: Some(settings),
+        }),
+    ))
 }

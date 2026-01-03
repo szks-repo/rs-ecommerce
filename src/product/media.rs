@@ -1,5 +1,5 @@
-use axum::{Json, http::StatusCode};
 use aws_sdk_s3::{presigning::PresigningConfig, primitives::ByteStream};
+use axum::{Json, http::StatusCode};
 use chrono::Utc;
 use reqwest::{Url, header};
 use sqlx::Row;
@@ -13,7 +13,9 @@ use crate::{
     shared::{ids::parse_uuid, time::chrono_to_timestamp},
 };
 
-fn validate_store_asset_input(asset: &pb::MediaAsset) -> Result<(), (StatusCode, Json<ConnectError>)> {
+fn validate_store_asset_input(
+    asset: &pb::MediaAsset,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
     if asset.public_url.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -287,7 +289,10 @@ async fn import_external_asset(
             _ => "".to_string(),
         }
     } else {
-        storage_config.cdn_base_url.trim_end_matches('/').to_string()
+        storage_config
+            .cdn_base_url
+            .trim_end_matches('/')
+            .to_string()
     };
     let public_url = format!("{}/{}", public_base, object_key);
     Ok(pb::MediaAsset {
@@ -310,8 +315,7 @@ pub async fn create_media_upload_url(
     content_type: String,
     size_bytes: i64,
 ) -> Result<pb::CreateMediaUploadUrlResponse, (StatusCode, Json<ConnectError>)> {
-    let (store_id, tenant_id) =
-        resolve_store_context(state, store.clone(), tenant.clone()).await?;
+    let (store_id, tenant_id) = resolve_store_context(state, store.clone(), tenant.clone()).await?;
     let storage_config = storage::public_config();
     if !storage_config.is_configured() {
         return Err((
@@ -349,8 +353,8 @@ pub async fn create_media_upload_url(
             if size_bytes > 0 {
                 put_req = put_req.content_length(size_bytes);
             }
-            let presign_config = PresigningConfig::expires_in(Duration::from_secs(900))
-                .map_err(|_| {
+            let presign_config =
+                PresigningConfig::expires_in(Duration::from_secs(900)).map_err(|_| {
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(ConnectError {
@@ -359,18 +363,15 @@ pub async fn create_media_upload_url(
                         }),
                     )
                 })?;
-            let presigned = put_req
-                .presigned(presign_config)
-                .await
-                .map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::Internal,
-                            message: "failed to presign upload url".to_string(),
-                        }),
-                    )
-                })?;
+            let presigned = put_req.presigned(presign_config).await.map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::Internal,
+                        message: "failed to presign upload url".to_string(),
+                    }),
+                )
+            })?;
             let mut headers = HashMap::new();
             for (key, value) in presigned.headers() {
                 headers.insert(key.to_string(), value.to_string());
@@ -378,7 +379,10 @@ pub async fn create_media_upload_url(
             let public_base = if storage_config.cdn_base_url.is_empty() {
                 format!("https://{}.s3.amazonaws.com", storage_config.bucket)
             } else {
-                storage_config.cdn_base_url.trim_end_matches('/').to_string()
+                storage_config
+                    .cdn_base_url
+                    .trim_end_matches('/')
+                    .to_string()
             };
             let public_url = format!("{}/{}", public_base, object_key);
             Ok(pb::CreateMediaUploadUrlResponse {
@@ -508,7 +512,9 @@ pub async fn list_media_assets(
                 .get::<Option<String>, _>("content_type")
                 .unwrap_or_default(),
             size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
-            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            created_at: chrono_to_timestamp(Some(
+                row.get::<chrono::DateTime<Utc>, _>("created_at"),
+            )),
         })
         .collect();
 
@@ -570,7 +576,9 @@ pub async fn create_media_asset(
         provider: row.get("provider"),
         bucket: row.get("bucket"),
         object_key: row.get("object_key"),
-        content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
+        content_type: row
+            .get::<Option<String>, _>("content_type")
+            .unwrap_or_default(),
         size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
     })
@@ -614,9 +622,13 @@ pub async fn list_sku_images(
                 provider: row.get("provider"),
                 bucket: row.get("bucket"),
                 object_key: row.get("object_key"),
-                content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
+                content_type: row
+                    .get::<Option<String>, _>("content_type")
+                    .unwrap_or_default(),
                 size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
-                created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+                created_at: chrono_to_timestamp(Some(
+                    row.get::<chrono::DateTime<Utc>, _>("created_at"),
+                )),
             };
             pb::SkuImage {
                 asset_id: row.get("asset_id"),
@@ -653,14 +665,13 @@ pub async fn set_sku_images(
 
     for image in images.iter() {
         let asset_uuid = parse_uuid(&image.asset_id, "asset_id")?;
-        let exists = sqlx::query(
-            "SELECT 1 FROM store_media_assets WHERE id = $1 AND store_id = $2",
-        )
-        .bind(asset_uuid)
-        .bind(store_uuid)
-        .fetch_optional(tx.as_mut())
-        .await
-        .map_err(db::error)?;
+        let exists =
+            sqlx::query("SELECT 1 FROM store_media_assets WHERE id = $1 AND store_id = $2")
+                .bind(asset_uuid)
+                .bind(store_uuid)
+                .fetch_optional(tx.as_mut())
+                .await
+                .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,

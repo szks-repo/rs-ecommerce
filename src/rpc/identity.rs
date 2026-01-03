@@ -48,7 +48,13 @@ pub async fn sign_out(
     let store_id = req
         .store
         .as_ref()
-        .and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.clone()) })
+        .and_then(|s| {
+            if s.store_id.is_empty() {
+                None
+            } else {
+                Some(s.store_id.clone())
+            }
+        })
         .or_else(|| store_id_from_auth);
     let resp = identity::service::sign_out(&state, req, actor_ctx, session_id)
         .await
@@ -74,7 +80,13 @@ pub async fn refresh_token(
     let store_id = req
         .store
         .as_ref()
-        .and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id.clone()) })
+        .and_then(|s| {
+            if s.store_id.is_empty() {
+                None
+            } else {
+                Some(s.store_id.clone())
+            }
+        })
         .ok_or_else(|| {
             (
                 StatusCode::BAD_REQUEST,
@@ -223,7 +235,10 @@ pub async fn list_staff_sessions(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityListStaffSessionsResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<
+    (StatusCode, Json<pb::IdentityListStaffSessionsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
     let req = parse_request::<pb::IdentityListStaffSessionsRequest>(&headers, body)?;
     let resp = identity::service::list_staff_sessions(&state, req)
         .await
@@ -236,7 +251,10 @@ pub async fn force_sign_out_staff(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityForceSignOutStaffResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<
+    (StatusCode, Json<pb::IdentityForceSignOutStaffResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
     let mut req = parse_request::<pb::IdentityForceSignOutStaffRequest>(&headers, body)?;
     if req.actor.is_none() {
         req.actor = actor_ctx;
@@ -268,9 +286,8 @@ fn refresh_cookie_name(store_id: &str) -> String {
 }
 
 fn build_refresh_cookie(name: &str, value: &str, max_age_seconds: i64) -> HeaderValue {
-    let mut cookie = format!(
-        "{name}={value}; Max-Age={max_age_seconds}; Path=/; HttpOnly; SameSite=Lax"
-    );
+    let mut cookie =
+        format!("{name}={value}; Max-Age={max_age_seconds}; Path=/; HttpOnly; SameSite=Lax");
     if std::env::var("AUTH_COOKIE_SECURE")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false)
