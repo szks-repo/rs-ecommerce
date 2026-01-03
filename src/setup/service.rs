@@ -1,8 +1,10 @@
 use crate::{
     AppState,
+    infrastructure::audit,
     infrastructure::db,
     pb::pb,
     rpc::json::ConnectError,
+    shared::audit_action::{IdentityAuditAction, MallSettingsAuditAction, StoreSettingsAuditAction},
     shared::validation::StoreCode,
     store_settings::{
         repository::{PgStoreSettingsRepository, StoreSettingsRepository},
@@ -200,6 +202,94 @@ pub async fn initialize_store(
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
+
+    let actor_id = req.actor.as_ref().and_then(|actor| {
+        if actor.actor_id.is_empty() {
+            None
+        } else {
+            Some(actor.actor_id.clone())
+        }
+    });
+    let actor_type = req
+        .actor
+        .as_ref()
+        .and_then(|actor| {
+            if actor.actor_type.is_empty() {
+                None
+            } else {
+                Some(actor.actor_type.clone())
+            }
+        })
+        .unwrap_or_else(|| "system".to_string());
+
+    let _ = audit::record_tx(
+        &mut tx,
+        audit::AuditInput {
+            store_id: Some(store_id.to_string()),
+            actor_id: actor_id.clone(),
+            actor_type: actor_type.clone(),
+            action: StoreSettingsAuditAction::Initialize.into(),
+            target_type: Some("store_settings".to_string()),
+            target_id: Some(store_id.to_string()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "store_id": store_id.to_string(),
+                "store_name": req.store_name,
+                "store_code": store_code.as_str(),
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    let _ = audit::record_tx(
+        &mut tx,
+        audit::AuditInput {
+            store_id: Some(store_id.to_string()),
+            actor_id: actor_id.clone(),
+            actor_type: actor_type.clone(),
+            action: MallSettingsAuditAction::Initialize.into(),
+            target_type: Some("mall_settings".to_string()),
+            target_id: Some(store_id.to_string()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "store_id": store_id.to_string(),
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    let _ = audit::record_tx(
+        &mut tx,
+        audit::AuditInput {
+            store_id: Some(store_id.to_string()),
+            actor_id,
+            actor_type,
+            action: IdentityAuditAction::StaffCreate.into(),
+            target_type: Some("store_staff".to_string()),
+            target_id: Some(owner_staff_id.to_string()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "staff_id": owner_staff_id.to_string(),
+                "store_id": store_id.to_string(),
+                "role_id": owner_role_id.to_string(),
+                "role_key": "owner",
+                "email": req.owner_email,
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
 
     tx.commit().await.map_err(db::error)?;
 

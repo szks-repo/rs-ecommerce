@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import LogoutButton from "@/components/logout-button";
 import RequireAuth from "@/components/require-auth";
+import CurrentAccount from "@/components/current-account";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
@@ -47,7 +48,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   </a>
                 </nav>
                 <div className="mt-8 flex items-center justify-between border-t border-neutral-200 pt-4">
-                  <span className="text-xs text-neutral-500">Session</span>
+                  <CurrentAccount />
                   <LogoutButton />
                 </div>
               </div>

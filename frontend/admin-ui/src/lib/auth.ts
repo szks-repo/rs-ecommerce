@@ -87,6 +87,46 @@ export function getActiveAccessToken(): string | null {
   return tokens[storeId]?.accessToken || window.sessionStorage.getItem("access_token");
 }
 
+export function getActiveActorInfo():
+  | { staffId: string; role: string; storeId: string }
+  | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+  const token = getActiveAccessToken();
+  if (!token) {
+    return null;
+  }
+  const parts = token.split(".");
+  if (parts.length !== 3) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(
+      decodeURIComponent(
+        atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+          .split("")
+          .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+          .join("")
+      )
+    ) as {
+      sub?: string;
+      actor_type?: string;
+      store_id?: string;
+    };
+    if (!payload.sub || !payload.actor_type || !payload.store_id) {
+      return null;
+    }
+    return {
+      staffId: payload.sub,
+      role: payload.actor_type,
+      storeId: payload.store_id,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function getActiveTenantId(): string | null {
   if (typeof window === "undefined") {
     return null;

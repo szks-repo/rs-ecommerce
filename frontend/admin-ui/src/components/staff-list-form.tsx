@@ -68,6 +68,14 @@ export default function StaffListForm() {
         status: item.status ?? "",
         displayName: item.displayName ?? "",
       }));
+      list.sort((a, b) => {
+        const aOwner = a.roleKey === "owner" ? 1 : 0;
+        const bOwner = b.roleKey === "owner" ? 1 : 0;
+        if (aOwner !== bOwner) {
+          return bOwner - aOwner;
+        }
+        return a.staffId.localeCompare(b.staffId);
+      });
       setStaff(list);
       const initial: Record<string, string> = {};
       const initialNames: Record<string, string> = {};
@@ -173,53 +181,59 @@ export default function StaffListForm() {
                         <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
                       ) : null}
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs text-neutral-500">Display name</Label>
-                      <Input
-                        value={pendingName[row.staffId] ?? ""}
-                        onChange={(e) =>
-                          setPendingName((prev) => ({ ...prev, [row.staffId]: e.target.value }))
-                        }
-                        disabled={isOwner}
-                      />
-                    </div>
+                    {!isOwner ? (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-neutral-500">Display name</Label>
+                        <Input
+                          value={pendingName[row.staffId] ?? ""}
+                          onChange={(e) =>
+                            setPendingName((prev) => ({ ...prev, [row.staffId]: e.target.value }))
+                          }
+                        />
+                      </div>
+                    ) : null}
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-neutral-500">Role</Label>
-                    <Select
-                      value={pending[row.staffId] ?? ""}
-                      onValueChange={(value) =>
-                        setPending((prev) => ({ ...prev, [row.staffId]: value }))
-                      }
-                      disabled={isOwner}
-                    >
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="Select role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {roles.length === 0 ? (
-                          <SelectItem value="__none__" disabled>
-                            No roles found
-                          </SelectItem>
-                        ) : (
-                          roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id}>
-                              {role.name} {role.key ? `(${role.key})` : ""}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex items-center justify-end">
-                    <Button
-                      type="button"
-                      onClick={() => handleSave(row.staffId)}
-                      disabled={isOwner || isSaving === row.staffId}
-                    >
-                      {isSaving === row.staffId ? "Saving..." : "Save"}
-                    </Button>
-                  </div>
+                  {!isOwner ? (
+                    <>
+                      <div className="space-y-1">
+                        <Label className="text-xs text-neutral-500">Role</Label>
+                        <Select
+                          value={pending[row.staffId] ?? ""}
+                          onValueChange={(value) =>
+                            setPending((prev) => ({ ...prev, [row.staffId]: value }))
+                          }
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {roles.length === 0 ? (
+                              <SelectItem value="__none__" disabled>
+                                No roles found
+                              </SelectItem>
+                            ) : (
+                              roles.map((role) => (
+                                <SelectItem key={role.id} value={role.id}>
+                                  {role.name} {role.key ? `(${role.key})` : ""}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <Button
+                          type="button"
+                          onClick={() => handleSave(row.staffId)}
+                          disabled={isSaving === row.staffId}
+                        >
+                          {isSaving === row.staffId ? "Saving..." : "Save"}
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-xs text-neutral-500">Owner details are hidden.</div>
+                  )}
                 </div>
               );
             })
