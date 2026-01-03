@@ -11,7 +11,7 @@ use crate::{
         audit_action::AuctionAuditAction,
         audit_helpers::{audit_input, to_json_opt},
         ids::{StoreId, parse_uuid},
-        money::{money_from_parts, money_to_parts, money_to_parts_opt},
+        money::{money_from_parts, money_to_parts_opt},
         time::chrono_to_timestamp,
     },
     store_settings::service::resolve_store_context,
@@ -36,85 +36,6 @@ struct AutoBidCandidate {
     customer_id: uuid::Uuid,
     max_amount: i64,
     created_at: DateTime<Utc>,
-}
-
-pub async fn get_auction_settings(
-    state: &AppState,
-    store_id: String,
-) -> Result<pb::AuctionSettings, (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let row = sqlx::query(
-        r#"
-        SELECT store_id::text as store_id,
-               bid_increment_amount,
-               bid_increment_currency,
-               fee_rate_percent::float8 as fee_rate_percent,
-               updated_at
-        FROM store_auction_settings
-        WHERE store_id = $1
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|err| db_error(err))?;
-
-    if let Some(row) = row {
-        Ok(pb::AuctionSettings {
-            store_id: row.get("store_id"),
-            bid_increment: Some(money_from_parts(
-                row.get::<i64, _>("bid_increment_amount"),
-                row.get::<String, _>("bid_increment_currency"),
-            )),
-            fee_rate_percent: row.get::<f64, _>("fee_rate_percent"),
-            updated_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-            )),
-        })
-    } else {
-        Ok(pb::AuctionSettings {
-            store_id,
-            bid_increment: Some(money_from_parts(100, "JPY".to_string())),
-            fee_rate_percent: 0.0,
-            updated_at: None,
-        })
-    }
-}
-
-pub async fn update_auction_settings(
-    state: &AppState,
-    store_id: String,
-    settings: pb::AuctionSettings,
-) -> Result<pb::AuctionSettings, (StatusCode, Json<ConnectError>)> {
-    let store_uuid = StoreId::parse(&store_id)?;
-    let (increment_amount, increment_currency) = money_to_parts(settings.bid_increment)?;
-    let fee_rate = settings.fee_rate_percent;
-
-    sqlx::query(
-        r#"
-        INSERT INTO store_auction_settings (store_id, bid_increment_amount, bid_increment_currency, fee_rate_percent)
-        VALUES ($1,$2,$3,$4)
-        ON CONFLICT (store_id)
-        DO UPDATE SET bid_increment_amount = EXCLUDED.bid_increment_amount,
-                      bid_increment_currency = EXCLUDED.bid_increment_currency,
-                      fee_rate_percent = EXCLUDED.fee_rate_percent,
-                      updated_at = now()
-        "#,
-    )
-    .bind(store_uuid.as_uuid())
-    .bind(increment_amount)
-    .bind(increment_currency.as_str())
-    .bind(fee_rate)
-    .execute(&state.db)
-    .await
-    .map_err(|err| db_error(err))?;
-
-    Ok(pb::AuctionSettings {
-        store_id,
-        bid_increment: Some(money_from_parts(increment_amount, increment_currency)),
-        fee_rate_percent: fee_rate,
-        updated_at: chrono_to_timestamp(Some(Utc::now())),
-    })
 }
 
 pub async fn create_auction(

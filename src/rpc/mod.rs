@@ -224,26 +224,6 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
-            "/rpc/ecommerce.v1.AuctionService/GetAuctionSettings",
-            post(auction::get_auction_settings).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(
-                    req,
-                    next,
-                    permissions::PermissionKey::AuctionRead,
-                )
-            })),
-        )
-        .route(
-            "/rpc/ecommerce.v1.AuctionService/UpdateAuctionSettings",
-            post(auction::update_auction_settings).route_layer(middleware::from_fn(|req, next| {
-                permissions::require_permission_key(
-                    req,
-                    next,
-                    permissions::PermissionKey::AuctionWrite,
-                )
-            })),
-        )
-        .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateVariant",
             post(backoffice::create_variant).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(

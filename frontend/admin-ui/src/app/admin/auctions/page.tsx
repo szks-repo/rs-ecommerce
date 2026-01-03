@@ -13,9 +13,6 @@ export default function AuctionsPage() {
         <Button asChild>
           <Link href="/admin/auctions/new">New auction</Link>
         </Button>
-        <Button variant="outline" asChild>
-          <Link href="/admin/auctions/settings">Settings</Link>
-        </Button>
       </div>
 
       <div className="mt-8 grid gap-6">

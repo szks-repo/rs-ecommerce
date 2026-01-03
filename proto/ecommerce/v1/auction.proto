@@ -15,8 +15,6 @@ service AuctionService {
   rpc ListAutoBids(ListAutoBidsRequest) returns (ListAutoBidsResponse);
   rpc CloseAuction(CloseAuctionRequest) returns (CloseAuctionResponse);
   rpc ApproveAuction(ApproveAuctionRequest) returns (ApproveAuctionResponse);
-  rpc GetAuctionSettings(GetAuctionSettingsRequest) returns (GetAuctionSettingsResponse);
-  rpc UpdateAuctionSettings(UpdateAuctionSettingsRequest) returns (UpdateAuctionSettingsResponse);
 }
 
 message Auction {
@@ -59,13 +57,6 @@ message AuctionAutoBid {
   string status = 5; // active | disabled
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
-}
-
-message AuctionSettings {
-  string store_id = 1;
-  Money bid_increment = 2;
-  double fee_rate_percent = 3;
-  google.protobuf.Timestamp updated_at = 4;
 }
 
 message CreateAuctionRequest {
@@ -172,22 +163,4 @@ message ApproveAuctionRequest {
 
 message ApproveAuctionResponse {
   Auction auction = 1;
-}
-
-message GetAuctionSettingsRequest {
-  StoreContext store = 1;
-}
-
-message GetAuctionSettingsResponse {
-  AuctionSettings settings = 1;
-}
-
-message UpdateAuctionSettingsRequest {
-  StoreContext store = 1;
-  AuctionSettings settings = 2;
-  ActorContext actor = 3;
-}
-
-message UpdateAuctionSettingsResponse {
-  AuctionSettings settings = 1;
 }

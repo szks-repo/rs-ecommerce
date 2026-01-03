@@ -10,9 +10,6 @@ import {
   ListAutoBidsRequestSchema,
   CloseAuctionRequestSchema,
   ApproveAuctionRequestSchema,
-  GetAuctionSettingsRequestSchema,
-  UpdateAuctionSettingsRequestSchema,
-  AuctionSettingsSchema,
 } from "@/gen/ecommerce/v1/auction_pb";
 import { MoneySchema } from "@/gen/ecommerce/v1/common_pb";
 
@@ -122,27 +119,6 @@ export async function approveAuction(params: { auctionId: string }) {
   return client.approveAuction(
     create(ApproveAuctionRequestSchema, {
       auctionId: params.auctionId,
-    })
-  );
-}
-
-export async function getAuctionSettings() {
-  return client.getAuctionSettings(create(GetAuctionSettingsRequestSchema, {}));
-}
-
-export async function updateAuctionSettings(params: {
-  bidIncrementAmount: number;
-  currency: string;
-  feeRatePercent: number;
-}) {
-  const settings = create(AuctionSettingsSchema, {
-    bidIncrement: money(params.bidIncrementAmount, params.currency),
-    feeRatePercent: params.feeRatePercent,
-  });
-
-  return client.updateAuctionSettings(
-    create(UpdateAuctionSettingsRequestSchema, {
-      settings,
     })
   );
 }
