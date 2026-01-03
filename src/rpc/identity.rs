@@ -337,6 +337,18 @@ pub async fn invite_staff(
     Ok((StatusCode::OK, Json(resp)))
 }
 
+pub async fn accept_invite(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityAcceptInviteResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::IdentityAcceptInviteRequest>(&headers, body)?;
+    let resp = identity::service::accept_invite(&state, req)
+        .await
+        .map_err(|err| err.into_connect())?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
 pub async fn transfer_owner(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

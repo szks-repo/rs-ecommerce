@@ -12,6 +12,7 @@ import {
   IdentityTransferOwnerRequestSchema,
   IdentityListStaffSessionsRequestSchema,
   IdentityForceSignOutStaffRequestSchema,
+  IdentityAcceptInviteRequestSchema,
   IdentityListRolesRequestSchema,
   IdentityListRolesWithPermissionsRequestSchema,
   IdentityUpdateRoleRequestSchema,
@@ -121,6 +122,20 @@ export async function identityInviteStaff(params: {
     create(IdentityInviteStaffRequestSchema, {
       email: params.email,
       roleId: params.roleId,
+      displayName: params.displayName || "",
+    })
+  );
+}
+
+export async function identityAcceptInvite(params: {
+  token: string;
+  password: string;
+  displayName?: string;
+}) {
+  return client.acceptInvite(
+    create(IdentityAcceptInviteRequestSchema, {
+      token: params.token,
+      password: params.password,
       displayName: params.displayName || "",
     })
   );

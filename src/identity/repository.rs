@@ -37,6 +37,18 @@ pub struct RoleDetailRow {
     pub description: Option<String>,
 }
 
+pub struct StaffInviteRow {
+    pub invite_id: String,
+    pub staff_id: String,
+    pub store_id: String,
+    pub store_code: Option<String>,
+    pub email: String,
+    pub role_id: String,
+    pub role_key: String,
+    pub display_name: Option<String>,
+    pub expires_at: chrono::DateTime<chrono::Utc>,
+}
+
 pub trait IdentityRepository {
     /// list_staff
     async fn list_staff(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<StaffSummaryRow>>;
@@ -138,6 +150,8 @@ pub trait IdentityRepository {
         store_uuid: &uuid::Uuid,
         email: &str,
     ) -> IdentityResult<bool>;
+
+    async fn fetch_invite_by_token(&self, token: &str) -> IdentityResult<Option<StaffInviteRow>>;
 
     async fn insert_staff_invite_tx<'e, E>(
         &self,
@@ -581,6 +595,45 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         .await
         .map_err(IdentityError::from)?;
         Ok(row.is_some())
+    }
+
+    async fn fetch_invite_by_token(&self, token: &str) -> IdentityResult<Option<StaffInviteRow>> {
+        let row = sqlx::query(
+            r#"
+            SELECT inv.id::text as invite_id,
+                   ss.id::text as staff_id,
+                   inv.store_id::text as store_id,
+                   s.code as store_code,
+                   inv.email,
+                   inv.role_id::text as role_id,
+                   r.key as role_key,
+                   ss.display_name,
+                   inv.expires_at
+            FROM store_staff_invites inv
+            JOIN store_roles r ON r.id = inv.role_id
+            JOIN stores s ON s.id = inv.store_id
+            JOIN store_staff ss ON ss.store_id = inv.store_id AND ss.email = inv.email
+            WHERE inv.token = $1
+              AND inv.accepted_at IS NULL
+              AND ss.status = 'invited'
+            "#,
+        )
+        .bind(token)
+        .fetch_optional(self.db)
+        .await
+        .map_err(IdentityError::from)?;
+
+        Ok(row.map(|row| StaffInviteRow {
+            invite_id: row.get("invite_id"),
+            staff_id: row.get("staff_id"),
+            store_id: row.get("store_id"),
+            store_code: row.get("store_code"),
+            email: row.get("email"),
+            role_id: row.get("role_id"),
+            role_key: row.get("role_key"),
+            display_name: row.get("display_name"),
+            expires_at: row.get("expires_at"),
+        }))
     }
 
     async fn insert_staff_invite_tx<'e, E>(

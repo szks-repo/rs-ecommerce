@@ -21,7 +21,7 @@ use crate::{
     shared::validation::{Email, Phone},
     shared::{
         audit_action::IdentityAuditAction,
-        ids::{StoreId, TenantId},
+        ids::{StoreId, TenantId, parse_uuid},
         time::chrono_to_timestamp,
     },
 };
@@ -79,6 +79,13 @@ impl<'a> IdentityService<'a> {
         req: pb::IdentityInviteStaffRequest,
     ) -> IdentityResult<pb::IdentityInviteStaffResponse> {
         invite_staff(self.state, req).await
+    }
+
+    pub async fn accept_invite(
+        &self,
+        req: pb::IdentityAcceptInviteRequest,
+    ) -> IdentityResult<pb::IdentityAcceptInviteResponse> {
+        accept_invite(self.state, req).await
     }
 
     pub async fn transfer_owner(
@@ -657,6 +664,108 @@ pub async fn invite_staff(
         email: invite_email.as_str().to_string(),
         role_id: req.role_id,
         expires_at: chrono_to_timestamp(Some(expires_at)),
+    })
+}
+
+pub async fn accept_invite(
+    state: &AppState,
+    req: pb::IdentityAcceptInviteRequest,
+) -> IdentityResult<pb::IdentityAcceptInviteResponse> {
+    if req.token.is_empty() {
+        return Err(IdentityError::invalid_argument("token is required"));
+    }
+    if req.password.is_empty() {
+        return Err(IdentityError::invalid_argument("password is required"));
+    }
+
+    let repo = PgIdentityRepository::new(&state.db);
+    let invite = repo
+        .fetch_invite_by_token(&req.token)
+        .await?
+        .ok_or_else(|| IdentityError::invalid_argument("invite token is invalid"))?;
+
+    if invite.expires_at < Utc::now() {
+        return Err(IdentityError::invalid_argument("invite token has expired"));
+    }
+
+    let store_uuid = StoreId::parse(&invite.store_id)?;
+    let staff_uuid = parse_uuid(&invite.staff_id, "staff_id")?;
+    let password_hash = hash_password(&req.password)?;
+    let display_name = if req.display_name.is_empty() {
+        None
+    } else {
+        Some(req.display_name.as_str())
+    };
+
+    let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
+    sqlx::query(
+        r#"
+        UPDATE store_staff
+        SET password_hash = $1,
+            status = 'active',
+            display_name = COALESCE($2, display_name),
+            updated_at = now()
+        WHERE id = $3 AND store_id = $4
+        "#,
+    )
+    .bind(password_hash)
+    .bind(display_name)
+    .bind(staff_uuid)
+    .bind(store_uuid.as_uuid())
+    .execute(tx.as_mut())
+    .await
+    .map_err(IdentityError::from)?;
+
+    let accepted_at = Utc::now();
+    sqlx::query(
+        r#"
+        UPDATE store_staff_invites
+        SET accepted_at = $1
+        WHERE token = $2 AND accepted_at IS NULL
+        "#,
+    )
+    .bind(accepted_at)
+    .bind(&req.token)
+    .execute(tx.as_mut())
+    .await
+    .map_err(IdentityError::from)?;
+
+    let _ = audit::record_tx(
+        &mut tx,
+        audit::AuditInput {
+            store_id: Some(invite.store_id.clone()),
+            actor_id: Some(invite.staff_id.clone()),
+            actor_type: invite.role_key.clone(),
+            action: IdentityAuditAction::StaffCreate.into(),
+            target_type: Some("store_staff".to_string()),
+            target_id: Some(invite.staff_id.clone()),
+            request_id: None,
+            ip_address: None,
+            user_agent: None,
+            before_json: None,
+            after_json: Some(serde_json::json!({
+                "staff_id": invite.staff_id,
+                "store_id": invite.store_id,
+                "role_id": invite.role_id,
+                "role_key": invite.role_key,
+                "email": invite.email,
+                "display_name": req.display_name,
+                "source": "invite",
+            })),
+            metadata_json: None,
+        },
+    )
+    .await?;
+
+    tx.commit().await.map_err(IdentityError::from)?;
+
+    Ok(pb::IdentityAcceptInviteResponse {
+        staff_id: invite.staff_id,
+        store_id: invite.store_id,
+        store_code: invite.store_code.unwrap_or_default(),
+        email: invite.email,
+        role_key: invite.role_key,
+        accepted_at: chrono_to_timestamp(Some(accepted_at)),
     })
 }
 

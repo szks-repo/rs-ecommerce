@@ -817,6 +817,10 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.IdentityService/AcceptInvite",
+            post(identity::accept_invite),
+        )
+        .route(
             "/rpc/ecommerce.v1.IdentityService/TransferOwner",
             post(identity::transfer_owner).route_layer(middleware::from_fn(|req, next| {
                 permissions::require_permission_key(
