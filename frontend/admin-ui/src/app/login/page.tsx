@@ -17,6 +17,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [storeCode, setStoreCode] = useState("");
   const [email, setEmail] = useState("");
+  const [staffIdentifier, setStaffIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
@@ -32,13 +33,39 @@ export default function LoginPage() {
     }
   }, [push]);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleAdminSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
     try {
       const data = await identitySignIn({
         storeCode,
         email,
+        password,
+      });
+      sessionStorage.setItem("store_code", storeCode);
+      router.push("/admin");
+    } catch (err) {
+      const uiError = formatConnectError(err, "Sign in failed", "Unknown error");
+      push({
+        variant: "error",
+        title: uiError.title,
+        description: uiError.description,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleStaffSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      const trimmed = staffIdentifier.trim();
+      const isEmail = trimmed.includes("@");
+      const data = await identitySignIn({
+        storeCode,
+        email: isEmail ? trimmed : undefined,
+        loginId: !isEmail ? trimmed : undefined,
         password,
       });
       sessionStorage.setItem("store_code", storeCode);
@@ -94,20 +121,19 @@ export default function LoginPage() {
                   onStoreCodeChange={setStoreCode}
                   onEmailChange={setEmail}
                   onPasswordChange={setPassword}
-                  onSubmit={handleSubmit}
+                  onSubmit={handleAdminSubmit}
                 />
               </TabsContent>
               <TabsContent value="staff" className="mt-6 space-y-4">
-                <LoginForm
-                  roleLabel="Staff"
+                <StaffLoginForm
                   storeCode={storeCode}
-                  email={email}
+                  staffIdentifier={staffIdentifier}
                   password={password}
                   isSubmitting={isSubmitting}
                   onStoreCodeChange={setStoreCode}
-                  onEmailChange={setEmail}
+                  onStaffIdentifierChange={setStaffIdentifier}
                   onPasswordChange={setPassword}
-                  onSubmit={handleSubmit}
+                  onSubmit={handleStaffSubmit}
                 />
               </TabsContent>
             </Tabs>
@@ -181,6 +207,68 @@ function LoginForm({
       </div>
       <Button className="w-full" type="submit" disabled={isSubmitting}>
         {isSubmitting ? "Signing in..." : `Sign in as ${roleLabel}`}
+      </Button>
+    </form>
+  );
+}
+
+function StaffLoginForm({
+  storeCode,
+  staffIdentifier,
+  password,
+  isSubmitting,
+  onStoreCodeChange,
+  onStaffIdentifierChange,
+  onPasswordChange,
+  onSubmit,
+}: {
+  storeCode: string;
+  staffIdentifier: string;
+  password: string;
+  isSubmitting: boolean;
+  onStoreCodeChange: (value: string) => void;
+  onStaffIdentifierChange: (value: string) => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: (e: React.FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form className="space-y-4" onSubmit={onSubmit}>
+      <div className="space-y-2">
+        <Label htmlFor="storeCodeStaff">Store Code</Label>
+        <Input
+          id="storeCodeStaff"
+          placeholder="example-store"
+          autoComplete="organization"
+          value={storeCode}
+          onChange={(e) => onStoreCodeChange(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="staffIdentifier">Email or Staff ID</Label>
+        <Input
+          id="staffIdentifier"
+          placeholder="staff@example.com or STAFF-001"
+          autoComplete="username"
+          value={staffIdentifier}
+          onChange={(e) => onStaffIdentifierChange(e.target.value)}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="passwordStaff">Password</Label>
+        <Input
+          id="passwordStaff"
+          type="password"
+          placeholder="Staff password"
+          autoComplete="current-password"
+          value={password}
+          onChange={(e) => onPasswordChange(e.target.value)}
+          required
+        />
+      </div>
+      <Button className="w-full" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? "Signing in..." : "Sign in as Staff"}
       </Button>
     </form>
   );
