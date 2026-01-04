@@ -3,8 +3,8 @@
 Rust-based e-commerce platform (storefront + admin + operations).
 
 ## Status
-This project is **under active development** and currently **pre-alpha**.  
-Breaking changes, incomplete features, and instability should be expected.
+This project is **in planning + active implementation** and **not yet pre-alpha**.  
+Specs, data models, and APIs are still shifting; breaking changes and incomplete features are expected.
 
 ## Features (current / planned)
 - Store setup and settings (basic info, payment, tax, shipping, storage)
