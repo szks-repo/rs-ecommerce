@@ -72,6 +72,12 @@ export default function NewMetafieldPage() {
   }, [searchParams]);
 
   useEffect(() => {
+    if (valueType === "bool" || valueType === "boolean") {
+      setIsList(false);
+    }
+  }, [valueType]);
+
+  useEffect(() => {
     async function loadRoles() {
       try {
         const resp = await identityListRoles();
@@ -295,7 +301,7 @@ export default function NewMetafieldPage() {
                 className="h-4 w-4 accent-neutral-900"
                 checked={isList}
                 onChange={(event) => setIsList(event.target.checked)}
-                disabled={formDisabled}
+                disabled={formDisabled || valueType === "bool" || valueType === "boolean"}
               />
               <Label htmlFor="isList">Treat as list (array)</Label>
             </div>

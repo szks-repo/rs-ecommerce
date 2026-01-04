@@ -322,7 +322,7 @@ pub async fn upsert_customer_metafield_value(
     let req = parse_request::<pb::UpsertCustomerMetafieldValueRequest>(&headers, body)?;
     let (_store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
     let actor = req.actor.or(actor_ctx);
-    let value = customer::service::upsert_customer_metafield_value(
+    customer::service::upsert_customer_metafield_value(
         &state,
         tenant_id,
         req.customer_id,
@@ -334,8 +334,6 @@ pub async fn upsert_customer_metafield_value(
     .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
-        Json(pb::UpsertCustomerMetafieldValueResponse {
-            value: Some(value),
-        }),
+        Json(pb::UpsertCustomerMetafieldValueResponse {}),
     ))
 }

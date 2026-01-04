@@ -285,5 +285,4 @@ message UpsertCustomerMetafieldValueRequest {
 }
 
 message UpsertCustomerMetafieldValueResponse {
-  MetafieldValue value = 1;
 }

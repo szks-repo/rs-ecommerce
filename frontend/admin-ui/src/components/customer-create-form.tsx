@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ const COUNTRY_OPTIONS = [
 ];
 
 export default function CustomerCreateForm() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -49,6 +51,9 @@ export default function CustomerCreateForm() {
         notes: notes || undefined,
         countryCode,
       });
+      if (resp.customer?.id) {
+        router.push(`/admin/customers/${resp.customer.id}`);
+      }
       push({
         variant: "success",
         title: "Customer created",
@@ -56,12 +61,6 @@ export default function CustomerCreateForm() {
           ? "Matched an existing customer and linked the profile."
           : "New customer record created.",
       });
-      setName("");
-      setEmail("");
-      setPhone("");
-      setNotes("");
-      setStatus("active");
-      setCountryCode("JP");
     } catch (err) {
       notifyError(err, "Create failed", "Failed to create customer");
     } finally {

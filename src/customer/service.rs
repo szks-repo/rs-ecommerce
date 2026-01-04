@@ -1382,7 +1382,7 @@ pub async fn upsert_customer_metafield_value(
     definition_id: String,
     value_json: String,
     _actor: Option<pb::ActorContext>,
-) -> CustomerResult<pb::MetafieldValue> {
+) -> CustomerResult<()> {
     let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
     let definition_uuid = parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
@@ -1393,11 +1393,9 @@ pub async fn upsert_customer_metafield_value(
         ));
     }
 
-    if serde_json::from_str::<serde_json::Value>(&value_json).is_err() {
-        return Err(CustomerError::InvalidArgument(
-            "value_json must be valid JSON".to_string(),
-        ));
-    }
+    let value = serde_json::from_str::<serde_json::Value>(&value_json).map_err(|_| {
+        CustomerError::InvalidArgument("value_json must be valid JSON".to_string())
+    })?;
 
     let exists = sqlx::query(
         r#"
@@ -1445,33 +1443,42 @@ pub async fn upsert_customer_metafield_value(
             "metafield definition not found".to_string(),
         ));
     };
-    let definition = metafield_definition_from_row(&def_row);
+    let value_type = def_row.get::<String, _>("value_type");
+    let is_list = def_row.get::<bool, _>("is_list");
+    if value_type == "bool" || value_type == "boolean" {
+        let valid = if is_list {
+            value.is_boolean()
+                || value
+                    .as_array()
+                    .map(|items| items.iter().all(|item| item.is_boolean()))
+                    .unwrap_or(false)
+        } else {
+            value.is_boolean()
+        };
+        if !valid {
+            return Err(CustomerError::InvalidArgument(
+                "value_json must be a boolean".to_string(),
+            ));
+        }
+    }
+    let _definition = metafield_definition_from_row(&def_row);
 
-    let row = sqlx::query(
+    sqlx::query(
         r#"
         INSERT INTO metafield_values (definition_id, owner_id, value_json)
         VALUES ($1, $2, $3::jsonb)
         ON CONFLICT (definition_id, owner_id)
         DO UPDATE SET value_json = EXCLUDED.value_json, updated_at = now()
-        RETURNING id::text as id, created_at, updated_at
         "#,
     )
     .bind(definition_uuid)
     .bind(customer_uuid)
     .bind(&value_json)
-    .fetch_one(&state.db)
+    .execute(&state.db)
     .await
     .map_err(CustomerError::from)?;
 
-    Ok(pb::MetafieldValue {
-        id: row.get("id"),
-        definition_id,
-        owner_id: customer_id,
-        value_json,
-        created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-        updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
-        definition: Some(definition),
-    })
+    Ok(())
 }
 
 fn validate_customer_profile(

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -52,7 +53,7 @@ function normalizePostalCodeJP(value: string): string | null {
   return `${digits.slice(0, 3)}-${digits.slice(3)}`;
 }
 
-type MetafieldValueState = string | string[];
+type MetafieldValueState = string | string[] | boolean;
 
 function normalizeMetafieldValue(valueJson?: string): MetafieldValueState {
   if (!valueJson) {
@@ -63,10 +64,13 @@ function normalizeMetafieldValue(valueJson?: string): MetafieldValueState {
     if (Array.isArray(parsed)) {
       return parsed.map((item) => String(item));
     }
+    if (typeof parsed === "boolean") {
+      return parsed;
+    }
     if (typeof parsed === "string") {
       return parsed;
     }
-    if (typeof parsed === "number" || typeof parsed === "boolean") {
+    if (typeof parsed === "number") {
       return String(parsed);
     }
     return JSON.stringify(parsed);
@@ -274,7 +278,15 @@ export default function CustomerDetailPage() {
     try {
       const rawValue = metafieldValues[definition.id];
       let valueJson = "\"\"";
-      if (definition.isList) {
+      const isBooleanType =
+        definition.valueType === "bool" || definition.valueType === "boolean";
+      if (isBooleanType) {
+        const normalized =
+          typeof rawValue === "string"
+            ? rawValue.trim().toLowerCase() === "true"
+            : Boolean(rawValue);
+        valueJson = JSON.stringify(normalized);
+      } else if (definition.isList) {
         if (Array.isArray(rawValue)) {
           valueJson = JSON.stringify(rawValue);
         } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
@@ -304,7 +316,17 @@ export default function CustomerDetailPage() {
   }
 
   function renderMetafieldInput(definition: MetafieldDefinition) {
-    const value = metafieldValues[definition.id] ?? "";
+    let value: MetafieldValueState = metafieldValues[definition.id] ?? "";
+    if (
+      (definition.valueType === "bool" || definition.valueType === "boolean") &&
+      typeof value === "string"
+    ) {
+      if (value.toLowerCase() === "true") {
+        value = true;
+      } else if (value.toLowerCase() === "false") {
+        value = false;
+      }
+    }
     const handleChange = (nextValue: MetafieldValueState) => {
       setMetafieldValues((prev) => ({
         ...prev,
@@ -379,6 +401,18 @@ export default function CustomerDetailPage() {
             ))}
           </SelectContent>
         </Select>
+      );
+    }
+
+    if (definition.valueType === "bool" || definition.valueType === "boolean") {
+      return (
+        <div className="flex items-center justify-between gap-3">
+          <div className="text-xs text-neutral-500">Toggle on/off</div>
+          <Switch
+            checked={Boolean(value)}
+            onCheckedChange={(checked) => handleChange(checked)}
+          />
+        </div>
       );
     }
 

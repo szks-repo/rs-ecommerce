@@ -149,6 +149,12 @@ export default function MetafieldDetailPage() {
     void loadRoles();
   }, [push]);
 
+  useEffect(() => {
+    if (valueType === "bool" || valueType === "boolean") {
+      setIsList(false);
+    }
+  }, [valueType]);
+
   const valueTypeLabel = useMemo(() => {
     const entry = VALUE_TYPES.find((option) => option.value === valueType);
     return entry?.label ?? valueType;
@@ -341,6 +347,7 @@ export default function MetafieldDetailPage() {
                 className="h-4 w-4 accent-neutral-900"
                 checked={isList}
                 onChange={(event) => setIsList(event.target.checked)}
+                disabled={valueType === "bool" || valueType === "boolean"}
               />
               <Label htmlFor="isList">Treat as list (array)</Label>
             </div>
