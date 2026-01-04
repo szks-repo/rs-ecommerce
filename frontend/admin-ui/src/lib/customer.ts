@@ -12,6 +12,12 @@ import {
   CustomerAddressInputSchema,
   UpsertCustomerIdentityRequestSchema,
   UpsertCustomerAddressRequestSchema,
+  ListCustomerMetafieldDefinitionsRequestSchema,
+  CreateCustomerMetafieldDefinitionRequestSchema,
+  UpdateCustomerMetafieldDefinitionRequestSchema,
+  CustomerMetafieldDefinitionInputSchema,
+  ListCustomerMetafieldValuesRequestSchema,
+  UpsertCustomerMetafieldValueRequestSchema,
 } from "@/gen/ecommerce/v1/customer_pb";
 
 const client = createServiceClient(CustomerService);
@@ -143,6 +149,90 @@ export async function upsertCustomerAddress(params: {
     create(UpsertCustomerAddressRequestSchema, {
       customerId: params.customerId,
       address,
+    })
+  );
+}
+
+export async function listCustomerMetafieldDefinitions() {
+  return client.listCustomerMetafieldDefinitions(
+    create(ListCustomerMetafieldDefinitionsRequestSchema, {})
+  );
+}
+
+export async function createCustomerMetafieldDefinition(params: {
+  namespace: string;
+  key: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  isList?: boolean;
+  validationsJson?: string;
+  visibilityJson?: string;
+}) {
+  const definition = create(CustomerMetafieldDefinitionInputSchema, {
+    namespace: params.namespace,
+    key: params.key,
+    name: params.name,
+    description: params.description || "",
+    valueType: params.valueType,
+    isList: params.isList ?? false,
+    validationsJson: params.validationsJson || "",
+    visibilityJson: params.visibilityJson || "",
+  });
+  return client.createCustomerMetafieldDefinition(
+    create(CreateCustomerMetafieldDefinitionRequestSchema, {
+      definition,
+    })
+  );
+}
+
+export async function updateCustomerMetafieldDefinition(params: {
+  definitionId: string;
+  namespace: string;
+  key: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  isList?: boolean;
+  validationsJson?: string;
+  visibilityJson?: string;
+}) {
+  const definition = create(CustomerMetafieldDefinitionInputSchema, {
+    namespace: params.namespace,
+    key: params.key,
+    name: params.name,
+    description: params.description || "",
+    valueType: params.valueType,
+    isList: params.isList ?? false,
+    validationsJson: params.validationsJson || "",
+    visibilityJson: params.visibilityJson || "",
+  });
+  return client.updateCustomerMetafieldDefinition(
+    create(UpdateCustomerMetafieldDefinitionRequestSchema, {
+      definitionId: params.definitionId,
+      definition,
+    })
+  );
+}
+
+export async function listCustomerMetafieldValues(customerId: string) {
+  return client.listCustomerMetafieldValues(
+    create(ListCustomerMetafieldValuesRequestSchema, {
+      customerId,
+    })
+  );
+}
+
+export async function upsertCustomerMetafieldValue(params: {
+  customerId: string;
+  definitionId: string;
+  valueJson: string;
+}) {
+  return client.upsertCustomerMetafieldValue(
+    create(UpsertCustomerMetafieldValueRequestSchema, {
+      customerId: params.customerId,
+      definitionId: params.definitionId,
+      valueJson: params.valueJson,
     })
   );
 }

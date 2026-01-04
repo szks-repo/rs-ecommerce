@@ -12,6 +12,16 @@ service CustomerService {
   rpc UpdateCustomer(UpdateCustomerRequest) returns (UpdateCustomerResponse);
   rpc UpsertCustomerIdentity(UpsertCustomerIdentityRequest) returns (UpsertCustomerIdentityResponse);
   rpc UpsertCustomerAddress(UpsertCustomerAddressRequest) returns (UpsertCustomerAddressResponse);
+  rpc ListCustomerMetafieldDefinitions(ListCustomerMetafieldDefinitionsRequest)
+      returns (ListCustomerMetafieldDefinitionsResponse);
+  rpc CreateCustomerMetafieldDefinition(CreateCustomerMetafieldDefinitionRequest)
+      returns (CreateCustomerMetafieldDefinitionResponse);
+  rpc UpdateCustomerMetafieldDefinition(UpdateCustomerMetafieldDefinitionRequest)
+      returns (UpdateCustomerMetafieldDefinitionResponse);
+  rpc ListCustomerMetafieldValues(ListCustomerMetafieldValuesRequest)
+      returns (ListCustomerMetafieldValuesResponse);
+  rpc UpsertCustomerMetafieldValue(UpsertCustomerMetafieldValueRequest)
+      returns (UpsertCustomerMetafieldValueResponse);
 }
 
 message Customer {
@@ -110,6 +120,31 @@ message CustomerAddressInput {
   string country_code = 10;
 }
 
+message MetafieldDefinition {
+  string id = 1;
+  string owner_type = 2;
+  string namespace = 3;
+  string key = 4;
+  string name = 5;
+  string description = 6;
+  string value_type = 7;
+  bool is_list = 8;
+  string validations_json = 9;
+  string visibility_json = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message MetafieldValue {
+  string id = 1;
+  string definition_id = 2;
+  string owner_id = 3;
+  string value_json = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  MetafieldDefinition definition = 7;
+}
+
 message ListCustomersRequest {
   StoreContext store = 1;
   TenantContext tenant = 2;
@@ -185,4 +220,70 @@ message UpsertCustomerAddressRequest {
 
 message UpsertCustomerAddressResponse {
   CustomerAddress address = 1;
+}
+
+message ListCustomerMetafieldDefinitionsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message ListCustomerMetafieldDefinitionsResponse {
+  repeated MetafieldDefinition definitions = 1;
+}
+
+message CustomerMetafieldDefinitionInput {
+  string namespace = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+  string value_type = 5;
+  bool is_list = 6;
+  string validations_json = 7;
+  string visibility_json = 8;
+}
+
+message CreateCustomerMetafieldDefinitionRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  CustomerMetafieldDefinitionInput definition = 3;
+  ActorContext actor = 4;
+}
+
+message CreateCustomerMetafieldDefinitionResponse {
+  MetafieldDefinition definition = 1;
+}
+
+message UpdateCustomerMetafieldDefinitionRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string definition_id = 3;
+  CustomerMetafieldDefinitionInput definition = 4;
+  ActorContext actor = 5;
+}
+
+message UpdateCustomerMetafieldDefinitionResponse {
+  MetafieldDefinition definition = 1;
+}
+
+message ListCustomerMetafieldValuesRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+}
+
+message ListCustomerMetafieldValuesResponse {
+  repeated MetafieldValue values = 1;
+}
+
+message UpsertCustomerMetafieldValueRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string customer_id = 3;
+  string definition_id = 4;
+  string value_json = 5;
+  ActorContext actor = 6;
+}
+
+message UpsertCustomerMetafieldValueResponse {
+  MetafieldValue value = 1;
 }

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/customer.proto.
  */
 export const file_ecommerce_v1_customer: GenFile = /*@__PURE__*/
-  fileDesc("ChtlY29tbWVyY2UvdjEvY3VzdG9tZXIucHJvdG8SDGVjb21tZXJjZS52MSKZAQoIQ3VzdG9tZXISCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg4KBnN0YXR1cxgDIAEoCRIuCgpjcmVhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKFAgoPQ3VzdG9tZXJQcm9maWxlEgoKAmlkGAEgASgJEhMKC2N1c3RvbWVyX2lkGAIgASgJEhAKCHN0b3JlX2lkGAMgASgJEgwKBG5hbWUYBCABKAkSDQoFZW1haWwYBSABKAkSDQoFcGhvbmUYBiABKAkSDgoGc3RhdHVzGAcgASgJEg0KBW5vdGVzGAggASgJEhQKDGNvdW50cnlfY29kZRgJIAEoCRIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLHAQoQQ3VzdG9tZXJJZGVudGl0eRIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSFQoNaWRlbnRpdHlfdHlwZRgEIAEoCRIWCg5pZGVudGl0eV92YWx1ZRgFIAEoCRIQCgh2ZXJpZmllZBgGIAEoCBIOCgZzb3VyY2UYByABKAkSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiqAIKD0N1c3RvbWVyQWRkcmVzcxIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIMCgR0eXBlGAMgASgJEgwKBG5hbWUYBCABKAkSEwoLcG9zdGFsX2NvZGUYBSABKAkSEgoKcHJlZmVjdHVyZRgGIAEoCRIMCgRjaXR5GAcgASgJEg0KBWxpbmUxGAggASgJEg0KBWxpbmUyGAkgASgJEg0KBXBob25lGAogASgJEhQKDGNvdW50cnlfY29kZRgLIAEoCRIuCgpjcmVhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK4AQoPQ3VzdG9tZXJTdW1tYXJ5EhMKC2N1c3RvbWVyX2lkGAEgASgJEhIKCnByb2ZpbGVfaWQYAiABKAkSEAoIc3RvcmVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRINCgVlbWFpbBgFIAEoCRINCgVwaG9uZRgGIAEoCRIOCgZzdGF0dXMYByABKAkSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAidwoUQ3VzdG9tZXJQcm9maWxlSW5wdXQSDAoEbmFtZRgBIAEoCRINCgVlbWFpbBgCIAEoCRINCgVwaG9uZRgDIAEoCRIOCgZzdGF0dXMYBCABKAkSDQoFbm90ZXMYBSABKAkSFAoMY291bnRyeV9jb2RlGAYgASgJIlgKFUN1c3RvbWVySWRlbnRpdHlJbnB1dBIVCg1pZGVudGl0eV90eXBlGAEgASgJEhYKDmlkZW50aXR5X3ZhbHVlGAIgASgJEhAKCHZlcmlmaWVkGAMgASgIInUKFkN1c3RvbWVySWRlbnRpdHlVcHNlcnQSCgoCaWQYASABKAkSFQoNaWRlbnRpdHlfdHlwZRgCIAEoCRIWCg5pZGVudGl0eV92YWx1ZRgDIAEoCRIQCgh2ZXJpZmllZBgEIAEoCBIOCgZzb3VyY2UYBSABKAkiuAEKFEN1c3RvbWVyQWRkcmVzc0lucHV0EgoKAmlkGAEgASgJEgwKBHR5cGUYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtwb3N0YWxfY29kZRgEIAEoCRISCgpwcmVmZWN0dXJlGAUgASgJEgwKBGNpdHkYBiABKAkSDQoFbGluZTEYByABKAkSDQoFbGluZTIYCCABKAkSDQoFcGhvbmUYCSABKAkSFAoMY291bnRyeV9jb2RlGAogASgJIqMBChRMaXN0Q3VzdG9tZXJzUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSDQoFcXVlcnkYAyABKAkSJAoEcGFnZRgEIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJxChVMaXN0Q3VzdG9tZXJzUmVzcG9uc2USMAoJY3VzdG9tZXJzGAEgAygLMh0uZWNvbW1lcmNlLnYxLkN1c3RvbWVyU3VtbWFyeRImCgRwYWdlGAIgASgLMhguZWNvbW1lcmNlLnYxLlBhZ2VSZXN1bHQigQEKEkdldEN1c3RvbWVyUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEwoLY3VzdG9tZXJfaWQYAyABKAki1QEKE0dldEN1c3RvbWVyUmVzcG9uc2USKAoIY3VzdG9tZXIYASABKAsyFi5lY29tbWVyY2UudjEuQ3VzdG9tZXISLgoHcHJvZmlsZRgCIAEoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lclByb2ZpbGUSMgoKaWRlbnRpdGllcxgDIAMoCzIeLmVjb21tZXJjZS52MS5DdXN0b21lcklkZW50aXR5EjAKCWFkZHJlc3NlcxgEIAMoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lckFkZHJlc3MiiAIKFUNyZWF0ZUN1c3RvbWVyUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSMwoHcHJvZmlsZRgDIAEoCzIiLmVjb21tZXJjZS52MS5DdXN0b21lclByb2ZpbGVJbnB1dBI3CgppZGVudGl0aWVzGAQgAygLMiMuZWNvbW1lcmNlLnYxLkN1c3RvbWVySWRlbnRpdHlJbnB1dBIpCgVhY3RvchgFIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQijAEKFkNyZWF0ZUN1c3RvbWVyUmVzcG9uc2USKAoIY3VzdG9tZXIYASABKAsyFi5lY29tbWVyY2UudjEuQ3VzdG9tZXISLgoHcHJvZmlsZRgCIAEoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lclByb2ZpbGUSGAoQbWF0Y2hlZF9leGlzdGluZxgDIAEoCCL9AQoVVXBkYXRlQ3VzdG9tZXJSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtjdXN0b21lcl9pZBgDIAEoCRIzCgdwcm9maWxlGAQgASgLMiIuZWNvbW1lcmNlLnYxLkN1c3RvbWVyUHJvZmlsZUlucHV0EhcKD2N1c3RvbWVyX3N0YXR1cxgFIAEoCRIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQicgoWVXBkYXRlQ3VzdG9tZXJSZXNwb25zZRIoCghjdXN0b21lchgBIAEoCzIWLmVjb21tZXJjZS52MS5DdXN0b21lchIuCgdwcm9maWxlGAIgASgLMh0uZWNvbW1lcmNlLnYxLkN1c3RvbWVyUHJvZmlsZSLvAQodVXBzZXJ0Q3VzdG9tZXJJZGVudGl0eVJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhMKC2N1c3RvbWVyX2lkGAMgASgJEjYKCGlkZW50aXR5GAQgASgLMiQuZWNvbW1lcmNlLnYxLkN1c3RvbWVySWRlbnRpdHlVcHNlcnQSKQoFYWN0b3IYBSABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IlIKHlVwc2VydEN1c3RvbWVySWRlbnRpdHlSZXNwb25zZRIwCghpZGVudGl0eRgBIAEoCzIeLmVjb21tZXJjZS52MS5DdXN0b21lcklkZW50aXR5IusBChxVcHNlcnRDdXN0b21lckFkZHJlc3NSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtjdXN0b21lcl9pZBgDIAEoCRIzCgdhZGRyZXNzGAQgASgLMiIuZWNvbW1lcmNlLnYxLkN1c3RvbWVyQWRkcmVzc0lucHV0EikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJPCh1VcHNlcnRDdXN0b21lckFkZHJlc3NSZXNwb25zZRIuCgdhZGRyZXNzGAEgASgLMh0uZWNvbW1lcmNlLnYxLkN1c3RvbWVyQWRkcmVzczLgBAoPQ3VzdG9tZXJTZXJ2aWNlElgKDUxpc3RDdXN0b21lcnMSIi5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyc1JlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyc1Jlc3BvbnNlElIKC0dldEN1c3RvbWVyEiAuZWNvbW1lcmNlLnYxLkdldEN1c3RvbWVyUmVxdWVzdBohLmVjb21tZXJjZS52MS5HZXRDdXN0b21lclJlc3BvbnNlElsKDkNyZWF0ZUN1c3RvbWVyEiMuZWNvbW1lcmNlLnYxLkNyZWF0ZUN1c3RvbWVyUmVxdWVzdBokLmVjb21tZXJjZS52MS5DcmVhdGVDdXN0b21lclJlc3BvbnNlElsKDlVwZGF0ZUN1c3RvbWVyEiMuZWNvbW1lcmNlLnYxLlVwZGF0ZUN1c3RvbWVyUmVxdWVzdBokLmVjb21tZXJjZS52MS5VcGRhdGVDdXN0b21lclJlc3BvbnNlEnMKFlVwc2VydEN1c3RvbWVySWRlbnRpdHkSKy5lY29tbWVyY2UudjEuVXBzZXJ0Q3VzdG9tZXJJZGVudGl0eVJlcXVlc3QaLC5lY29tbWVyY2UudjEuVXBzZXJ0Q3VzdG9tZXJJZGVudGl0eVJlc3BvbnNlEnAKFVVwc2VydEN1c3RvbWVyQWRkcmVzcxIqLmVjb21tZXJjZS52MS5VcHNlcnRDdXN0b21lckFkZHJlc3NSZXF1ZXN0GisuZWNvbW1lcmNlLnYxLlVwc2VydEN1c3RvbWVyQWRkcmVzc1Jlc3BvbnNlYgZwcm90bzM", [file_ecommerce_v1_common, file_google_protobuf_timestamp]);
+  fileDesc("ChtlY29tbWVyY2UvdjEvY3VzdG9tZXIucHJvdG8SDGVjb21tZXJjZS52MSKZAQoIQ3VzdG9tZXISCgoCaWQYASABKAkSEQoJdGVuYW50X2lkGAIgASgJEg4KBnN0YXR1cxgDIAEoCRIuCgpjcmVhdGVkX2F0GAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKFAgoPQ3VzdG9tZXJQcm9maWxlEgoKAmlkGAEgASgJEhMKC2N1c3RvbWVyX2lkGAIgASgJEhAKCHN0b3JlX2lkGAMgASgJEgwKBG5hbWUYBCABKAkSDQoFZW1haWwYBSABKAkSDQoFcGhvbmUYBiABKAkSDgoGc3RhdHVzGAcgASgJEg0KBW5vdGVzGAggASgJEhQKDGNvdW50cnlfY29kZRgJIAEoCRIuCgpjcmVhdGVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLHAQoQQ3VzdG9tZXJJZGVudGl0eRIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIRCgl0ZW5hbnRfaWQYAyABKAkSFQoNaWRlbnRpdHlfdHlwZRgEIAEoCRIWCg5pZGVudGl0eV92YWx1ZRgFIAEoCRIQCgh2ZXJpZmllZBgGIAEoCBIOCgZzb3VyY2UYByABKAkSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiqAIKD0N1c3RvbWVyQWRkcmVzcxIKCgJpZBgBIAEoCRITCgtjdXN0b21lcl9pZBgCIAEoCRIMCgR0eXBlGAMgASgJEgwKBG5hbWUYBCABKAkSEwoLcG9zdGFsX2NvZGUYBSABKAkSEgoKcHJlZmVjdHVyZRgGIAEoCRIMCgRjaXR5GAcgASgJEg0KBWxpbmUxGAggASgJEg0KBWxpbmUyGAkgASgJEg0KBXBob25lGAogASgJEhQKDGNvdW50cnlfY29kZRgLIAEoCRIuCgpjcmVhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK4AQoPQ3VzdG9tZXJTdW1tYXJ5EhMKC2N1c3RvbWVyX2lkGAEgASgJEhIKCnByb2ZpbGVfaWQYAiABKAkSEAoIc3RvcmVfaWQYAyABKAkSDAoEbmFtZRgEIAEoCRINCgVlbWFpbBgFIAEoCRINCgVwaG9uZRgGIAEoCRIOCgZzdGF0dXMYByABKAkSLgoKY3JlYXRlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAidwoUQ3VzdG9tZXJQcm9maWxlSW5wdXQSDAoEbmFtZRgBIAEoCRINCgVlbWFpbBgCIAEoCRINCgVwaG9uZRgDIAEoCRIOCgZzdGF0dXMYBCABKAkSDQoFbm90ZXMYBSABKAkSFAoMY291bnRyeV9jb2RlGAYgASgJIlgKFUN1c3RvbWVySWRlbnRpdHlJbnB1dBIVCg1pZGVudGl0eV90eXBlGAEgASgJEhYKDmlkZW50aXR5X3ZhbHVlGAIgASgJEhAKCHZlcmlmaWVkGAMgASgIInUKFkN1c3RvbWVySWRlbnRpdHlVcHNlcnQSCgoCaWQYASABKAkSFQoNaWRlbnRpdHlfdHlwZRgCIAEoCRIWCg5pZGVudGl0eV92YWx1ZRgDIAEoCRIQCgh2ZXJpZmllZBgEIAEoCBIOCgZzb3VyY2UYBSABKAkiuAEKFEN1c3RvbWVyQWRkcmVzc0lucHV0EgoKAmlkGAEgASgJEgwKBHR5cGUYAiABKAkSDAoEbmFtZRgDIAEoCRITCgtwb3N0YWxfY29kZRgEIAEoCRISCgpwcmVmZWN0dXJlGAUgASgJEgwKBGNpdHkYBiABKAkSDQoFbGluZTEYByABKAkSDQoFbGluZTIYCCABKAkSDQoFcGhvbmUYCSABKAkSFAoMY291bnRyeV9jb2RlGAogASgJIrACChNNZXRhZmllbGREZWZpbml0aW9uEgoKAmlkGAEgASgJEhIKCm93bmVyX3R5cGUYAiABKAkSEQoJbmFtZXNwYWNlGAMgASgJEgsKA2tleRgEIAEoCRIMCgRuYW1lGAUgASgJEhMKC2Rlc2NyaXB0aW9uGAYgASgJEhIKCnZhbHVlX3R5cGUYByABKAkSDwoHaXNfbGlzdBgIIAEoCBIYChB2YWxpZGF0aW9uc19qc29uGAkgASgJEhcKD3Zpc2liaWxpdHlfanNvbhgKIAEoCRIuCgpjcmVhdGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GAwgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLwAQoOTWV0YWZpZWxkVmFsdWUSCgoCaWQYASABKAkSFQoNZGVmaW5pdGlvbl9pZBgCIAEoCRIQCghvd25lcl9pZBgDIAEoCRISCgp2YWx1ZV9qc29uGAQgASgJEi4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjUKCmRlZmluaXRpb24YByABKAsyIS5lY29tbWVyY2UudjEuTWV0YWZpZWxkRGVmaW5pdGlvbiKjAQoUTGlzdEN1c3RvbWVyc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0Eg0KBXF1ZXJ5GAMgASgJEiQKBHBhZ2UYBCABKAsyFi5lY29tbWVyY2UudjEuUGFnZUluZm8icQoVTGlzdEN1c3RvbWVyc1Jlc3BvbnNlEjAKCWN1c3RvbWVycxgBIAMoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lclN1bW1hcnkSJgoEcGFnZRgCIAEoCzIYLmVjb21tZXJjZS52MS5QYWdlUmVzdWx0IoEBChJHZXRDdXN0b21lclJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhMKC2N1c3RvbWVyX2lkGAMgASgJItUBChNHZXRDdXN0b21lclJlc3BvbnNlEigKCGN1c3RvbWVyGAEgASgLMhYuZWNvbW1lcmNlLnYxLkN1c3RvbWVyEi4KB3Byb2ZpbGUYAiABKAsyHS5lY29tbWVyY2UudjEuQ3VzdG9tZXJQcm9maWxlEjIKCmlkZW50aXRpZXMYAyADKAsyHi5lY29tbWVyY2UudjEuQ3VzdG9tZXJJZGVudGl0eRIwCglhZGRyZXNzZXMYBCADKAsyHS5lY29tbWVyY2UudjEuQ3VzdG9tZXJBZGRyZXNzIogCChVDcmVhdGVDdXN0b21lclJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EjMKB3Byb2ZpbGUYAyABKAsyIi5lY29tbWVyY2UudjEuQ3VzdG9tZXJQcm9maWxlSW5wdXQSNwoKaWRlbnRpdGllcxgEIAMoCzIjLmVjb21tZXJjZS52MS5DdXN0b21lcklkZW50aXR5SW5wdXQSKQoFYWN0b3IYBSABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IowBChZDcmVhdGVDdXN0b21lclJlc3BvbnNlEigKCGN1c3RvbWVyGAEgASgLMhYuZWNvbW1lcmNlLnYxLkN1c3RvbWVyEi4KB3Byb2ZpbGUYAiABKAsyHS5lY29tbWVyY2UudjEuQ3VzdG9tZXJQcm9maWxlEhgKEG1hdGNoZWRfZXhpc3RpbmcYAyABKAgi/QEKFVVwZGF0ZUN1c3RvbWVyUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEwoLY3VzdG9tZXJfaWQYAyABKAkSMwoHcHJvZmlsZRgEIAEoCzIiLmVjb21tZXJjZS52MS5DdXN0b21lclByb2ZpbGVJbnB1dBIXCg9jdXN0b21lcl9zdGF0dXMYBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0InIKFlVwZGF0ZUN1c3RvbWVyUmVzcG9uc2USKAoIY3VzdG9tZXIYASABKAsyFi5lY29tbWVyY2UudjEuQ3VzdG9tZXISLgoHcHJvZmlsZRgCIAEoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lclByb2ZpbGUi7wEKHVVwc2VydEN1c3RvbWVySWRlbnRpdHlSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtjdXN0b21lcl9pZBgDIAEoCRI2CghpZGVudGl0eRgEIAEoCzIkLmVjb21tZXJjZS52MS5DdXN0b21lcklkZW50aXR5VXBzZXJ0EikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJSCh5VcHNlcnRDdXN0b21lcklkZW50aXR5UmVzcG9uc2USMAoIaWRlbnRpdHkYASABKAsyHi5lY29tbWVyY2UudjEuQ3VzdG9tZXJJZGVudGl0eSLrAQocVXBzZXJ0Q3VzdG9tZXJBZGRyZXNzUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQSEwoLY3VzdG9tZXJfaWQYAyABKAkSMwoHYWRkcmVzcxgEIAEoCzIiLmVjb21tZXJjZS52MS5DdXN0b21lckFkZHJlc3NJbnB1dBIpCgVhY3RvchgFIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiTwodVXBzZXJ0Q3VzdG9tZXJBZGRyZXNzUmVzcG9uc2USLgoHYWRkcmVzcxgBIAEoCzIdLmVjb21tZXJjZS52MS5DdXN0b21lckFkZHJlc3MigQEKJ0xpc3RDdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25zUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSKwoGdGVuYW50GAIgASgLMhsuZWNvbW1lcmNlLnYxLlRlbmFudENvbnRleHQiYgooTGlzdEN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvbnNSZXNwb25zZRI2CgtkZWZpbml0aW9ucxgBIAMoCzIhLmVjb21tZXJjZS52MS5NZXRhZmllbGREZWZpbml0aW9uIr0BCiBDdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25JbnB1dBIRCgluYW1lc3BhY2UYASABKAkSCwoDa2V5GAIgASgJEgwKBG5hbWUYAyABKAkSEwoLZGVzY3JpcHRpb24YBCABKAkSEgoKdmFsdWVfdHlwZRgFIAEoCRIPCgdpc19saXN0GAYgASgIEhgKEHZhbGlkYXRpb25zX2pzb24YByABKAkSFwoPdmlzaWJpbGl0eV9qc29uGAggASgJIvEBCihDcmVhdGVDdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBJCCgpkZWZpbml0aW9uGAMgASgLMi4uZWNvbW1lcmNlLnYxLkN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvbklucHV0EikKBWFjdG9yGAQgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJiCilDcmVhdGVDdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25SZXNwb25zZRI1CgpkZWZpbml0aW9uGAEgASgLMiEuZWNvbW1lcmNlLnYxLk1ldGFmaWVsZERlZmluaXRpb24iiAIKKFVwZGF0ZUN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvblJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EisKBnRlbmFudBgCIAEoCzIbLmVjb21tZXJjZS52MS5UZW5hbnRDb250ZXh0EhUKDWRlZmluaXRpb25faWQYAyABKAkSQgoKZGVmaW5pdGlvbhgEIAEoCzIuLmVjb21tZXJjZS52MS5DdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25JbnB1dBIpCgVhY3RvchgFIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiYgopVXBkYXRlQ3VzdG9tZXJNZXRhZmllbGREZWZpbml0aW9uUmVzcG9uc2USNQoKZGVmaW5pdGlvbhgBIAEoCzIhLmVjb21tZXJjZS52MS5NZXRhZmllbGREZWZpbml0aW9uIpEBCiJMaXN0Q3VzdG9tZXJNZXRhZmllbGRWYWx1ZXNSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtjdXN0b21lcl9pZBgDIAEoCSJTCiNMaXN0Q3VzdG9tZXJNZXRhZmllbGRWYWx1ZXNSZXNwb25zZRIsCgZ2YWx1ZXMYASADKAsyHC5lY29tbWVyY2UudjEuTWV0YWZpZWxkVmFsdWUi6AEKI1Vwc2VydEN1c3RvbWVyTWV0YWZpZWxkVmFsdWVSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIrCgZ0ZW5hbnQYAiABKAsyGy5lY29tbWVyY2UudjEuVGVuYW50Q29udGV4dBITCgtjdXN0b21lcl9pZBgDIAEoCRIVCg1kZWZpbml0aW9uX2lkGAQgASgJEhIKCnZhbHVlX2pzb24YBSABKAkSKQoFYWN0b3IYBiABKAsyGi5lY29tbWVyY2UudjEuQWN0b3JDb250ZXh0IlMKJFVwc2VydEN1c3RvbWVyTWV0YWZpZWxkVmFsdWVSZXNwb25zZRIrCgV2YWx1ZRgBIAEoCzIcLmVjb21tZXJjZS52MS5NZXRhZmllbGRWYWx1ZTKvCgoPQ3VzdG9tZXJTZXJ2aWNlElgKDUxpc3RDdXN0b21lcnMSIi5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyc1JlcXVlc3QaIy5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyc1Jlc3BvbnNlElIKC0dldEN1c3RvbWVyEiAuZWNvbW1lcmNlLnYxLkdldEN1c3RvbWVyUmVxdWVzdBohLmVjb21tZXJjZS52MS5HZXRDdXN0b21lclJlc3BvbnNlElsKDkNyZWF0ZUN1c3RvbWVyEiMuZWNvbW1lcmNlLnYxLkNyZWF0ZUN1c3RvbWVyUmVxdWVzdBokLmVjb21tZXJjZS52MS5DcmVhdGVDdXN0b21lclJlc3BvbnNlElsKDlVwZGF0ZUN1c3RvbWVyEiMuZWNvbW1lcmNlLnYxLlVwZGF0ZUN1c3RvbWVyUmVxdWVzdBokLmVjb21tZXJjZS52MS5VcGRhdGVDdXN0b21lclJlc3BvbnNlEnMKFlVwc2VydEN1c3RvbWVySWRlbnRpdHkSKy5lY29tbWVyY2UudjEuVXBzZXJ0Q3VzdG9tZXJJZGVudGl0eVJlcXVlc3QaLC5lY29tbWVyY2UudjEuVXBzZXJ0Q3VzdG9tZXJJZGVudGl0eVJlc3BvbnNlEnAKFVVwc2VydEN1c3RvbWVyQWRkcmVzcxIqLmVjb21tZXJjZS52MS5VcHNlcnRDdXN0b21lckFkZHJlc3NSZXF1ZXN0GisuZWNvbW1lcmNlLnYxLlVwc2VydEN1c3RvbWVyQWRkcmVzc1Jlc3BvbnNlEpEBCiBMaXN0Q3VzdG9tZXJNZXRhZmllbGREZWZpbml0aW9ucxI1LmVjb21tZXJjZS52MS5MaXN0Q3VzdG9tZXJNZXRhZmllbGREZWZpbml0aW9uc1JlcXVlc3QaNi5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvbnNSZXNwb25zZRKUAQohQ3JlYXRlQ3VzdG9tZXJNZXRhZmllbGREZWZpbml0aW9uEjYuZWNvbW1lcmNlLnYxLkNyZWF0ZUN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvblJlcXVlc3QaNy5lY29tbWVyY2UudjEuQ3JlYXRlQ3VzdG9tZXJNZXRhZmllbGREZWZpbml0aW9uUmVzcG9uc2USlAEKIVVwZGF0ZUN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvbhI2LmVjb21tZXJjZS52MS5VcGRhdGVDdXN0b21lck1ldGFmaWVsZERlZmluaXRpb25SZXF1ZXN0GjcuZWNvbW1lcmNlLnYxLlVwZGF0ZUN1c3RvbWVyTWV0YWZpZWxkRGVmaW5pdGlvblJlc3BvbnNlEoIBChtMaXN0Q3VzdG9tZXJNZXRhZmllbGRWYWx1ZXMSMC5lY29tbWVyY2UudjEuTGlzdEN1c3RvbWVyTWV0YWZpZWxkVmFsdWVzUmVxdWVzdBoxLmVjb21tZXJjZS52MS5MaXN0Q3VzdG9tZXJNZXRhZmllbGRWYWx1ZXNSZXNwb25zZRKFAQocVXBzZXJ0Q3VzdG9tZXJNZXRhZmllbGRWYWx1ZRIxLmVjb21tZXJjZS52MS5VcHNlcnRDdXN0b21lck1ldGFmaWVsZFZhbHVlUmVxdWVzdBoyLmVjb21tZXJjZS52MS5VcHNlcnRDdXN0b21lck1ldGFmaWVsZFZhbHVlUmVzcG9uc2ViBnByb3RvMw", [file_ecommerce_v1_common, file_google_protobuf_timestamp]);
 
 /**
  * @generated from message ecommerce.v1.Customer
@@ -476,6 +476,125 @@ export const CustomerAddressInputSchema: GenMessage<CustomerAddressInput> = /*@_
   messageDesc(file_ecommerce_v1_customer, 8);
 
 /**
+ * @generated from message ecommerce.v1.MetafieldDefinition
+ */
+export type MetafieldDefinition = Message<"ecommerce.v1.MetafieldDefinition"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string owner_type = 2;
+   */
+  ownerType: string;
+
+  /**
+   * @generated from field: string namespace = 3;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string key = 4;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string name = 5;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 6;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string value_type = 7;
+   */
+  valueType: string;
+
+  /**
+   * @generated from field: bool is_list = 8;
+   */
+  isList: boolean;
+
+  /**
+   * @generated from field: string validations_json = 9;
+   */
+  validationsJson: string;
+
+  /**
+   * @generated from field: string visibility_json = 10;
+   */
+  visibilityJson: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 11;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 12;
+   */
+  updatedAt?: Timestamp;
+};
+
+/**
+ * Describes the message ecommerce.v1.MetafieldDefinition.
+ * Use `create(MetafieldDefinitionSchema)` to create a new message.
+ */
+export const MetafieldDefinitionSchema: GenMessage<MetafieldDefinition> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 9);
+
+/**
+ * @generated from message ecommerce.v1.MetafieldValue
+ */
+export type MetafieldValue = Message<"ecommerce.v1.MetafieldValue"> & {
+  /**
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * @generated from field: string definition_id = 2;
+   */
+  definitionId: string;
+
+  /**
+   * @generated from field: string owner_id = 3;
+   */
+  ownerId: string;
+
+  /**
+   * @generated from field: string value_json = 4;
+   */
+  valueJson: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp created_at = 5;
+   */
+  createdAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp updated_at = 6;
+   */
+  updatedAt?: Timestamp;
+
+  /**
+   * @generated from field: ecommerce.v1.MetafieldDefinition definition = 7;
+   */
+  definition?: MetafieldDefinition;
+};
+
+/**
+ * Describes the message ecommerce.v1.MetafieldValue.
+ * Use `create(MetafieldValueSchema)` to create a new message.
+ */
+export const MetafieldValueSchema: GenMessage<MetafieldValue> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 10);
+
+/**
  * @generated from message ecommerce.v1.ListCustomersRequest
  */
 export type ListCustomersRequest = Message<"ecommerce.v1.ListCustomersRequest"> & {
@@ -505,7 +624,7 @@ export type ListCustomersRequest = Message<"ecommerce.v1.ListCustomersRequest"> 
  * Use `create(ListCustomersRequestSchema)` to create a new message.
  */
 export const ListCustomersRequestSchema: GenMessage<ListCustomersRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 9);
+  messageDesc(file_ecommerce_v1_customer, 11);
 
 /**
  * @generated from message ecommerce.v1.ListCustomersResponse
@@ -527,7 +646,7 @@ export type ListCustomersResponse = Message<"ecommerce.v1.ListCustomersResponse"
  * Use `create(ListCustomersResponseSchema)` to create a new message.
  */
 export const ListCustomersResponseSchema: GenMessage<ListCustomersResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 10);
+  messageDesc(file_ecommerce_v1_customer, 12);
 
 /**
  * @generated from message ecommerce.v1.GetCustomerRequest
@@ -554,7 +673,7 @@ export type GetCustomerRequest = Message<"ecommerce.v1.GetCustomerRequest"> & {
  * Use `create(GetCustomerRequestSchema)` to create a new message.
  */
 export const GetCustomerRequestSchema: GenMessage<GetCustomerRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 11);
+  messageDesc(file_ecommerce_v1_customer, 13);
 
 /**
  * @generated from message ecommerce.v1.GetCustomerResponse
@@ -586,7 +705,7 @@ export type GetCustomerResponse = Message<"ecommerce.v1.GetCustomerResponse"> & 
  * Use `create(GetCustomerResponseSchema)` to create a new message.
  */
 export const GetCustomerResponseSchema: GenMessage<GetCustomerResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 12);
+  messageDesc(file_ecommerce_v1_customer, 14);
 
 /**
  * @generated from message ecommerce.v1.CreateCustomerRequest
@@ -623,7 +742,7 @@ export type CreateCustomerRequest = Message<"ecommerce.v1.CreateCustomerRequest"
  * Use `create(CreateCustomerRequestSchema)` to create a new message.
  */
 export const CreateCustomerRequestSchema: GenMessage<CreateCustomerRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 13);
+  messageDesc(file_ecommerce_v1_customer, 15);
 
 /**
  * @generated from message ecommerce.v1.CreateCustomerResponse
@@ -650,7 +769,7 @@ export type CreateCustomerResponse = Message<"ecommerce.v1.CreateCustomerRespons
  * Use `create(CreateCustomerResponseSchema)` to create a new message.
  */
 export const CreateCustomerResponseSchema: GenMessage<CreateCustomerResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 14);
+  messageDesc(file_ecommerce_v1_customer, 16);
 
 /**
  * @generated from message ecommerce.v1.UpdateCustomerRequest
@@ -692,7 +811,7 @@ export type UpdateCustomerRequest = Message<"ecommerce.v1.UpdateCustomerRequest"
  * Use `create(UpdateCustomerRequestSchema)` to create a new message.
  */
 export const UpdateCustomerRequestSchema: GenMessage<UpdateCustomerRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 15);
+  messageDesc(file_ecommerce_v1_customer, 17);
 
 /**
  * @generated from message ecommerce.v1.UpdateCustomerResponse
@@ -714,7 +833,7 @@ export type UpdateCustomerResponse = Message<"ecommerce.v1.UpdateCustomerRespons
  * Use `create(UpdateCustomerResponseSchema)` to create a new message.
  */
 export const UpdateCustomerResponseSchema: GenMessage<UpdateCustomerResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 16);
+  messageDesc(file_ecommerce_v1_customer, 18);
 
 /**
  * @generated from message ecommerce.v1.UpsertCustomerIdentityRequest
@@ -751,7 +870,7 @@ export type UpsertCustomerIdentityRequest = Message<"ecommerce.v1.UpsertCustomer
  * Use `create(UpsertCustomerIdentityRequestSchema)` to create a new message.
  */
 export const UpsertCustomerIdentityRequestSchema: GenMessage<UpsertCustomerIdentityRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 17);
+  messageDesc(file_ecommerce_v1_customer, 19);
 
 /**
  * @generated from message ecommerce.v1.UpsertCustomerIdentityResponse
@@ -768,7 +887,7 @@ export type UpsertCustomerIdentityResponse = Message<"ecommerce.v1.UpsertCustome
  * Use `create(UpsertCustomerIdentityResponseSchema)` to create a new message.
  */
 export const UpsertCustomerIdentityResponseSchema: GenMessage<UpsertCustomerIdentityResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 18);
+  messageDesc(file_ecommerce_v1_customer, 20);
 
 /**
  * @generated from message ecommerce.v1.UpsertCustomerAddressRequest
@@ -805,7 +924,7 @@ export type UpsertCustomerAddressRequest = Message<"ecommerce.v1.UpsertCustomerA
  * Use `create(UpsertCustomerAddressRequestSchema)` to create a new message.
  */
 export const UpsertCustomerAddressRequestSchema: GenMessage<UpsertCustomerAddressRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 19);
+  messageDesc(file_ecommerce_v1_customer, 21);
 
 /**
  * @generated from message ecommerce.v1.UpsertCustomerAddressResponse
@@ -822,7 +941,304 @@ export type UpsertCustomerAddressResponse = Message<"ecommerce.v1.UpsertCustomer
  * Use `create(UpsertCustomerAddressResponseSchema)` to create a new message.
  */
 export const UpsertCustomerAddressResponseSchema: GenMessage<UpsertCustomerAddressResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_customer, 20);
+  messageDesc(file_ecommerce_v1_customer, 22);
+
+/**
+ * @generated from message ecommerce.v1.ListCustomerMetafieldDefinitionsRequest
+ */
+export type ListCustomerMetafieldDefinitionsRequest = Message<"ecommerce.v1.ListCustomerMetafieldDefinitionsRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.ListCustomerMetafieldDefinitionsRequest.
+ * Use `create(ListCustomerMetafieldDefinitionsRequestSchema)` to create a new message.
+ */
+export const ListCustomerMetafieldDefinitionsRequestSchema: GenMessage<ListCustomerMetafieldDefinitionsRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 23);
+
+/**
+ * @generated from message ecommerce.v1.ListCustomerMetafieldDefinitionsResponse
+ */
+export type ListCustomerMetafieldDefinitionsResponse = Message<"ecommerce.v1.ListCustomerMetafieldDefinitionsResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.MetafieldDefinition definitions = 1;
+   */
+  definitions: MetafieldDefinition[];
+};
+
+/**
+ * Describes the message ecommerce.v1.ListCustomerMetafieldDefinitionsResponse.
+ * Use `create(ListCustomerMetafieldDefinitionsResponseSchema)` to create a new message.
+ */
+export const ListCustomerMetafieldDefinitionsResponseSchema: GenMessage<ListCustomerMetafieldDefinitionsResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 24);
+
+/**
+ * @generated from message ecommerce.v1.CustomerMetafieldDefinitionInput
+ */
+export type CustomerMetafieldDefinitionInput = Message<"ecommerce.v1.CustomerMetafieldDefinitionInput"> & {
+  /**
+   * @generated from field: string namespace = 1;
+   */
+  namespace: string;
+
+  /**
+   * @generated from field: string key = 2;
+   */
+  key: string;
+
+  /**
+   * @generated from field: string name = 3;
+   */
+  name: string;
+
+  /**
+   * @generated from field: string description = 4;
+   */
+  description: string;
+
+  /**
+   * @generated from field: string value_type = 5;
+   */
+  valueType: string;
+
+  /**
+   * @generated from field: bool is_list = 6;
+   */
+  isList: boolean;
+
+  /**
+   * @generated from field: string validations_json = 7;
+   */
+  validationsJson: string;
+
+  /**
+   * @generated from field: string visibility_json = 8;
+   */
+  visibilityJson: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.CustomerMetafieldDefinitionInput.
+ * Use `create(CustomerMetafieldDefinitionInputSchema)` to create a new message.
+ */
+export const CustomerMetafieldDefinitionInputSchema: GenMessage<CustomerMetafieldDefinitionInput> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 25);
+
+/**
+ * @generated from message ecommerce.v1.CreateCustomerMetafieldDefinitionRequest
+ */
+export type CreateCustomerMetafieldDefinitionRequest = Message<"ecommerce.v1.CreateCustomerMetafieldDefinitionRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: ecommerce.v1.CustomerMetafieldDefinitionInput definition = 3;
+   */
+  definition?: CustomerMetafieldDefinitionInput;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 4;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateCustomerMetafieldDefinitionRequest.
+ * Use `create(CreateCustomerMetafieldDefinitionRequestSchema)` to create a new message.
+ */
+export const CreateCustomerMetafieldDefinitionRequestSchema: GenMessage<CreateCustomerMetafieldDefinitionRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 26);
+
+/**
+ * @generated from message ecommerce.v1.CreateCustomerMetafieldDefinitionResponse
+ */
+export type CreateCustomerMetafieldDefinitionResponse = Message<"ecommerce.v1.CreateCustomerMetafieldDefinitionResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.MetafieldDefinition definition = 1;
+   */
+  definition?: MetafieldDefinition;
+};
+
+/**
+ * Describes the message ecommerce.v1.CreateCustomerMetafieldDefinitionResponse.
+ * Use `create(CreateCustomerMetafieldDefinitionResponseSchema)` to create a new message.
+ */
+export const CreateCustomerMetafieldDefinitionResponseSchema: GenMessage<CreateCustomerMetafieldDefinitionResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 27);
+
+/**
+ * @generated from message ecommerce.v1.UpdateCustomerMetafieldDefinitionRequest
+ */
+export type UpdateCustomerMetafieldDefinitionRequest = Message<"ecommerce.v1.UpdateCustomerMetafieldDefinitionRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string definition_id = 3;
+   */
+  definitionId: string;
+
+  /**
+   * @generated from field: ecommerce.v1.CustomerMetafieldDefinitionInput definition = 4;
+   */
+  definition?: CustomerMetafieldDefinitionInput;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 5;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpdateCustomerMetafieldDefinitionRequest.
+ * Use `create(UpdateCustomerMetafieldDefinitionRequestSchema)` to create a new message.
+ */
+export const UpdateCustomerMetafieldDefinitionRequestSchema: GenMessage<UpdateCustomerMetafieldDefinitionRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 28);
+
+/**
+ * @generated from message ecommerce.v1.UpdateCustomerMetafieldDefinitionResponse
+ */
+export type UpdateCustomerMetafieldDefinitionResponse = Message<"ecommerce.v1.UpdateCustomerMetafieldDefinitionResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.MetafieldDefinition definition = 1;
+   */
+  definition?: MetafieldDefinition;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpdateCustomerMetafieldDefinitionResponse.
+ * Use `create(UpdateCustomerMetafieldDefinitionResponseSchema)` to create a new message.
+ */
+export const UpdateCustomerMetafieldDefinitionResponseSchema: GenMessage<UpdateCustomerMetafieldDefinitionResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 29);
+
+/**
+ * @generated from message ecommerce.v1.ListCustomerMetafieldValuesRequest
+ */
+export type ListCustomerMetafieldValuesRequest = Message<"ecommerce.v1.ListCustomerMetafieldValuesRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string customer_id = 3;
+   */
+  customerId: string;
+};
+
+/**
+ * Describes the message ecommerce.v1.ListCustomerMetafieldValuesRequest.
+ * Use `create(ListCustomerMetafieldValuesRequestSchema)` to create a new message.
+ */
+export const ListCustomerMetafieldValuesRequestSchema: GenMessage<ListCustomerMetafieldValuesRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 30);
+
+/**
+ * @generated from message ecommerce.v1.ListCustomerMetafieldValuesResponse
+ */
+export type ListCustomerMetafieldValuesResponse = Message<"ecommerce.v1.ListCustomerMetafieldValuesResponse"> & {
+  /**
+   * @generated from field: repeated ecommerce.v1.MetafieldValue values = 1;
+   */
+  values: MetafieldValue[];
+};
+
+/**
+ * Describes the message ecommerce.v1.ListCustomerMetafieldValuesResponse.
+ * Use `create(ListCustomerMetafieldValuesResponseSchema)` to create a new message.
+ */
+export const ListCustomerMetafieldValuesResponseSchema: GenMessage<ListCustomerMetafieldValuesResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 31);
+
+/**
+ * @generated from message ecommerce.v1.UpsertCustomerMetafieldValueRequest
+ */
+export type UpsertCustomerMetafieldValueRequest = Message<"ecommerce.v1.UpsertCustomerMetafieldValueRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: ecommerce.v1.TenantContext tenant = 2;
+   */
+  tenant?: TenantContext;
+
+  /**
+   * @generated from field: string customer_id = 3;
+   */
+  customerId: string;
+
+  /**
+   * @generated from field: string definition_id = 4;
+   */
+  definitionId: string;
+
+  /**
+   * @generated from field: string value_json = 5;
+   */
+  valueJson: string;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 6;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpsertCustomerMetafieldValueRequest.
+ * Use `create(UpsertCustomerMetafieldValueRequestSchema)` to create a new message.
+ */
+export const UpsertCustomerMetafieldValueRequestSchema: GenMessage<UpsertCustomerMetafieldValueRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 32);
+
+/**
+ * @generated from message ecommerce.v1.UpsertCustomerMetafieldValueResponse
+ */
+export type UpsertCustomerMetafieldValueResponse = Message<"ecommerce.v1.UpsertCustomerMetafieldValueResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.MetafieldValue value = 1;
+   */
+  value?: MetafieldValue;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpsertCustomerMetafieldValueResponse.
+ * Use `create(UpsertCustomerMetafieldValueResponseSchema)` to create a new message.
+ */
+export const UpsertCustomerMetafieldValueResponseSchema: GenMessage<UpsertCustomerMetafieldValueResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_customer, 33);
 
 /**
  * @generated from service ecommerce.v1.CustomerService
@@ -875,6 +1291,46 @@ export const CustomerService: GenService<{
     methodKind: "unary";
     input: typeof UpsertCustomerAddressRequestSchema;
     output: typeof UpsertCustomerAddressResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.CustomerService.ListCustomerMetafieldDefinitions
+   */
+  listCustomerMetafieldDefinitions: {
+    methodKind: "unary";
+    input: typeof ListCustomerMetafieldDefinitionsRequestSchema;
+    output: typeof ListCustomerMetafieldDefinitionsResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.CustomerService.CreateCustomerMetafieldDefinition
+   */
+  createCustomerMetafieldDefinition: {
+    methodKind: "unary";
+    input: typeof CreateCustomerMetafieldDefinitionRequestSchema;
+    output: typeof CreateCustomerMetafieldDefinitionResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.CustomerService.UpdateCustomerMetafieldDefinition
+   */
+  updateCustomerMetafieldDefinition: {
+    methodKind: "unary";
+    input: typeof UpdateCustomerMetafieldDefinitionRequestSchema;
+    output: typeof UpdateCustomerMetafieldDefinitionResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.CustomerService.ListCustomerMetafieldValues
+   */
+  listCustomerMetafieldValues: {
+    methodKind: "unary";
+    input: typeof ListCustomerMetafieldValuesRequestSchema;
+    output: typeof ListCustomerMetafieldValuesResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.CustomerService.UpsertCustomerMetafieldValue
+   */
+  upsertCustomerMetafieldValue: {
+    methodKind: "unary";
+    input: typeof UpsertCustomerMetafieldValueRequestSchema;
+    output: typeof UpsertCustomerMetafieldValueResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_ecommerce_v1_customer, 0);

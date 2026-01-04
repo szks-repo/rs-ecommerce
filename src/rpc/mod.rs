@@ -515,6 +515,76 @@ pub fn router(state: AppState) -> Router<()> {
             )),
         )
         .route(
+            "/rpc/ecommerce.v1.CustomerService/ListCustomerMetafieldDefinitions",
+            post(customer::list_customer_metafield_definitions).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CustomersRead,
+                    )
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/CreateCustomerMetafieldDefinition",
+            post(customer::create_customer_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CustomersWrite,
+                    )
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/UpdateCustomerMetafieldDefinition",
+            post(customer::update_customer_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CustomersWrite,
+                    )
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/ListCustomerMetafieldValues",
+            post(customer::list_customer_metafield_values).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CustomersRead,
+                    )
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.CustomerService/UpsertCustomerMetafieldValue",
+            post(customer::upsert_customer_metafield_value).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CustomersWrite,
+                    )
+                },
+            )),
+        )
+        .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetStoreSettings",
             post(store_settings::get_store_settings).route_layer(middleware::from_fn_with_state(state.clone(),
                 |State(state), req, next| {

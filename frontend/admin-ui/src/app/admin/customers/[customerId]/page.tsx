@@ -16,8 +16,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { getCustomer, updateCustomer, upsertCustomerIdentity, upsertCustomerAddress } from "@/lib/customer";
-import type { CustomerAddress, CustomerIdentity } from "@/gen/ecommerce/v1/customer_pb";
+import {
+  getCustomer,
+  updateCustomer,
+  upsertCustomerIdentity,
+  upsertCustomerAddress,
+  listCustomerMetafieldDefinitions,
+  listCustomerMetafieldValues,
+  upsertCustomerMetafieldValue,
+} from "@/lib/customer";
+import type {
+  CustomerAddress,
+  CustomerIdentity,
+  MetafieldDefinition,
+} from "@/gen/ecommerce/v1/customer_pb";
 import { useApiCall } from "@/lib/use-api-call";
 
 const COUNTRY_OPTIONS = [
@@ -38,6 +50,29 @@ function normalizePostalCodeJP(value: string): string | null {
     return null;
   }
   return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+}
+
+type MetafieldValueState = string | string[];
+
+function normalizeMetafieldValue(valueJson?: string): MetafieldValueState {
+  if (!valueJson) {
+    return "";
+  }
+  try {
+    const parsed = JSON.parse(valueJson);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => String(item));
+    }
+    if (typeof parsed === "string") {
+      return parsed;
+    }
+    if (typeof parsed === "number" || typeof parsed === "boolean") {
+      return String(parsed);
+    }
+    return JSON.stringify(parsed);
+  } catch {
+    return valueJson;
+  }
 }
 
 export default function CustomerDetailPage() {
@@ -74,6 +109,9 @@ export default function CustomerDetailPage() {
   const [addressPhone, setAddressPhone] = useState("");
   const [addressCountryCode, setAddressCountryCode] = useState("JP");
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [metafieldDefs, setMetafieldDefs] = useState<MetafieldDefinition[]>([]);
+  const [metafieldValues, setMetafieldValues] = useState<Record<string, MetafieldValueState>>({});
+  const [isSavingMetafield, setIsSavingMetafield] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -90,6 +128,18 @@ export default function CustomerDetailPage() {
         setCustomerStatus(resp.customer?.status ?? "active");
         setIdentities(resp.identities ?? []);
         setAddresses(resp.addresses ?? []);
+        const [defsResp, valuesResp] = await Promise.all([
+          listCustomerMetafieldDefinitions(),
+          listCustomerMetafieldValues(customerId),
+        ]);
+        setMetafieldDefs(defsResp.definitions ?? []);
+        const valuesMap: Record<string, MetafieldValueState> = {};
+        (valuesResp.values ?? []).forEach((value) => {
+          if (value.definitionId) {
+            valuesMap[value.definitionId] = normalizeMetafieldValue(value.valueJson);
+          }
+        });
+        setMetafieldValues(valuesMap);
       } catch (err) {
         notifyError(err, "Load failed", "Failed to load customer");
       } finally {
@@ -103,6 +153,14 @@ export default function CustomerDetailPage() {
     const resp = await getCustomer(customerId);
     setIdentities(resp.identities ?? []);
     setAddresses(resp.addresses ?? []);
+    const valuesResp = await listCustomerMetafieldValues(customerId);
+    const valuesMap: Record<string, MetafieldValueState> = {};
+    (valuesResp.values ?? []).forEach((value) => {
+      if (value.definitionId) {
+        valuesMap[value.definitionId] = normalizeMetafieldValue(value.valueJson);
+      }
+    });
+    setMetafieldValues(valuesMap);
   }
 
   async function handleSave(event: React.FormEvent<HTMLFormElement>) {
@@ -205,6 +263,181 @@ export default function CustomerDetailPage() {
       notifyError(err, "Address save failed", "Failed to save address");
     } finally {
       setIsSavingAddress(false);
+    }
+  }
+
+  async function handleSaveMetafield(definition: MetafieldDefinition) {
+    if (!definition.id || isSavingMetafield) {
+      return;
+    }
+    setIsSavingMetafield(definition.id);
+    try {
+      const rawValue = metafieldValues[definition.id];
+      let valueJson = "\"\"";
+      if (definition.isList) {
+        if (Array.isArray(rawValue)) {
+          valueJson = JSON.stringify(rawValue);
+        } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+          valueJson = rawValue.trim();
+        } else {
+          valueJson = "[]";
+        }
+      } else {
+        valueJson = JSON.stringify(typeof rawValue === "string" ? rawValue : "");
+      }
+      await upsertCustomerMetafieldValue({
+        customerId,
+        definitionId: definition.id,
+        valueJson,
+      });
+      push({
+        variant: "success",
+        title: "Custom attribute saved",
+        description: "Metafield value has been updated.",
+      });
+      await reloadCustomer();
+    } catch (err) {
+      notifyError(err, "Save failed", "Failed to save custom attribute");
+    } finally {
+      setIsSavingMetafield(null);
+    }
+  }
+
+  function renderMetafieldInput(definition: MetafieldDefinition) {
+    const value = metafieldValues[definition.id] ?? "";
+    const handleChange = (nextValue: MetafieldValueState) => {
+      setMetafieldValues((prev) => ({
+        ...prev,
+        [definition.id]: nextValue,
+      }));
+    };
+
+    let enumOptions: string[] = [];
+    if (definition.valueType === "enum") {
+      try {
+        const parsed = definition.validationsJson
+          ? JSON.parse(definition.validationsJson)
+          : {};
+        if (parsed && Array.isArray(parsed.enum)) {
+          enumOptions = parsed.enum.map((item: unknown) => String(item));
+        }
+      } catch {
+        enumOptions = [];
+      }
+    }
+
+    if (definition.valueType === "enum") {
+      if (definition.isList) {
+        const selected = Array.isArray(value) ? value : [];
+        return (
+          <div className="space-y-2">
+            {enumOptions.length === 0 ? (
+              <div className="text-xs text-neutral-500">No enum options configured.</div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {enumOptions.map((option) => {
+                  const checked = selected.includes(option);
+                  return (
+                    <label
+                      key={option}
+                      className="flex items-center gap-2 rounded-full border border-neutral-200 px-3 py-1 text-xs text-neutral-700"
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-neutral-900"
+                        checked={checked}
+                        onChange={(event) => {
+                          if (event.target.checked) {
+                            handleChange([...selected, option]);
+                          } else {
+                            handleChange(selected.filter((item) => item !== option));
+                          }
+                        }}
+                      />
+                      {option}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
+      return (
+        <Select
+          value={typeof value === "string" ? value : ""}
+          onValueChange={(next) => handleChange(next)}
+        >
+          <SelectTrigger className="bg-white">
+            <SelectValue placeholder="Select value" />
+          </SelectTrigger>
+          <SelectContent>
+            {enumOptions.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    if (definition.isList) {
+      return (
+        <Textarea
+          id={`metafield-${definition.id}`}
+          value={typeof value === "string" ? value : JSON.stringify(value)}
+          onChange={(event) => handleChange(event.target.value)}
+          placeholder='e.g. ["value1","value2"]'
+        />
+      );
+    }
+
+    switch (definition.valueType) {
+      case "date":
+        return (
+          <Input
+            id={`metafield-${definition.id}`}
+            type="date"
+            value={typeof value === "string" ? value : ""}
+            onChange={(event) => handleChange(event.target.value)}
+          />
+        );
+      case "dateTime":
+        return (
+          <Input
+            id={`metafield-${definition.id}`}
+            type="datetime-local"
+            value={typeof value === "string" ? value : ""}
+            onChange={(event) => handleChange(event.target.value)}
+          />
+        );
+      case "color":
+        return (
+          <div className="flex items-center gap-3">
+            <Input
+              id={`metafield-${definition.id}`}
+              type="color"
+              value={typeof value === "string" && value ? value : "#000000"}
+              onChange={(event) => handleChange(event.target.value)}
+              className="h-10 w-16 p-1"
+            />
+            <Input
+              value={typeof value === "string" ? value : ""}
+              onChange={(event) => handleChange(event.target.value)}
+              placeholder="#000000"
+            />
+          </div>
+        );
+      default:
+        return (
+          <Input
+            id={`metafield-${definition.id}`}
+            value={typeof value === "string" ? value : ""}
+            onChange={(event) => handleChange(event.target.value)}
+            placeholder="Enter value"
+          />
+        );
     }
   }
 
@@ -604,6 +837,51 @@ export default function CustomerDetailPage() {
                   >
                     Edit
                   </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-neutral-200 bg-white text-neutral-900">
+        <CardHeader>
+          <CardTitle>Custom attributes</CardTitle>
+          <CardDescription className="text-neutral-500">
+            Optional metadata defined for customers (metafields).
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm text-neutral-700">
+          {metafieldDefs.length === 0 ? (
+            <div className="text-sm text-neutral-600">No metafield definitions configured.</div>
+          ) : (
+            metafieldDefs.map((definition) => (
+              <div key={definition.id} className="rounded-lg border border-neutral-200 p-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium text-neutral-900">
+                      {definition.name}
+                      <span className="ml-2 text-xs font-normal text-neutral-500">
+                        {definition.namespace}.{definition.key}
+                      </span>
+                    </div>
+                    <div className="text-xs text-neutral-500">
+                      type: {definition.valueType}
+                      {definition.description ? ` · ${definition.description}` : ""}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => handleSaveMetafield(definition)}
+                    disabled={isSavingMetafield === definition.id}
+                  >
+                    {isSavingMetafield === definition.id ? "Saving..." : "Save"}
+                  </Button>
+                </div>
+                <div className="mt-3 space-y-2">
+                  <Label htmlFor={`metafield-${definition.id}`}>Value</Label>
+                  {renderMetafieldInput(definition)}
                 </div>
               </div>
             ))

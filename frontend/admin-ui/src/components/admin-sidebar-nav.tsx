@@ -17,6 +17,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Products", href: "/admin/products", permission: "catalog.read" },
   { label: "Auctions", href: "/admin/auctions", permission: "auction.read" },
   { label: "Customers", href: "/admin/customers", permission: "customers.read" },
+  { label: "Metafields", href: "/admin/metafields", permission: "customers.write" },
   { label: "Inventory", href: "/admin/inventory", permission: "catalog.read" },
   { label: "Shop Settings", href: "/admin/settings", permission: "settings.read" },
   { label: "Identity", href: "/admin/identity", permission: "staff.manage" },

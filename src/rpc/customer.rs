@@ -200,3 +200,142 @@ pub async fn upsert_customer_address(
         }),
     ))
 }
+
+pub async fn list_customer_metafield_definitions(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ListCustomerMetafieldDefinitionsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::ListCustomerMetafieldDefinitionsRequest>(&headers, body)?;
+    let (_store_id, _tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let definitions = customer::service::list_customer_metafield_definitions(&state)
+        .await
+        .map_err(|err| err.into_connect())?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListCustomerMetafieldDefinitionsResponse { definitions }),
+    ))
+}
+
+pub async fn create_customer_metafield_definition(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::CreateCustomerMetafieldDefinitionResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::CreateCustomerMetafieldDefinitionRequest>(&headers, body)?;
+    let (_store_id, _tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let _actor = req.actor.or(actor_ctx);
+    let input = req.definition.ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "definition is required".to_string(),
+            }),
+        )
+    })?;
+    let definition = customer::service::create_customer_metafield_definition(&state, input)
+        .await
+        .map_err(|err| err.into_connect())?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateCustomerMetafieldDefinitionResponse {
+            definition: Some(definition),
+        }),
+    ))
+}
+
+pub async fn update_customer_metafield_definition(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::UpdateCustomerMetafieldDefinitionResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::UpdateCustomerMetafieldDefinitionRequest>(&headers, body)?;
+    let (_store_id, _tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let _actor = req.actor.or(actor_ctx);
+    let input = req.definition.ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "definition is required".to_string(),
+            }),
+        )
+    })?;
+    let definition = customer::service::update_customer_metafield_definition(
+        &state,
+        req.definition_id,
+        input,
+    )
+    .await
+    .map_err(|err| err.into_connect())?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateCustomerMetafieldDefinitionResponse {
+            definition: Some(definition),
+        }),
+    ))
+}
+
+pub async fn list_customer_metafield_values(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ListCustomerMetafieldValuesResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::ListCustomerMetafieldValuesRequest>(&headers, body)?;
+    let (_store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let values =
+        customer::service::list_customer_metafield_values(&state, tenant_id, req.customer_id)
+            .await
+            .map_err(|err| err.into_connect())?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListCustomerMetafieldValuesResponse { values }),
+    ))
+}
+
+pub async fn upsert_customer_metafield_value(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::UpsertCustomerMetafieldValueResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::UpsertCustomerMetafieldValueRequest>(&headers, body)?;
+    let (_store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let actor = req.actor.or(actor_ctx);
+    let value = customer::service::upsert_customer_metafield_value(
+        &state,
+        tenant_id,
+        req.customer_id,
+        req.definition_id,
+        req.value_json,
+        actor,
+    )
+    .await
+    .map_err(|err| err.into_connect())?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpsertCustomerMetafieldValueResponse {
+            value: Some(value),
+        }),
+    ))
+}

@@ -648,6 +648,38 @@ CREATE INDEX IF NOT EXISTS customer_identities_tenant_idx
     ON customer_identities (tenant_id);
 CREATE INDEX IF NOT EXISTS customer_addresses_customer_idx ON customer_addresses (customer_id);
 
+CREATE TABLE IF NOT EXISTS metafield_definitions (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_type text NOT NULL,
+    namespace text NOT NULL,
+    key text NOT NULL,
+    name text NOT NULL,
+    description text,
+    value_type text NOT NULL,
+    is_list bool NOT NULL DEFAULT false,
+    validations_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+    visibility_json jsonb NOT NULL DEFAULT '{}'::jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (owner_type, namespace, key)
+);
+
+CREATE INDEX IF NOT EXISTS metafield_definitions_owner_idx
+    ON metafield_definitions (owner_type, namespace, key);
+
+CREATE TABLE IF NOT EXISTS metafield_values (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    definition_id uuid NOT NULL REFERENCES metafield_definitions(id) ON DELETE CASCADE,
+    owner_id uuid NOT NULL,
+    value_json jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (definition_id, owner_id)
+);
+
+CREATE INDEX IF NOT EXISTS metafield_values_owner_idx
+    ON metafield_values (owner_id);
+
 CREATE TABLE IF NOT EXISTS store_db_routing (
     store_id uuid PRIMARY KEY REFERENCES stores(id),
     db_key text NOT NULL,
