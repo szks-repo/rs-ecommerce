@@ -35,6 +35,7 @@ export default function ProductCreateForm() {
   const [newAxis, setNewAxis] = useState("");
   const [draggingAxisIndex, setDraggingAxisIndex] = useState<number | null>(null);
   const [sku, setSku] = useState("");
+  const [janCode, setJanCode] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
   const [priceAmount, setPriceAmount] = useState("0");
   const [compareAtAmount, setCompareAtAmount] = useState("");
@@ -119,6 +120,7 @@ export default function ProductCreateForm() {
         }
         defaultVariant = {
           sku: sku.trim(),
+          janCode: janCode.trim() || undefined,
           fulfillmentType,
           priceAmount: price,
           compareAtAmount: compareAt,
@@ -156,6 +158,7 @@ export default function ProductCreateForm() {
       setVariantAxes([]);
       setNewAxis("");
       setSku("");
+      setJanCode("");
       setFulfillmentType("physical");
       setPriceAmount("0");
       setCompareAtAmount("");
@@ -340,6 +343,15 @@ export default function ProductCreateForm() {
                   onChange={(e) => setSku(e.target.value)}
                   disabled={axes.length > 0}
                   required={axes.length === 0}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="defaultJanCode">JAN Code (optional)</Label>
+                <Input
+                  id="defaultJanCode"
+                  value={janCode}
+                  onChange={(e) => setJanCode(e.target.value)}
+                  disabled={axes.length > 0}
                 />
               </div>
               <div className="space-y-2">

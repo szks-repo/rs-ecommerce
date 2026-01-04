@@ -30,6 +30,7 @@ export default function VariantCreateForm({
 }: VariantCreateFormProps) {
   const [productId, setProductId] = useState(initialProductId ?? "");
   const [sku, setSku] = useState("");
+  const [janCode, setJanCode] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
   const [priceAmount, setPriceAmount] = useState("0");
   const [compareAtAmount, setCompareAtAmount] = useState("");
@@ -75,6 +76,7 @@ export default function VariantCreateForm({
       const data = await createVariant({
         productId,
         sku,
+        janCode: janCode.trim() || undefined,
         fulfillmentType,
         priceAmount: price,
         compareAtAmount: compareAt,
@@ -89,6 +91,7 @@ export default function VariantCreateForm({
       });
       setProductId(initialProductId ?? "");
       setSku("");
+      setJanCode("");
       setFulfillmentType("physical");
       setPriceAmount("0");
       setCompareAtAmount("");
@@ -126,6 +129,14 @@ export default function VariantCreateForm({
           <div className="space-y-2">
             <Label htmlFor="variantSku">SKU</Label>
             <Input id="variantSku" value={sku} onChange={(e) => setSku(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="variantJanCode">JAN Code (optional)</Label>
+            <Input
+              id="variantJanCode"
+              value={janCode}
+              onChange={(e) => setJanCode(e.target.value)}
+            />
           </div>
           {axes.length > 0 ? (
             <div className="grid gap-4 md:grid-cols-2">

@@ -66,6 +66,7 @@ message DefaultVariantInput {
   Money price = 3;
   Money compare_at = 4;
   string status = 5;
+  string jan_code = 6;
 }
 
 message VariantAdmin {
@@ -78,6 +79,7 @@ message VariantAdmin {
   string status = 7;
   string tax_rule_id = 8;
   repeated VariantAxisValue axis_values = 9;
+  string jan_code = 10;
 }
 
 message SkuAdmin {
@@ -88,6 +90,7 @@ message SkuAdmin {
   string fulfillment_type = 5;
   Money price = 6;
   string status = 7;
+  string jan_code = 8;
 }
 
 message MediaAsset {
@@ -233,6 +236,7 @@ message CreateVariantRequest {
   string status = 7;
   ActorContext actor = 8;
   repeated VariantAxisValue axis_values = 9;
+  string jan_code = 10;
 }
 
 message CreateVariantResponse {
@@ -247,6 +251,7 @@ message UpdateVariantRequest {
   string status = 5;
   string fulfillment_type = 6; // optional
   ActorContext actor = 7;
+  string jan_code = 8;
 }
 
 message UpdateVariantResponse {

@@ -33,6 +33,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
   );
   const [status, setStatus] = useState(variant?.status ?? "active");
   const [fulfillmentType, setFulfillmentType] = useState(variant?.fulfillmentType ?? "");
+  const [janCode, setJanCode] = useState(variant?.janCode ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
@@ -49,6 +50,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
     setCompareAtAmount(variant.compareAt?.amount != null ? String(variant.compareAt.amount) : "");
     setStatus(variant.status || "active");
     setFulfillmentType(variant.fulfillmentType || "");
+    setJanCode(variant.janCode ?? "");
   }, [variant]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -73,6 +75,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
         currency: "JPY",
         status,
         fulfillmentType: fulfillmentType || undefined,
+        janCode: janCode.trim() || undefined,
       });
       push({
         variant: "success",
@@ -154,6 +157,14 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="updateVariantJan">JAN Code (optional)</Label>
+            <Input
+              id="updateVariantJan"
+              value={janCode}
+              onChange={(e) => setJanCode(e.target.value)}
+            />
           </div>
           <div>
             <Button type="submit" disabled={isSubmitting || !canSubmit}>

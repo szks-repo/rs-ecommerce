@@ -187,6 +187,7 @@ pub async fn list_variants_admin(
         SELECT v.id,
                v.product_id,
                v.sku,
+               v.jan_code,
                v.fulfillment_type,
                v.price_amount,
                v.price_currency,
@@ -216,6 +217,7 @@ pub async fn list_variants_admin(
             id: variant_id.to_string(),
             product_id: product_uuid.to_string(),
             sku: row.get("sku"),
+            jan_code: row.get::<Option<String>, _>("jan_code").unwrap_or_default(),
             fulfillment_type: row.get("fulfillment_type"),
             price: Some(money_from_parts(
                 row.get::<i64, _>("price_amount"),
@@ -299,6 +301,7 @@ pub async fn list_skus_admin(
         r#"
         SELECT v.id::text as id,
                v.sku,
+               v.jan_code,
                v.product_id::text as product_id,
                p.title as product_title,
                v.fulfillment_type,
@@ -332,6 +335,7 @@ pub async fn list_skus_admin(
                 row.get::<String, _>("price_currency"),
             )),
             status: row.get("status"),
+            jan_code: row.get::<Option<String>, _>("jan_code").unwrap_or_default(),
         })
         .collect())
 }
@@ -457,14 +461,19 @@ pub async fn create_product(
         sqlx::query(
             r#"
             INSERT INTO product_skus (
-                id, product_id, sku, fulfillment_type, price_amount, price_currency,
+                id, product_id, sku, jan_code, fulfillment_type, price_amount, price_currency,
                 compare_at_amount, compare_at_currency, status, tax_rule_id
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
             "#,
         )
         .bind(uuid::Uuid::new_v4())
         .bind(product_id)
         .bind(default_sku.as_str())
+        .bind(if default_variant.jan_code.is_empty() {
+            None
+        } else {
+            Some(default_variant.jan_code.as_str())
+        })
         .bind(&fulfillment_type)
         .bind(price_amount)
         .bind(&price_currency)
@@ -784,14 +793,19 @@ pub async fn create_variant(
     sqlx::query(
         r#"
         INSERT INTO product_skus (
-            id, product_id, sku, fulfillment_type, price_amount, price_currency,
+            id, product_id, sku, jan_code, fulfillment_type, price_amount, price_currency,
             compare_at_amount, compare_at_currency, status, tax_rule_id
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
         "#,
     )
     .bind(variant_id)
     .bind(parse_uuid(&req.product_id, "product_id")?)
     .bind(sku.as_str())
+    .bind(if req.jan_code.is_empty() {
+        None
+    } else {
+        Some(req.jan_code.as_str())
+    })
     .bind(&fulfillment_type)
     .bind(price_amount)
     .bind(&price_currency)
@@ -834,6 +848,11 @@ pub async fn create_variant(
         status,
         tax_rule_id: product_tax_rule_id.map(|id| id.to_string()).unwrap_or_default(),
         axis_values: axis_values_for_response,
+        jan_code: if req.jan_code.is_empty() {
+            String::new()
+        } else {
+            req.jan_code
+        },
     };
 
     audit::record_tx(
@@ -901,8 +920,9 @@ pub async fn update_variant(
             compare_at_amount = $3, compare_at_currency = $4,
             status = $5,
             fulfillment_type = COALESCE($6, fulfillment_type),
+            jan_code = NULLIF($7, ''),
             updated_at = now()
-        WHERE id = $7
+        WHERE id = $8
         "#,
     )
     .bind(price_amount)
@@ -911,6 +931,7 @@ pub async fn update_variant(
     .bind(compare_currency)
     .bind(&status)
     .bind(fulfillment_type.as_deref())
+    .bind(req.jan_code.as_str())
     .bind(parse_uuid(&req.variant_id, "variant_id")?)
     .execute(tx.as_mut())
     .await
@@ -921,6 +942,7 @@ pub async fn update_variant(
         SELECT id::text as id,
                product_id::text as product_id,
                sku,
+               jan_code,
                fulfillment_type,
                price_amount,
                price_currency,
@@ -941,6 +963,7 @@ pub async fn update_variant(
         id: row.get("id"),
         product_id: row.get("product_id"),
         sku: row.get("sku"),
+        jan_code: row.get::<Option<String>, _>("jan_code").unwrap_or_default(),
         fulfillment_type: row.get("fulfillment_type"),
         price: Some(money_from_parts(
             row.get::<i64, _>("price_amount"),

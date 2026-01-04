@@ -110,6 +110,9 @@ export default function VariantList() {
                   id: {variant.id} / status: {variant.status} / type:{" "}
                   {variant.fulfillmentType}
                 </div>
+                {variant.janCode ? (
+                  <div className="text-xs text-neutral-500">JAN: {variant.janCode}</div>
+                ) : null}
               </div>
             ))}
           </div>

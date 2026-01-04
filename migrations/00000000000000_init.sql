@@ -355,6 +355,7 @@ CREATE TABLE IF NOT EXISTS product_skus (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id uuid NOT NULL REFERENCES products(id),
     sku text NOT NULL,
+    jan_code text,
     fulfillment_type text NOT NULL DEFAULT 'physical',
     price_amount bigint NOT NULL,
     price_currency text NOT NULL,

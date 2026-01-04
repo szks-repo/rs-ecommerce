@@ -55,6 +55,7 @@ export async function createProduct(params: {
   variantAxes?: { name: string; position?: number }[];
   defaultVariant?: {
     sku: string;
+    janCode?: string;
     fulfillmentType: string;
     priceAmount: number;
     compareAtAmount?: number;
@@ -100,6 +101,7 @@ export async function createProduct(params: {
     variantAxes: { name: string; position: number }[];
     defaultVariant?: {
       sku: string;
+      janCode?: string;
       fulfillmentType: string;
       price: { amount: bigint; currency: string };
       compareAt?: { amount: bigint; currency: string };
@@ -122,6 +124,7 @@ export async function createProduct(params: {
   if (params.defaultVariant) {
     payload.defaultVariant = {
       sku: params.defaultVariant.sku,
+      janCode: params.defaultVariant.janCode || "",
       fulfillmentType: params.defaultVariant.fulfillmentType,
       price: {
         amount: BigInt(params.defaultVariant.priceAmount),
@@ -168,6 +171,7 @@ export async function updateProduct(params: {
 export async function createVariant(params: {
   productId: string;
   sku: string;
+  janCode?: string;
   fulfillmentType: string;
   priceAmount: number;
   compareAtAmount?: number;
@@ -179,6 +183,7 @@ export async function createVariant(params: {
     create(CreateVariantRequestSchema, {
       productId: params.productId,
       sku: params.sku,
+      janCode: params.janCode || "",
       fulfillmentType: params.fulfillmentType,
       price: { amount: BigInt(params.priceAmount), currency: params.currency },
       compareAt:
@@ -198,6 +203,7 @@ export async function updateVariant(params: {
   currency: string;
   status: string;
   fulfillmentType?: string;
+  janCode?: string;
 }) {
   return client.updateVariant(
     create(UpdateVariantRequestSchema, {
@@ -209,6 +215,7 @@ export async function updateVariant(params: {
           : undefined,
       status: params.status,
       fulfillmentType: params.fulfillmentType || "",
+      janCode: params.janCode || "",
     })
   );
 }
