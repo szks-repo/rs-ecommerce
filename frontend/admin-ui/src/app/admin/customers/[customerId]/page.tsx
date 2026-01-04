@@ -270,6 +270,84 @@ export default function CustomerDetailPage() {
     }
   }
 
+  function validateMetafieldValue(definition: MetafieldDefinition, rawValue: MetafieldValueState) {
+    let validations: { min?: unknown; max?: unknown; required?: unknown } = {};
+    if (definition.validationsJson) {
+      try {
+        validations = JSON.parse(definition.validationsJson);
+      } catch {
+        validations = {};
+      }
+    }
+    const required = validations.required === true;
+    const isDateType = definition.valueType === "date" || definition.valueType === "dateTime";
+    const isBooleanType =
+      definition.valueType === "bool" || definition.valueType === "boolean";
+
+    const isEmpty =
+      rawValue == null ||
+      (typeof rawValue === "string" && rawValue.trim() === "") ||
+      (Array.isArray(rawValue) && rawValue.length === 0);
+
+    if (required && isEmpty) {
+      return "This field is required.";
+    }
+
+    if (isBooleanType) {
+      return null;
+    }
+
+    if (isDateType) {
+      const minValue = typeof validations.min === "string" ? validations.min : undefined;
+      const maxValue = typeof validations.max === "string" ? validations.max : undefined;
+      const parseDate = (value: string) => {
+        if (definition.valueType === "date") {
+          return new Date(`${value}T00:00:00`);
+        }
+        return new Date(value);
+      };
+      const minDate = minValue ? parseDate(minValue) : null;
+      const maxDate = maxValue ? parseDate(maxValue) : null;
+      const values: string[] = [];
+      if (definition.isList) {
+        if (Array.isArray(rawValue)) {
+          values.push(...rawValue.map((v) => String(v)));
+        } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+          try {
+            const parsed = JSON.parse(rawValue);
+            if (!Array.isArray(parsed)) {
+              return "Value must be a JSON array of date strings.";
+            }
+            values.push(...parsed.map((v: unknown) => String(v)));
+          } catch {
+            return "Value must be a JSON array of date strings.";
+          }
+        }
+      } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+        values.push(rawValue.trim());
+      }
+
+      if (values.length === 0) {
+        return null;
+      }
+
+      for (const value of values) {
+        const date = parseDate(value);
+        if (!Number.isFinite(date.getTime())) {
+          return "Value must be a valid date.";
+        }
+        if (minDate && Number.isFinite(minDate.getTime()) && date < minDate) {
+          return `Date must be on or after ${minValue}.`;
+        }
+        if (maxDate && Number.isFinite(maxDate.getTime()) && date > maxDate) {
+          return `Date must be on or before ${maxValue}.`;
+        }
+      }
+    }
+
+    return null;
+  }
+
   async function handleSaveMetafield(definition: MetafieldDefinition) {
     if (!definition.id || isSavingMetafield) {
       return;
@@ -277,6 +355,16 @@ export default function CustomerDetailPage() {
     setIsSavingMetafield(definition.id);
     try {
       const rawValue = metafieldValues[definition.id];
+      const validationError = validateMetafieldValue(definition, rawValue);
+      if (validationError) {
+        push({
+          variant: "error",
+          title: "Validation failed",
+          description: validationError,
+        });
+        return;
+      }
+
       let valueJson = "\"\"";
       const isBooleanType =
         definition.valueType === "bool" || definition.valueType === "boolean";
@@ -334,6 +422,7 @@ export default function CustomerDetailPage() {
       }));
     };
 
+    const validationError = validateMetafieldValue(definition, value);
     let enumOptions: string[] = [];
     if (definition.valueType === "enum") {
       try {
@@ -382,25 +471,33 @@ export default function CustomerDetailPage() {
                 })}
               </div>
             )}
+            {validationError ? (
+              <p className="text-xs text-red-600">{validationError}</p>
+            ) : null}
           </div>
         );
       }
       return (
-        <Select
-          value={typeof value === "string" ? value : ""}
-          onValueChange={(next) => handleChange(next)}
-        >
-          <SelectTrigger className="bg-white">
-            <SelectValue placeholder="Select value" />
-          </SelectTrigger>
-          <SelectContent>
-            {enumOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="space-y-2">
+          <Select
+            value={typeof value === "string" ? value : ""}
+            onValueChange={(next) => handleChange(next)}
+          >
+            <SelectTrigger className="bg-white">
+              <SelectValue placeholder="Select value" />
+            </SelectTrigger>
+            <SelectContent>
+              {enumOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {validationError ? (
+            <p className="text-xs text-red-600">{validationError}</p>
+          ) : null}
+        </div>
       );
     }
 
@@ -412,39 +509,57 @@ export default function CustomerDetailPage() {
             checked={Boolean(value)}
             onCheckedChange={(checked) => handleChange(checked)}
           />
+          {validationError ? (
+            <p className="text-xs text-red-600">{validationError}</p>
+          ) : null}
         </div>
       );
     }
 
     if (definition.isList) {
       return (
-        <Textarea
-          id={`metafield-${definition.id}`}
-          value={typeof value === "string" ? value : JSON.stringify(value)}
-          onChange={(event) => handleChange(event.target.value)}
-          placeholder='e.g. ["value1","value2"]'
-        />
+        <div className="space-y-2">
+          <Textarea
+            id={`metafield-${definition.id}`}
+            value={typeof value === "string" ? value : JSON.stringify(value)}
+            onChange={(event) => handleChange(event.target.value)}
+            placeholder='e.g. ["value1","value2"]'
+          />
+          {validationError ? (
+            <p className="text-xs text-red-600">{validationError}</p>
+          ) : null}
+        </div>
       );
     }
 
     switch (definition.valueType) {
       case "date":
         return (
-          <Input
-            id={`metafield-${definition.id}`}
-            type="date"
-            value={typeof value === "string" ? value : ""}
-            onChange={(event) => handleChange(event.target.value)}
-          />
+          <div className="space-y-2">
+            <Input
+              id={`metafield-${definition.id}`}
+              type="date"
+              value={typeof value === "string" ? value : ""}
+              onChange={(event) => handleChange(event.target.value)}
+            />
+            {validationError ? (
+              <p className="text-xs text-red-600">{validationError}</p>
+            ) : null}
+          </div>
         );
       case "dateTime":
         return (
-          <Input
-            id={`metafield-${definition.id}`}
-            type="datetime-local"
-            value={typeof value === "string" ? value : ""}
-            onChange={(event) => handleChange(event.target.value)}
-          />
+          <div className="space-y-2">
+            <Input
+              id={`metafield-${definition.id}`}
+              type="datetime-local"
+              value={typeof value === "string" ? value : ""}
+              onChange={(event) => handleChange(event.target.value)}
+            />
+            {validationError ? (
+              <p className="text-xs text-red-600">{validationError}</p>
+            ) : null}
+          </div>
         );
       case "color":
         return (
@@ -461,16 +576,24 @@ export default function CustomerDetailPage() {
               onChange={(event) => handleChange(event.target.value)}
               placeholder="#000000"
             />
+            {validationError ? (
+              <p className="text-xs text-red-600">{validationError}</p>
+            ) : null}
           </div>
         );
       default:
         return (
-          <Input
-            id={`metafield-${definition.id}`}
-            value={typeof value === "string" ? value : ""}
-            onChange={(event) => handleChange(event.target.value)}
-            placeholder="Enter value"
-          />
+          <div className="space-y-2">
+            <Input
+              id={`metafield-${definition.id}`}
+              value={typeof value === "string" ? value : ""}
+              onChange={(event) => handleChange(event.target.value)}
+              placeholder="Enter value"
+            />
+            {validationError ? (
+              <p className="text-xs text-red-600">{validationError}</p>
+            ) : null}
+          </div>
         );
     }
   }
@@ -908,7 +1031,15 @@ export default function CustomerDetailPage() {
                     type="button"
                     size="sm"
                     onClick={() => handleSaveMetafield(definition)}
-                    disabled={isSavingMetafield === definition.id}
+                    disabled={
+                      isSavingMetafield === definition.id ||
+                      Boolean(
+                        validateMetafieldValue(
+                          definition,
+                          metafieldValues[definition.id] ?? ""
+                        )
+                      )
+                    }
                   >
                     {isSavingMetafield === definition.id ? "Saving..." : "Save"}
                   </Button>
