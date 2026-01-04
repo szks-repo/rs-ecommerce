@@ -16,6 +16,7 @@ import {
 import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useApiCall } from "@/lib/use-api-call";
+import { validateSkuCode } from "@/lib/sku-code";
 
 type VariantCreateFormProps = {
   productId?: string;
@@ -65,6 +66,10 @@ export default function VariantCreateForm({
       const compareAt = compareAtAmount.trim().length > 0 ? Number(compareAtAmount) : undefined;
       if (typeof compareAt === "number" && !Number.isFinite(compareAt)) {
         throw new Error("compare_at_amount must be a number.");
+      }
+      const skuError = validateSkuCode(sku.trim());
+      if (skuError) {
+        throw new Error(skuError);
       }
       const axisValuesPayload = axes.map((axis) => {
         const value = axisValues[axis.name]?.trim() ?? "";

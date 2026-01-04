@@ -52,6 +52,7 @@ export type StoreSettingsFormValues = {
   brandColor: string;
   logoUrl?: string;
   faviconUrl?: string;
+  skuCodeRegex?: string;
 };
 
 export function toStoreSettingsForm(settings: StoreSettings): StoreSettingsFormValues {
@@ -65,6 +66,7 @@ export function toStoreSettingsForm(settings: StoreSettings): StoreSettingsFormV
   const payment = settings.payment ?? {};
   const bank = payment.bankAccount ?? {};
   const branding = settings.branding ?? {};
+  const catalog = settings.catalog ?? {};
   return {
     storeName: profile.storeName || "",
     legalName: profile.legalName || "",
@@ -98,6 +100,7 @@ export function toStoreSettingsForm(settings: StoreSettings): StoreSettingsFormV
     brandColor: branding.brandColor || "#111827",
     logoUrl: branding.logoUrl || "",
     faviconUrl: branding.faviconUrl || "",
+    skuCodeRegex: catalog.skuCodeRegex || "",
   };
 }
 
@@ -168,6 +171,9 @@ export async function updateStoreSettings(params: {
       brandColor: params.settings.brandColor,
       logoUrl: params.settings.logoUrl || "",
       faviconUrl: params.settings.faviconUrl || "",
+    },
+    catalog: {
+      skuCodeRegex: params.settings.skuCodeRegex || "",
     },
   });
   const resp = await client.updateStoreSettings(create(UpdateStoreSettingsRequestSchema, { settings }));

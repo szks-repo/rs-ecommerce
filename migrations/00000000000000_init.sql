@@ -224,6 +224,14 @@ CREATE TABLE IF NOT EXISTS store_payment_settings (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS store_catalog_settings (
+    store_id uuid PRIMARY KEY REFERENCES stores(id),
+    tenant_id uuid NOT NULL REFERENCES tenants(id),
+    sku_code_regex text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS store_appearance_settings (
     store_id uuid PRIMARY KEY REFERENCES stores(id),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
@@ -238,6 +246,7 @@ CREATE TABLE IF NOT EXISTS store_appearance_settings (
 CREATE INDEX IF NOT EXISTS store_profile_settings_tenant_idx ON store_profile_settings (tenant_id);
 CREATE INDEX IF NOT EXISTS store_tax_settings_tenant_idx ON store_tax_settings (tenant_id);
 CREATE INDEX IF NOT EXISTS store_payment_settings_tenant_idx ON store_payment_settings (tenant_id);
+CREATE INDEX IF NOT EXISTS store_catalog_settings_tenant_idx ON store_catalog_settings (tenant_id);
 CREATE INDEX IF NOT EXISTS store_appearance_settings_tenant_idx ON store_appearance_settings (tenant_id);
 
 CREATE TABLE IF NOT EXISTS shipping_zones (

@@ -43,6 +43,10 @@ fn branding(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreBran
     settings.branding.clone().unwrap_or_default()
 }
 
+fn catalog(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::StoreCatalog {
+    settings.catalog.clone().unwrap_or_default()
+}
+
 fn bank_account(settings: &crate::pb::pb::StoreSettings) -> crate::pb::pb::BankAccount {
     payment(settings).bank_account.unwrap_or_default()
 }
@@ -80,6 +84,7 @@ pub struct StoreSettingsRecord {
     pub logo_url: Option<String>,
     pub favicon_url: Option<String>,
     pub time_zone: String,
+    pub sku_code_regex: Option<String>,
 }
 
 #[derive(Debug, Clone)]
@@ -451,6 +456,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
                    COALESCE(pay.bank_account_type, '') AS bank_account_type,
                    COALESCE(pay.bank_account_number, '') AS bank_account_number,
                    COALESCE(pay.bank_account_name, '') AS bank_account_name,
+                   COALESCE(cat.sku_code_regex, '') AS sku_code_regex,
                    COALESCE(app.theme, 'default') AS theme,
                    COALESCE(app.brand_color, '#111827') AS brand_color,
                    COALESCE(app.logo_url, '') AS logo_url,
@@ -458,6 +464,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             FROM store_profile_settings p
             LEFT JOIN store_tax_settings t ON t.store_id = p.store_id
             LEFT JOIN store_payment_settings pay ON pay.store_id = p.store_id
+            LEFT JOIN store_catalog_settings cat ON cat.store_id = p.store_id
             LEFT JOIN store_appearance_settings app ON app.store_id = p.store_id
             WHERE p.store_id = $1
             "#,
@@ -494,6 +501,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             bank_account_type: row.get("bank_account_type"),
             bank_account_number: row.get("bank_account_number"),
             bank_account_name: row.get("bank_account_name"),
+            sku_code_regex: row.get::<Option<String>, _>("sku_code_regex"),
             theme: row.get("theme"),
             brand_color: row.get("brand_color"),
             logo_url: row.get("logo_url"),
@@ -523,6 +531,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
                    COALESCE(pay.bank_account_type, '') AS bank_account_type,
                    COALESCE(pay.bank_account_number, '') AS bank_account_number,
                    COALESCE(pay.bank_account_name, '') AS bank_account_name,
+                   COALESCE(cat.sku_code_regex, '') AS sku_code_regex,
                    COALESCE(app.theme, 'default') AS theme,
                    COALESCE(app.brand_color, '#111827') AS brand_color,
                    COALESCE(app.logo_url, '') AS logo_url,
@@ -530,6 +539,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             FROM store_profile_settings p
             LEFT JOIN store_tax_settings t ON t.store_id = p.store_id
             LEFT JOIN store_payment_settings pay ON pay.store_id = p.store_id
+            LEFT JOIN store_catalog_settings cat ON cat.store_id = p.store_id
             LEFT JOIN store_appearance_settings app ON app.store_id = p.store_id
             WHERE p.tenant_id = $1
             ORDER BY p.created_at ASC
@@ -568,6 +578,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
             bank_account_type: row.get("bank_account_type"),
             bank_account_number: row.get("bank_account_number"),
             bank_account_name: row.get("bank_account_name"),
+            sku_code_regex: row.get::<Option<String>, _>("sku_code_regex"),
             theme: row.get("theme"),
             brand_color: row.get("brand_color"),
             logo_url: row.get("logo_url"),
@@ -629,6 +640,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         let payment = payment(settings);
         let bank = bank_account(settings);
         let branding = branding(settings);
+        let catalog = catalog(settings);
         sqlx::query(
             r#"
             INSERT INTO store_profile_settings (
@@ -741,6 +753,27 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
 
         sqlx::query(
             r#"
+            INSERT INTO store_catalog_settings (store_id, tenant_id, sku_code_regex)
+            VALUES ($1,$2,$3)
+            ON CONFLICT (store_id)
+            DO UPDATE SET tenant_id = EXCLUDED.tenant_id,
+                          sku_code_regex = EXCLUDED.sku_code_regex,
+                          updated_at = now()
+            "#,
+        )
+        .bind(store_uuid)
+        .bind(tenant_uuid)
+        .bind(if catalog.sku_code_regex.is_empty() {
+            None
+        } else {
+            Some(catalog.sku_code_regex.as_str())
+        })
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+
+        sqlx::query(
+            r#"
             INSERT INTO store_appearance_settings (
                 store_id, tenant_id, theme, brand_color, logo_url, favicon_url
             )
@@ -807,6 +840,7 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         let payment = payment(settings);
         let bank = bank_account(settings);
         let branding = branding(settings);
+        let catalog = catalog(settings);
         sqlx::query(
             r#"
             INSERT INTO store_profile_settings (
@@ -878,6 +912,24 @@ impl<'a> StoreSettingsRepository for PgStoreSettingsRepository<'a> {
         .bind(&bank.bank_account_type)
         .bind(&bank.bank_account_number)
         .bind(&bank.bank_account_name)
+        .execute(exec.as_mut())
+        .await
+        .map_err(db::error)?;
+
+        sqlx::query(
+            r#"
+            INSERT INTO store_catalog_settings (store_id, tenant_id, sku_code_regex)
+            VALUES ($1,$2,$3)
+            ON CONFLICT (store_id) DO NOTHING
+            "#,
+        )
+        .bind(store_uuid)
+        .bind(tenant_uuid)
+        .bind(if catalog.sku_code_regex.is_empty() {
+            None
+        } else {
+            Some(catalog.sku_code_regex.as_str())
+        })
         .execute(exec.as_mut())
         .await
         .map_err(db::error)?;

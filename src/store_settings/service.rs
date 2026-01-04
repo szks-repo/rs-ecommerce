@@ -269,6 +269,9 @@ pub(crate) fn default_store_settings(store_name: String) -> pb::StoreSettings {
             logo_url: "".to_string(),
             favicon_url: "".to_string(),
         }),
+        catalog: Some(pb::StoreCatalog {
+            sku_code_regex: "".to_string(),
+        }),
     }
 }
 
@@ -326,6 +329,9 @@ fn store_settings_from_record(row: StoreSettingsRecord) -> pb::StoreSettings {
             brand_color: row.brand_color,
             logo_url: row.logo_url.unwrap_or_default(),
             favicon_url: row.favicon_url.unwrap_or_default(),
+        }),
+        catalog: Some(pb::StoreCatalog {
+            sku_code_regex: row.sku_code_regex.unwrap_or_default(),
         }),
     }
 }
@@ -401,6 +407,7 @@ fn merge_store_settings(
     incoming.order = Some(merge_order(existing.order, incoming.order));
     incoming.payment = Some(merge_payment(existing.payment, incoming.payment));
     incoming.branding = Some(merge_branding(existing.branding, incoming.branding));
+    incoming.catalog = Some(merge_catalog(existing.catalog, incoming.catalog));
     incoming
 }
 
@@ -547,6 +554,18 @@ fn merge_branding(
     }
     if incoming.favicon_url.is_empty() {
         incoming.favicon_url = existing.favicon_url;
+    }
+    incoming
+}
+
+fn merge_catalog(
+    existing: Option<pb::StoreCatalog>,
+    incoming: Option<pb::StoreCatalog>,
+) -> pb::StoreCatalog {
+    let existing = existing.unwrap_or_default();
+    let mut incoming = incoming.unwrap_or_default();
+    if incoming.sku_code_regex.is_empty() {
+        incoming.sku_code_regex = existing.sku_code_regex;
     }
     incoming
 }

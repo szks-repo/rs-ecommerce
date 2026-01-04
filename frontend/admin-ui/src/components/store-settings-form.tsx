@@ -65,6 +65,7 @@ export default function StoreSettingsForm({
   const [brandColor, setBrandColor] = useState("#111827");
   const [logoUrl, setLogoUrl] = useState("");
   const [faviconUrl, setFaviconUrl] = useState("");
+  const [skuCodeRegex, setSkuCodeRegex] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const { call } = useApiCall();
@@ -116,6 +117,8 @@ export default function StoreSettingsForm({
         setBrandColor(settings.brandColor || "#111827");
         setLogoUrl(settings.logoUrl || "");
         setFaviconUrl(settings.faviconUrl || "");
+        setSkuCodeRegex(settings.skuCodeRegex || "");
+        window.sessionStorage.setItem("store_sku_code_regex", settings.skuCodeRegex || "");
       })
       .finally(() => {
         setIsLoading(false);
@@ -182,6 +185,7 @@ export default function StoreSettingsForm({
           brandColor,
           logoUrl,
           faviconUrl,
+          skuCodeRegex,
         },
         },
       }),
@@ -196,6 +200,7 @@ export default function StoreSettingsForm({
     );
     if (resp) {
       window.sessionStorage.setItem("store_time_zone", timeZone || "Asia/Tokyo");
+      window.sessionStorage.setItem("store_sku_code_regex", skuCodeRegex || "");
     }
     setIsSaving(false);
   }
@@ -246,6 +251,18 @@ export default function StoreSettingsForm({
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="legalNotice">Legal Notice</Label>
               <Textarea id="legalNotice" value={legalNotice} onChange={(e) => setLegalNotice(e.target.value)} rows={3} required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="skuCodeRegex">SKU Code Rule (Regex)</Label>
+              <Input
+                id="skuCodeRegex"
+                value={skuCodeRegex}
+                onChange={(e) => setSkuCodeRegex(e.target.value)}
+                placeholder="Optional: ^[A-Z0-9-]{4,}$"
+              />
+              <p className="text-xs text-neutral-500">
+                Used for client-side validation when creating SKUs. Leave blank to skip validation.
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="defaultLanguage">Default Language</Label>

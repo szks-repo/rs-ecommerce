@@ -21,6 +21,7 @@ import { listTaxRules } from "@/lib/store_settings";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
 import { useApiCall } from "@/lib/use-api-call";
 import { dateInputToTimestamp } from "@/lib/time";
+import { validateSkuCode } from "@/lib/sku-code";
 
 export default function ProductCreateForm() {
   const router = useRouter();
@@ -112,6 +113,10 @@ export default function ProductCreateForm() {
         }
         if (!sku.trim()) {
           throw new Error("sku is required when no variant axes are specified.");
+        }
+        const skuError = validateSkuCode(sku.trim());
+        if (skuError) {
+          throw new Error(skuError);
         }
         const compareAt =
           compareAtAmount.trim().length > 0 ? Number(compareAtAmount) : undefined;

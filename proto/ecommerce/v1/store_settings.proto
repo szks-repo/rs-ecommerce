@@ -90,6 +90,10 @@ message StoreBranding {
   string favicon_url = 4;
 }
 
+message StoreCatalog {
+  string sku_code_regex = 1;
+}
+
 message StoreSettings {
   StoreProfile profile = 1;
   StoreContact contact = 2;
@@ -100,6 +104,7 @@ message StoreSettings {
   StoreOrder order = 7;
   StorePayment payment = 8;
   StoreBranding branding = 9;
+  StoreCatalog catalog = 10;
 }
 
 message MallSettings {
