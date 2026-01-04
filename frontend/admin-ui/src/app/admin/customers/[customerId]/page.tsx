@@ -283,6 +283,7 @@ export default function CustomerDetailPage() {
     const isDateType = definition.valueType === "date" || definition.valueType === "dateTime";
     const isBooleanType =
       definition.valueType === "bool" || definition.valueType === "boolean";
+    const isNumberType = definition.valueType === "number";
 
     const isEmpty =
       rawValue == null ||
@@ -341,6 +342,97 @@ export default function CustomerDetailPage() {
         }
         if (maxDate && Number.isFinite(maxDate.getTime()) && date > maxDate) {
           return `Date must be on or before ${maxValue}.`;
+        }
+      }
+    }
+
+    if (isNumberType) {
+      const minValue = typeof validations.min === "number" ? validations.min : undefined;
+      const maxValue = typeof validations.max === "number" ? validations.max : undefined;
+      const values: number[] = [];
+      if (definition.isList) {
+        if (Array.isArray(rawValue)) {
+          values.push(...rawValue.map((v) => Number(v)));
+        } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+          try {
+            const parsed = JSON.parse(rawValue);
+            if (!Array.isArray(parsed)) {
+              return "Value must be a JSON array of numbers.";
+            }
+            values.push(...parsed.map((v: unknown) => Number(v)));
+          } catch {
+            return "Value must be a JSON array of numbers.";
+          }
+        }
+      } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+        values.push(Number(rawValue.trim()));
+      }
+
+      if (values.length === 0) {
+        return null;
+      }
+
+      for (const num of values) {
+        if (!Number.isFinite(num)) {
+          return "Value must be a number.";
+        }
+        if (minValue != null && num < minValue) {
+          return `Value must be at least ${minValue}.`;
+        }
+        if (maxValue != null && num > maxValue) {
+          return `Value must be at most ${maxValue}.`;
+        }
+      }
+    }
+
+    if (
+      definition.valueType === "string" ||
+      definition.valueType === "text" ||
+      definition.valueType === "json"
+    ) {
+      const minValue = typeof validations.min === "number" ? validations.min : undefined;
+      const maxValue = typeof validations.max === "number" ? validations.max : undefined;
+      const regexValue = typeof validations.regex === "string" ? validations.regex : undefined;
+      let regex: RegExp | null = null;
+      if (regexValue) {
+        try {
+          regex = new RegExp(regexValue);
+        } catch {
+          regex = null;
+        }
+      }
+      const values: string[] = [];
+      if (definition.isList) {
+        if (Array.isArray(rawValue)) {
+          values.push(...rawValue.map((v) => String(v)));
+        } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+          try {
+            const parsed = JSON.parse(rawValue);
+            if (!Array.isArray(parsed)) {
+              return "Value must be a JSON array of strings.";
+            }
+            values.push(...parsed.map((v: unknown) => String(v)));
+          } catch {
+            return "Value must be a JSON array of strings.";
+          }
+        }
+      } else if (typeof rawValue === "string" && rawValue.trim() !== "") {
+        values.push(rawValue.trim());
+      }
+
+      if (values.length === 0) {
+        return null;
+      }
+
+      for (const text of values) {
+        if (minValue != null && text.length < minValue) {
+          return `Value must be at least ${minValue} characters.`;
+        }
+        if (maxValue != null && text.length > maxValue) {
+          return `Value must be at most ${maxValue} characters.`;
+        }
+        if (regex && !regex.test(text)) {
+          return "Value does not match the required pattern.";
         }
       }
     }
