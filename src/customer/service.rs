@@ -1077,7 +1077,9 @@ fn metafield_definition_from_row(row: &PgRow) -> pb::MetafieldDefinition {
         namespace: row.get("namespace"),
         key: row.get("key"),
         name: row.get("name"),
-        description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+        description: row
+            .get::<Option<String>, _>("description")
+            .unwrap_or_default(),
         value_type: row.get("value_type"),
         is_list: row.get("is_list"),
         validations_json: row
@@ -1338,7 +1340,9 @@ pub async fn list_customer_metafield_values(
                 namespace: row.get("namespace"),
                 key: row.get("key"),
                 name: row.get("name"),
-                description: row.get::<Option<String>, _>("description").unwrap_or_default(),
+                description: row
+                    .get::<Option<String>, _>("description")
+                    .unwrap_or_default(),
                 value_type: row.get("value_type"),
                 is_list: row.get("is_list"),
                 validations_json: row
@@ -1385,7 +1389,8 @@ pub async fn upsert_customer_metafield_value(
 ) -> CustomerResult<()> {
     let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
-    let definition_uuid = parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
+    let definition_uuid =
+        parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
 
     if value_json.trim().is_empty() {
         return Err(CustomerError::InvalidArgument(
@@ -1393,9 +1398,8 @@ pub async fn upsert_customer_metafield_value(
         ));
     }
 
-    let value = serde_json::from_str::<serde_json::Value>(&value_json).map_err(|_| {
-        CustomerError::InvalidArgument("value_json must be valid JSON".to_string())
-    })?;
+    let value = serde_json::from_str::<serde_json::Value>(&value_json)
+        .map_err(|_| CustomerError::InvalidArgument("value_json must be valid JSON".to_string()))?;
 
     let exists = sqlx::query(
         r#"

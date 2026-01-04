@@ -2,5 +2,4 @@
 ///
 /// 管理画面向けのオークション作成・更新・承認や、入札関連の処理を担当する。
 /// UI からの RPC は `src/rpc/auction.rs` を通じてこのモジュールの service へ委譲される。
-
 pub mod service;

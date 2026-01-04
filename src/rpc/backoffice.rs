@@ -164,10 +164,7 @@ pub async fn delete_category(
     let req = parse_request::<pb::DeleteCategoryRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let deleted = product::service::delete_category(&state, req, actor).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::DeleteCategoryResponse { deleted }),
-    ))
+    Ok((StatusCode::OK, Json(pb::DeleteCategoryResponse { deleted })))
 }
 
 pub async fn reorder_categories(

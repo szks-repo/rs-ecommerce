@@ -114,8 +114,10 @@ pub async fn list_my_permissions(
     Extension(auth_ctx): Extension<Option<AuthContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityListMyPermissionsResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<
+    (StatusCode, Json<pb::IdentityListMyPermissionsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
     let req = parse_request::<pb::IdentityListMyPermissionsRequest>(&headers, body)?;
     let resp = identity::service::list_my_permissions(&state, auth_ctx, req)
         .await
@@ -355,7 +357,8 @@ pub async fn accept_invite(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityAcceptInviteResponse>), (StatusCode, Json<ConnectError>)> {
+) -> Result<(StatusCode, Json<pb::IdentityAcceptInviteResponse>), (StatusCode, Json<ConnectError>)>
+{
     let req = parse_request::<pb::IdentityAcceptInviteRequest>(&headers, body)?;
     let resp = identity::service::accept_invite(&state, req)
         .await

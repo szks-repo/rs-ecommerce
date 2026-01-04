@@ -4,7 +4,9 @@ use crate::{
     infrastructure::db,
     pb::pb,
     rpc::json::ConnectError,
-    shared::audit_action::{IdentityAuditAction, MallSettingsAuditAction, StoreSettingsAuditAction},
+    shared::audit_action::{
+        IdentityAuditAction, MallSettingsAuditAction, StoreSettingsAuditAction,
+    },
     shared::validation::StoreCode,
     store_settings::{
         repository::{PgStoreSettingsRepository, StoreSettingsRepository},

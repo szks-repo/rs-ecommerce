@@ -207,7 +207,10 @@ pub async fn list_customer_metafield_definitions(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<
-    (StatusCode, Json<pb::ListCustomerMetafieldDefinitionsResponse>),
+    (
+        StatusCode,
+        Json<pb::ListCustomerMetafieldDefinitionsResponse>,
+    ),
     (StatusCode, Json<ConnectError>),
 > {
     let req = parse_request::<pb::ListCustomerMetafieldDefinitionsRequest>(&headers, body)?;
@@ -227,7 +230,10 @@ pub async fn create_customer_metafield_definition(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<
-    (StatusCode, Json<pb::CreateCustomerMetafieldDefinitionResponse>),
+    (
+        StatusCode,
+        Json<pb::CreateCustomerMetafieldDefinitionResponse>,
+    ),
     (StatusCode, Json<ConnectError>),
 > {
     let req = parse_request::<pb::CreateCustomerMetafieldDefinitionRequest>(&headers, body)?;
@@ -259,7 +265,10 @@ pub async fn update_customer_metafield_definition(
     headers: HeaderMap,
     body: Bytes,
 ) -> Result<
-    (StatusCode, Json<pb::UpdateCustomerMetafieldDefinitionResponse>),
+    (
+        StatusCode,
+        Json<pb::UpdateCustomerMetafieldDefinitionResponse>,
+    ),
     (StatusCode, Json<ConnectError>),
 > {
     let req = parse_request::<pb::UpdateCustomerMetafieldDefinitionRequest>(&headers, body)?;
@@ -274,13 +283,10 @@ pub async fn update_customer_metafield_definition(
             }),
         )
     })?;
-    let definition = customer::service::update_customer_metafield_definition(
-        &state,
-        req.definition_id,
-        input,
-    )
-    .await
-    .map_err(|err| err.into_connect())?;
+    let definition =
+        customer::service::update_customer_metafield_definition(&state, req.definition_id, input)
+            .await
+            .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::UpdateCustomerMetafieldDefinitionResponse {

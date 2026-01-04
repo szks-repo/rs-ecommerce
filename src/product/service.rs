@@ -151,12 +151,12 @@ pub async fn list_products_admin(
             tax_rule_id: row
                 .get::<Option<String>, _>("tax_rule_id")
                 .unwrap_or_default(),
-            sale_start_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>(
-                "sale_start_at",
-            )),
-            sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>(
-                "sale_end_at",
-            )),
+            sale_start_at: chrono_to_timestamp(
+                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
+            ),
+            sale_end_at: chrono_to_timestamp(
+                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
+            ),
             primary_category_id: row
                 .get::<Option<String>, _>("primary_category_id")
                 .unwrap_or_default(),
@@ -613,12 +613,13 @@ async fn ensure_category_ids_exist(
     if parsed.is_empty() {
         return Ok(());
     }
-    let rows = sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = ANY($2)")
-        .bind(store_id)
-        .bind(&parsed)
-        .fetch_all(tx.as_mut())
-        .await
-        .map_err(db::error)?;
+    let rows =
+        sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = ANY($2)")
+            .bind(store_id)
+            .bind(&parsed)
+            .fetch_all(tx.as_mut())
+            .await
+            .map_err(db::error)?;
     if rows.len() != parsed.len() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -775,13 +776,17 @@ pub async fn update_product(
     {
         after = pb::ProductAdmin {
             id: row.get::<String, _>("id"),
-            vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
+            vendor_id: row
+                .get::<Option<String>, _>("vendor_id")
+                .unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
-            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+            tax_rule_id: row
+                .get::<Option<String>, _>("tax_rule_id")
+                .unwrap_or_default(),
             sale_start_at: chrono_to_timestamp(
                 row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
             ),
@@ -924,14 +929,13 @@ pub async fn create_category(
         Some(parse_uuid(&category.parent_id, "parent_id")?)
     };
     if let Some(parent_id) = parent_id {
-        let exists = sqlx::query(
-            "SELECT id FROM product_categories WHERE store_id = $1 AND id = $2",
-        )
-        .bind(store_uuid.as_uuid())
-        .bind(parent_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?;
+        let exists =
+            sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
+                .bind(store_uuid.as_uuid())
+                .bind(parent_id)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -1039,14 +1043,13 @@ pub async fn update_category(
                 }),
             ));
         }
-        let exists = sqlx::query(
-            "SELECT id FROM product_categories WHERE store_id = $1 AND id = $2",
-        )
-        .bind(store_uuid.as_uuid())
-        .bind(parent_id)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?;
+        let exists =
+            sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
+                .bind(store_uuid.as_uuid())
+                .bind(parent_id)
+                .fetch_optional(&state.db)
+                .await
+                .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -1128,13 +1131,11 @@ pub async fn delete_category(
             }),
         ));
     }
-    let linked = sqlx::query(
-        "SELECT 1 FROM product_category_links WHERE category_id = $1 LIMIT 1",
-    )
-    .bind(category_uuid)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+    let linked = sqlx::query("SELECT 1 FROM product_category_links WHERE category_id = $1 LIMIT 1")
+        .bind(category_uuid)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
     if linked.is_some() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -1297,7 +1298,8 @@ pub async fn create_variant(
     .fetch_all(tx.as_mut())
     .await
     .map_err(db::error)?;
-    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut axis_value_map: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
     for axis_value in req.axis_values.iter() {
         let name = axis_value.name.trim().to_lowercase();
         let value = axis_value.value.trim();
@@ -1350,14 +1352,12 @@ pub async fn create_variant(
             });
         }
     }
-    let product_tax_rule_id = sqlx::query(
-        "SELECT tax_rule_id FROM products WHERE id = $1",
-    )
-    .bind(parse_uuid(&req.product_id, "product_id")?)
-    .fetch_optional(tx.as_mut())
-    .await
-    .map_err(db::error)?
-    .and_then(|row| row.get::<Option<uuid::Uuid>, _>("tax_rule_id"));
+    let product_tax_rule_id = sqlx::query("SELECT tax_rule_id FROM products WHERE id = $1")
+        .bind(parse_uuid(&req.product_id, "product_id")?)
+        .fetch_optional(tx.as_mut())
+        .await
+        .map_err(db::error)?
+        .and_then(|row| row.get::<Option<uuid::Uuid>, _>("tax_rule_id"));
     sqlx::query(
         r#"
         INSERT INTO product_skus (
@@ -1414,7 +1414,9 @@ pub async fn create_variant(
         price: req.price,
         compare_at: req.compare_at,
         status,
-        tax_rule_id: product_tax_rule_id.map(|id| id.to_string()).unwrap_or_default(),
+        tax_rule_id: product_tax_rule_id
+            .map(|id| id.to_string())
+            .unwrap_or_default(),
         axis_values: axis_values_for_response,
         jan_code: if req.jan_code.is_empty() {
             String::new()
@@ -1493,7 +1495,8 @@ pub async fn update_variant(
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
-    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    let mut axis_value_map: std::collections::HashMap<String, String> =
+        std::collections::HashMap::new();
     for axis_value in req.axis_values.iter() {
         let name = axis_value.name.trim().to_lowercase();
         let value = axis_value.value.trim();
@@ -1659,7 +1662,9 @@ pub async fn update_variant(
             None => None,
         },
         status: row.get("status"),
-        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+        tax_rule_id: row
+            .get::<Option<String>, _>("tax_rule_id")
+            .unwrap_or_default(),
         axis_values: axis_values_for_response,
     };
 
