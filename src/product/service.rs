@@ -194,7 +194,7 @@ pub async fn list_variants_admin(
                v.compare_at_currency,
                v.status,
                v.tax_rule_id
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE p.store_id = $1 AND v.product_id = $2
         ORDER BY v.created_at DESC
@@ -305,7 +305,7 @@ pub async fn list_skus_admin(
                v.price_amount,
                v.price_currency,
                v.status
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE p.store_id = $1
           AND ($2 = '' OR v.sku ILIKE $2 OR p.title ILIKE $2)
@@ -350,16 +350,6 @@ pub async fn create_product(
     let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
     let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
-    if sale_start_at.is_some() ^ sale_end_at.is_some() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "sale_start_at and sale_end_at must both be set or both be empty"
-                    .to_string(),
-            }),
-        ));
-    }
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
         if start > end {
             return Err((
@@ -466,7 +456,7 @@ pub async fn create_product(
             .to_string();
         sqlx::query(
             r#"
-            INSERT INTO variants (
+            INSERT INTO product_skus (
                 id, product_id, sku, fulfillment_type, price_amount, price_currency,
                 compare_at_amount, compare_at_currency, status, tax_rule_id
             ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -548,16 +538,6 @@ pub async fn update_product(
     let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
     let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
-    if sale_start_at.is_some() ^ sale_end_at.is_some() {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "sale_start_at and sale_end_at must both be set or both be empty"
-                    .to_string(),
-            }),
-        ));
-    }
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
         if start > end {
             return Err((
@@ -599,7 +579,7 @@ pub async fn update_product(
     if req.apply_tax_rule_to_variants {
         sqlx::query(
             r#"
-            UPDATE variants
+            UPDATE product_skus
             SET tax_rule_id = $1, updated_at = now()
             WHERE product_id = $2
             "#,
@@ -803,7 +783,7 @@ pub async fn create_variant(
     .and_then(|row| row.get::<Option<uuid::Uuid>, _>("tax_rule_id"));
     sqlx::query(
         r#"
-        INSERT INTO variants (
+        INSERT INTO product_skus (
             id, product_id, sku, fulfillment_type, price_amount, price_currency,
             compare_at_amount, compare_at_currency, status, tax_rule_id
         ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -916,7 +896,7 @@ pub async fn update_variant(
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
-        UPDATE variants
+        UPDATE product_skus
         SET price_amount = $1, price_currency = $2,
             compare_at_amount = $3, compare_at_currency = $4,
             status = $5,
@@ -948,7 +928,7 @@ pub async fn update_variant(
                compare_at_currency,
                status,
                tax_rule_id::text as tax_rule_id
-        FROM variants
+        FROM product_skus
         WHERE id = $1
         "#,
     )
@@ -996,7 +976,7 @@ pub async fn update_variant(
     tx.commit().await.map_err(db::error)?;
 
     if let Ok(row) =
-        sqlx::query("SELECT product_id::text as product_id FROM variants WHERE id = $1")
+        sqlx::query("SELECT product_id::text as product_id FROM product_skus WHERE id = $1")
             .bind(parse_uuid(&variant.id, "variant_id")?)
             .fetch_one(&state.db)
             .await
@@ -1075,7 +1055,7 @@ pub async fn set_inventory(
         r#"
         SELECT p.id::text as id
         FROM products p
-        JOIN variants v ON v.product_id = p.id
+        JOIN product_skus v ON v.product_id = p.id
         WHERE v.id = $1
         "#,
     )
@@ -1163,7 +1143,7 @@ async fn tenant_id_for_variant(
         r#"
         SELECT p.tenant_id::text as tenant_id
         FROM products p
-        JOIN variants v ON v.product_id = p.id
+        JOIN product_skus v ON v.product_id = p.id
         WHERE v.id = $1
         "#,
     )
@@ -1344,7 +1324,7 @@ async fn ensure_variant_belongs_to_store(
     let row = sqlx::query(
         r#"
         SELECT p.store_id::text as store_id
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE v.id = $1
         "#,

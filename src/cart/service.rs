@@ -94,7 +94,7 @@ pub async fn add_cart_item(state: &AppState, req: pb::AddCartItemRequest) -> Car
     let row = sqlx::query(
         r#"
         SELECT v.price_amount, v.price_currency, v.fulfillment_type
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE v.id = $1 AND p.store_id = $2
         LIMIT 1

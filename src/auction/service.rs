@@ -104,7 +104,7 @@ pub async fn create_auction(
     let product_id = sqlx::query(
         r#"
         SELECT v.product_id
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE v.id = $1 AND p.store_id = $2
         "#,

@@ -87,7 +87,7 @@ export default function VariantCreateForm({
         title: "Variant created",
         description: `Created variant: ${data.variant.id}`,
       });
-      setProductId("");
+      setProductId(initialProductId ?? "");
       setSku("");
       setFulfillmentType("physical");
       setPriceAmount("0");

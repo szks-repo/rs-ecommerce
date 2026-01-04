@@ -351,7 +351,7 @@ CREATE TABLE IF NOT EXISTS product_digital_settings (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS variants (
+CREATE TABLE IF NOT EXISTS product_skus (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id uuid NOT NULL REFERENCES products(id),
     sku text NOT NULL,
@@ -366,22 +366,10 @@ CREATE TABLE IF NOT EXISTS variants (
     updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS variants_product_sku_idx
-    ON variants (product_id, sku);
-CREATE INDEX IF NOT EXISTS variants_tax_rule_id_idx
-    ON variants (tax_rule_id);
-
-CREATE TABLE IF NOT EXISTS variant_axis_values (
-    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    variant_id uuid NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
-    axis_id uuid NOT NULL REFERENCES product_variant_axes(id) ON DELETE CASCADE,
-    value text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (variant_id, axis_id)
-);
-
-CREATE INDEX IF NOT EXISTS variant_axis_values_variant_idx
-    ON variant_axis_values (variant_id);
+CREATE UNIQUE INDEX IF NOT EXISTS product_skus_product_sku_idx
+    ON product_skus (product_id, sku);
+CREATE INDEX IF NOT EXISTS product_skus_tax_rule_id_idx
+    ON product_skus (tax_rule_id);
 
 CREATE TABLE IF NOT EXISTS product_variant_axes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -396,12 +384,24 @@ CREATE TABLE IF NOT EXISTS product_variant_axes (
 CREATE INDEX IF NOT EXISTS product_variant_axes_product_idx
     ON product_variant_axes (product_id, position);
 
+CREATE TABLE IF NOT EXISTS variant_axis_values (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    variant_id uuid NOT NULL REFERENCES product_skus(id) ON DELETE CASCADE,
+    axis_id uuid NOT NULL REFERENCES product_variant_axes(id) ON DELETE CASCADE,
+    value text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (variant_id, axis_id)
+);
+
+CREATE INDEX IF NOT EXISTS variant_axis_values_variant_idx
+    ON variant_axis_values (variant_id);
+
 CREATE TABLE IF NOT EXISTS inventory_stocks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
     store_id uuid NOT NULL REFERENCES stores(id),
     location_id uuid NOT NULL REFERENCES store_locations(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
+    variant_id uuid NOT NULL REFERENCES product_skus(id),
     stock int NOT NULL,
     reserved int NOT NULL,
     updated_at timestamptz NOT NULL DEFAULT now(),
@@ -431,7 +431,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS store_media_assets_store_key_idx
 CREATE TABLE IF NOT EXISTS sku_images (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id uuid NOT NULL REFERENCES stores(id),
-    sku_id uuid NOT NULL REFERENCES variants(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     asset_id uuid NOT NULL REFERENCES store_media_assets(id),
     position int NOT NULL DEFAULT 1,
     created_at timestamptz NOT NULL DEFAULT now(),
@@ -444,7 +444,7 @@ CREATE INDEX IF NOT EXISTS sku_images_sku_idx ON sku_images (sku_id);
 CREATE TABLE IF NOT EXISTS store_digital_assets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id uuid NOT NULL REFERENCES stores(id),
-    sku_id uuid NOT NULL REFERENCES variants(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     provider text NOT NULL,
     bucket text NOT NULL,
     object_key text NOT NULL,
@@ -469,7 +469,7 @@ CREATE TABLE IF NOT EXISTS carts (
 CREATE TABLE IF NOT EXISTS cart_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     cart_id uuid NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
-    sku_id uuid NOT NULL REFERENCES variants(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     location_id uuid REFERENCES store_locations(id),
     unit_price_amount bigint NOT NULL,
     unit_price_currency text NOT NULL,
@@ -488,7 +488,7 @@ CREATE TABLE IF NOT EXISTS inventory_reservations (
     store_id uuid NOT NULL REFERENCES stores(id),
     cart_id uuid NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     cart_item_id uuid REFERENCES cart_items(id) ON DELETE CASCADE,
-    sku_id uuid NOT NULL REFERENCES variants(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     location_id uuid REFERENCES store_locations(id),
     quantity int NOT NULL,
     status text NOT NULL,
@@ -517,7 +517,7 @@ CREATE TABLE IF NOT EXISTS inventory_reservation_requests (
     store_id uuid NOT NULL REFERENCES stores(id),
     cart_id uuid NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     cart_item_id uuid REFERENCES cart_items(id) ON DELETE CASCADE,
-    sku_id uuid NOT NULL REFERENCES variants(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     location_id uuid REFERENCES store_locations(id),
     quantity int NOT NULL,
     status text NOT NULL,
@@ -556,7 +556,7 @@ CREATE TABLE IF NOT EXISTS order_items (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id uuid NOT NULL REFERENCES orders(id),
     vendor_id uuid REFERENCES vendors(id),
-    variant_id uuid NOT NULL REFERENCES variants(id),
+    variant_id uuid NOT NULL REFERENCES product_skus(id),
     price_amount bigint NOT NULL,
     price_currency text NOT NULL,
     quantity int NOT NULL
@@ -708,7 +708,7 @@ CREATE TABLE IF NOT EXISTS auctions (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     store_id uuid NOT NULL REFERENCES stores(id),
     product_id uuid REFERENCES products(id),
-    sku_id uuid REFERENCES variants(id),
+    sku_id uuid REFERENCES product_skus(id),
     title text NOT NULL DEFAULT '',
     description text NOT NULL DEFAULT '',
     auction_type text NOT NULL,

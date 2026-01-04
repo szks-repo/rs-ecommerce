@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import { useApiCall } from "@/lib/use-api-call";
 import { dateInputToTimestamp } from "@/lib/time";
 
 export default function ProductCreateForm() {
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [vendorId, setVendorId] = useState("");
   const [description, setDescription] = useState("");
@@ -85,11 +87,6 @@ export default function ProductCreateForm() {
       }
       const saleStartAt = dateInputToTimestamp(saleStartDate, false);
       const saleEndAt = dateInputToTimestamp(saleEndDate, true);
-      const hasSaleStart = Boolean(saleStartAt);
-      const hasSaleEnd = Boolean(saleEndAt);
-      if (hasSaleStart !== hasSaleEnd) {
-        throw new Error("sale_start_at and sale_end_at must both be set or both be empty.");
-      }
       if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
         throw new Error("sale_end_at must be later than sale_start_at.");
       }
@@ -148,6 +145,7 @@ export default function ProductCreateForm() {
         title: "Product created",
         description: `Created product: ${data.product.id}`,
       });
+      router.push(`/admin/products/${data.product.id}`);
       setTitle("");
       setVendorId("");
       setDescription("");
@@ -203,7 +201,6 @@ export default function ProductCreateForm() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              required
             />
           </div>
           <div className="space-y-2">
@@ -257,7 +254,7 @@ export default function ProductCreateForm() {
               />
             </div>
             <div className="text-xs text-neutral-500 md:col-span-2">
-              If set, both start and end dates are required. Leave both empty to keep it always purchasable.
+              Set only start date for open-ended sales. Leave both empty to keep it always purchasable.
             </div>
           </div>
           <div className="space-y-2">

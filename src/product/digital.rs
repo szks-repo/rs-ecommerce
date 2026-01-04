@@ -30,7 +30,7 @@ async fn ensure_sku_is_digital(
     let row = sqlx::query(
         r#"
         SELECT v.fulfillment_type
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE v.id = $1 AND p.store_id = $2
         "#,

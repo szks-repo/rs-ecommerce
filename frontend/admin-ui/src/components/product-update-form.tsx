@@ -85,12 +85,9 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
       const saleEndAt = dateInputToTimestamp(saleEndDate, true);
       const hasSaleStart = Boolean(saleStartAt);
       const hasSaleEnd = Boolean(saleEndAt);
-      if (hasSaleStart !== hasSaleEnd) {
-        throw new Error("sale_start_at and sale_end_at must both be set or both be empty.");
-      }
-      if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
-        throw new Error("sale_end_at must be later than sale_start_at.");
-      }
+    if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
+      throw new Error("sale_end_at must be later than sale_start_at.");
+    }
       const data = await updateProduct({
         productId,
         title,
@@ -150,7 +147,6 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
-              required
             />
           </div>
           <div className="space-y-2">

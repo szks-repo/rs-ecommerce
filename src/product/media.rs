@@ -427,7 +427,7 @@ async fn ensure_sku_belongs_to_store(
     let row = sqlx::query(
         r#"
         SELECT p.store_id::text as store_id
-        FROM variants v
+        FROM product_skus v
         JOIN products p ON p.id = v.product_id
         WHERE v.id = $1
         "#,
