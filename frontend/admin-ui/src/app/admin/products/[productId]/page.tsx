@@ -201,7 +201,11 @@ export default function ProductDetailPage() {
       </Card>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <VariantUpdateForm variant={selectedVariant} onUpdated={loadData} />
+        <VariantUpdateForm
+          variant={selectedVariant}
+          variantAxes={variantAxes}
+          onUpdated={loadData}
+        />
         <VariantBulkUpdateForm variants={variants} onUpdated={loadData} />
       </div>
 

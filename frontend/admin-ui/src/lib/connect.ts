@@ -39,7 +39,11 @@ const authInterceptor: Interceptor = (next) => async (req) => {
         description: "Please sign in again to continue.",
       });
       clearActiveStoreSession();
-      if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/vendor/login")) {
+      if (
+        !window.location.pathname.startsWith("/login") &&
+        !window.location.pathname.startsWith("/vendor/login") &&
+        !window.location.pathname.startsWith("/init")
+      ) {
         window.location.href = "/login";
       }
     }

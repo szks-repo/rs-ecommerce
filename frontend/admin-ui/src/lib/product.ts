@@ -214,6 +214,7 @@ export async function updateVariant(params: {
   status: string;
   fulfillmentType?: string;
   janCode?: string;
+  axisValues?: { name: string; value: string }[];
 }) {
   return client.updateVariant(
     create(UpdateVariantRequestSchema, {
@@ -226,6 +227,7 @@ export async function updateVariant(params: {
       status: params.status,
       fulfillmentType: params.fulfillmentType || "",
       janCode: params.janCode || "",
+      axisValues: params.axisValues ?? [],
     })
   );
 }

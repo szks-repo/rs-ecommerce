@@ -20,10 +20,15 @@ import { useApiCall } from "@/lib/use-api-call";
 
 type VariantUpdateFormProps = {
   variant?: VariantAdmin | null;
+  variantAxes?: { name: string; position?: number }[];
   onUpdated?: () => void;
 };
 
-export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateFormProps) {
+export default function VariantUpdateForm({
+  variant,
+  variantAxes = [],
+  onUpdated,
+}: VariantUpdateFormProps) {
   const [variantId, setVariantId] = useState(variant?.id ?? "");
   const [priceAmount, setPriceAmount] = useState(
     variant?.price?.amount != null ? String(variant.price.amount) : "0"
@@ -34,6 +39,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
   const [status, setStatus] = useState(variant?.status ?? "active");
   const [fulfillmentType, setFulfillmentType] = useState(variant?.fulfillmentType ?? "");
   const [janCode, setJanCode] = useState(variant?.janCode ?? "");
+  const [axisValues, setAxisValues] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
@@ -51,6 +57,13 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
     setStatus(variant.status || "active");
     setFulfillmentType(variant.fulfillmentType || "");
     setJanCode(variant.janCode ?? "");
+    const nextAxisValues: Record<string, string> = {};
+    variant.axisValues?.forEach((axis) => {
+      if (axis.name) {
+        nextAxisValues[axis.name] = axis.value ?? "";
+      }
+    });
+    setAxisValues(nextAxisValues);
   }, [variant]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -68,6 +81,17 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
       if (typeof compareAt === "number" && !Number.isFinite(compareAt)) {
         throw new Error("compare_at_amount must be a number.");
       }
+      const axesPayload = variantAxes.map((axis) => ({
+        name: axis.name,
+        value: axisValues[axis.name] ?? "",
+      }));
+      if (variantAxes.length > 0) {
+        for (const axis of axesPayload) {
+          if (!axis.value.trim()) {
+            throw new Error(`axis value is required for ${axis.name}`);
+          }
+        }
+      }
       const data = await updateVariant({
         variantId,
         priceAmount: price,
@@ -76,6 +100,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
         status,
         fulfillmentType: fulfillmentType || undefined,
         janCode: janCode.trim() || undefined,
+        axisValues: axesPayload,
       });
       push({
         variant: "success",
@@ -143,6 +168,28 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
               </SelectContent>
             </Select>
           </div>
+          {variantAxes.length > 0 && (
+            <div className="space-y-2">
+              <Label>Axis Values</Label>
+              <div className="grid gap-3 md:grid-cols-2">
+                {variantAxes
+                  .slice()
+                  .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+                  .map((axis) => (
+                    <div key={axis.name} className="space-y-1">
+                      <Label className="text-xs text-neutral-500">{axis.name}</Label>
+                      <Input
+                        value={axisValues[axis.name] ?? ""}
+                        onChange={(e) =>
+                          setAxisValues((prev) => ({ ...prev, [axis.name]: e.target.value }))
+                        }
+                        placeholder={`Enter ${axis.name}`}
+                      />
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="updateVariantFulfillment">Fulfillment Type (optional)</Label>
             <Select value={fulfillmentType} onValueChange={setFulfillmentType}>

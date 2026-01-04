@@ -31,6 +31,7 @@ export function flattenCategories(categories: Category[]): FlattenedCategory[] {
 }
 
 export function categoryLabel(category: FlattenedCategory): string {
+  const level = `L${category.depth + 1}`;
   const prefix = category.depth > 0 ? "—".repeat(category.depth) + " " : "";
-  return `${prefix}${category.name}`;
+  return `${prefix}${category.name} (${level})`;
 }

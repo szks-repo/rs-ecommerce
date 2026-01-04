@@ -953,7 +953,7 @@ pub async fn create_category(
         .fetch_one(&state.db)
         .await
         .map_err(db::error)?;
-        row.get::<i64, _>("next_pos") as i32
+        row.get::<i32, _>("next_pos")
     };
     let row = sqlx::query(
         r#"
@@ -1480,6 +1480,51 @@ pub async fn update_variant(
         )
     };
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
+    let axes_rows = sqlx::query(
+        r#"
+        SELECT ax.id, ax.name
+        FROM product_variant_axes ax
+        JOIN product_skus v ON v.product_id = ax.product_id
+        WHERE v.id = $1
+        ORDER BY ax.position ASC
+        "#,
+    )
+    .bind(parse_uuid(&req.variant_id, "variant_id")?)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for axis_value in req.axis_values.iter() {
+        let name = axis_value.name.trim().to_lowercase();
+        let value = axis_value.value.trim();
+        if name.is_empty() || value.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "axis_values.name and axis_values.value are required".to_string(),
+                }),
+            ));
+        }
+        if axis_value_map.insert(name, value.to_string()).is_some() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "axis_values contains duplicate axis names".to_string(),
+                }),
+            ));
+        }
+    }
+    if axes_rows.is_empty() && !req.axis_values.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "axis_values cannot be set when variant axes are not defined".to_string(),
+            }),
+        ));
+    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
@@ -1504,6 +1549,74 @@ pub async fn update_variant(
     .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
+
+    let mut axis_values_for_response = Vec::new();
+    if !req.axis_values.is_empty() {
+        for row in axes_rows.iter() {
+            let axis_name = row.get::<String, _>("name");
+            let key = axis_name.trim().to_lowercase();
+            let value = axis_value_map.get(&key).cloned().unwrap_or_default();
+            if value.is_empty() {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::InvalidArgument,
+                        message: format!("axis value is required for {}", axis_name),
+                    }),
+                ));
+            }
+            axis_values_for_response.push(pb::VariantAxisValue {
+                name: axis_name.clone(),
+                value: value.clone(),
+            });
+        }
+        sqlx::query("DELETE FROM variant_axis_values WHERE variant_id = $1")
+            .bind(parse_uuid(&req.variant_id, "variant_id")?)
+            .execute(tx.as_mut())
+            .await
+            .map_err(db::error)?;
+        for row in axes_rows.iter() {
+            let axis_id: uuid::Uuid = row.get("id");
+            let axis_name = row.get::<String, _>("name");
+            let key = axis_name.trim().to_lowercase();
+            if let Some(value) = axis_value_map.get(&key) {
+                sqlx::query(
+                    r#"
+                    INSERT INTO variant_axis_values (id, variant_id, axis_id, value)
+                    VALUES ($1, $2, $3, $4)
+                    "#,
+                )
+                .bind(uuid::Uuid::new_v4())
+                .bind(parse_uuid(&req.variant_id, "variant_id")?)
+                .bind(axis_id)
+                .bind(value)
+                .execute(tx.as_mut())
+                .await
+                .map_err(db::error)?;
+            }
+        }
+    } else if !axes_rows.is_empty() {
+        let values_rows = sqlx::query(
+            r#"
+            SELECT ax.name as axis_name, vav.value as axis_value
+            FROM variant_axis_values vav
+            JOIN product_variant_axes ax ON ax.id = vav.axis_id
+            WHERE vav.variant_id = $1
+            ORDER BY ax.position ASC
+            "#,
+        )
+        .bind(parse_uuid(&req.variant_id, "variant_id")?)
+        .fetch_all(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+        axis_values_for_response = values_rows
+            .iter()
+            .map(|row| pb::VariantAxisValue {
+                name: row.get::<String, _>("axis_name"),
+                value: row.get::<String, _>("axis_value"),
+            })
+            .collect();
+    }
 
     let row = sqlx::query(
         r#"
@@ -1547,7 +1660,7 @@ pub async fn update_variant(
         },
         status: row.get("status"),
         tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
-        axis_values: Vec::new(),
+        axis_values: axis_values_for_response,
     };
 
     audit::record_tx(

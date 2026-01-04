@@ -336,6 +336,7 @@ message UpdateVariantRequest {
   string fulfillment_type = 6; // optional
   ActorContext actor = 7;
   string jan_code = 8;
+  repeated VariantAxisValue axis_values = 9;
 }
 
 message UpdateVariantResponse {
