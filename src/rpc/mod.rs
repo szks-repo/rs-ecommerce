@@ -195,6 +195,17 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.AuctionService/UpdateAuction",
+            post(auction::update_auction).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::AuctionWrite,
+                )
+            })),
+        )
+        .route(
             "/rpc/ecommerce.v1.AuctionService/PlaceBid",
             post(auction::place_bid).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
                 permissions::require_permission_key(

@@ -6,6 +6,7 @@ import {
   ListAuctionsRequestSchema,
   GetAuctionRequestSchema,
   CreateAuctionRequestSchema,
+  UpdateAuctionRequestSchema,
   ListBidsRequestSchema,
   ListAutoBidsRequestSchema,
   CloseAuctionRequestSchema,
@@ -61,12 +62,94 @@ export async function createAuction(params: {
   if (!Number.isFinite(params.startPriceAmount)) {
     throw new Error("start_price is required.");
   }
+  if (params.startPriceAmount < 0) {
+    throw new Error("start_price must be zero or positive.");
+  }
+  if (params.reservePriceAmount != null && params.reservePriceAmount < 0) {
+    throw new Error("reserve_price must be zero or positive.");
+  }
+  if (params.buyoutPriceAmount != null && params.buyoutPriceAmount < 0) {
+    throw new Error("buyout_price must be zero or positive.");
+  }
+  if (params.bidIncrementAmount != null && params.bidIncrementAmount < 0) {
+    throw new Error("bid_increment must be zero or positive.");
+  }
   if (!Number.isFinite(params.startAt.getTime()) || !Number.isFinite(params.endAt.getTime())) {
     throw new Error("start_at/end_at is required.");
   }
 
   return client.createAuction(
     create(CreateAuctionRequestSchema, {
+      skuId: params.skuId,
+      auctionType: params.auctionType,
+      status: params.status,
+      startAt: timestampFromDate(params.startAt),
+      endAt: timestampFromDate(params.endAt),
+      title: params.title.trim(),
+      description: params.description?.trim() || "",
+      startPrice: money(params.startPriceAmount, params.currency),
+      reservePrice:
+        typeof params.reservePriceAmount === "number"
+          ? money(params.reservePriceAmount, params.currency)
+          : undefined,
+      buyoutPrice:
+        typeof params.buyoutPriceAmount === "number"
+          ? money(params.buyoutPriceAmount, params.currency)
+          : undefined,
+      bidIncrement:
+        typeof params.bidIncrementAmount === "number"
+          ? money(params.bidIncrementAmount, params.currency)
+          : undefined,
+    })
+  );
+}
+
+export async function updateAuction(params: {
+  auctionId: string;
+  skuId: string;
+  title: string;
+  description?: string;
+  auctionType: string;
+  status: string;
+  startAt: Date;
+  endAt: Date;
+  startPriceAmount: number;
+  reservePriceAmount?: number;
+  buyoutPriceAmount?: number;
+  bidIncrementAmount?: number;
+  currency: string;
+}) {
+  if (!params.auctionId.trim()) {
+    throw new Error("auction_id is required.");
+  }
+  if (!params.skuId.trim()) {
+    throw new Error("sku_id is required.");
+  }
+  if (!params.title.trim()) {
+    throw new Error("title is required.");
+  }
+  if (!Number.isFinite(params.startPriceAmount)) {
+    throw new Error("start_price is required.");
+  }
+  if (!Number.isFinite(params.startAt.getTime()) || !Number.isFinite(params.endAt.getTime())) {
+    throw new Error("start_at/end_at is required.");
+  }
+  if (params.startPriceAmount < 0) {
+    throw new Error("start_price must be zero or positive.");
+  }
+  if (params.reservePriceAmount != null && params.reservePriceAmount < 0) {
+    throw new Error("reserve_price must be zero or positive.");
+  }
+  if (params.buyoutPriceAmount != null && params.buyoutPriceAmount < 0) {
+    throw new Error("buyout_price must be zero or positive.");
+  }
+  if (params.bidIncrementAmount != null && params.bidIncrementAmount < 0) {
+    throw new Error("bid_increment must be zero or positive.");
+  }
+
+  return client.updateAuction(
+    create(UpdateAuctionRequestSchema, {
+      auctionId: params.auctionId,
       skuId: params.skuId,
       auctionType: params.auctionType,
       status: params.status,

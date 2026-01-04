@@ -224,6 +224,181 @@ pub async fn create_auction(
     Ok(auction)
 }
 
+pub async fn update_auction(
+    state: &AppState,
+    store_id: String,
+    req: pb::UpdateAuctionRequest,
+    actor: Option<pb::ActorContext>,
+) -> Result<pb::Auction, (StatusCode, Json<ConnectError>)> {
+    let store_uuid = StoreId::parse(&store_id)?;
+    let auction_uuid = parse_uuid(&req.auction_id, "auction_id")?;
+
+    if req.sku_id.is_empty() {
+        return Err(invalid_arg("sku_id is required"));
+    }
+    if req.auction_type != AUCTION_TYPE_OPEN && req.auction_type != AUCTION_TYPE_SEALED {
+        return Err(invalid_arg("auction_type is invalid"));
+    }
+    if req.title.trim().is_empty() {
+        return Err(invalid_arg("title is required"));
+    }
+
+    let start_at = crate::shared::time::timestamp_to_chrono(req.start_at)
+        .ok_or_else(|| invalid_arg("start_at is required"))?;
+    let end_at = crate::shared::time::timestamp_to_chrono(req.end_at)
+        .ok_or_else(|| invalid_arg("end_at is required"))?;
+    if end_at <= start_at {
+        return Err(invalid_arg("end_at must be after start_at"));
+    }
+
+    let (start_price_amount, start_price_currency) = money_to_parts(req.start_price)?;
+    let (reserve_amount, reserve_currency) = money_to_parts_opt(req.reserve_price)?;
+    let (buyout_amount, buyout_currency) = money_to_parts_opt(req.buyout_price)?;
+    let (increment_amount, increment_currency) = match req.bid_increment {
+        Some(_) => money_to_parts(req.bid_increment)?,
+        None => {
+            return Err(invalid_arg("bid_increment is required"));
+        }
+    };
+
+    let mut tx = state.db.begin().await.map_err(db_error)?;
+    let row = sqlx::query(
+        r#"
+        SELECT status
+        FROM auctions
+        WHERE id = $1 AND store_id = $2
+        FOR UPDATE
+        "#,
+    )
+    .bind(auction_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_one(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+    let current_status: String = row.get("status");
+    if current_status != STATUS_DRAFT {
+        return Err(invalid_arg("only draft auctions can be edited"));
+    }
+
+    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let product_id = sqlx::query(
+        r#"
+        SELECT v.product_id
+        FROM product_skus v
+        JOIN products p ON p.id = v.product_id
+        WHERE v.id = $1 AND p.store_id = $2
+        "#,
+    )
+    .bind(sku_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db_error)?
+    .map(|row| row.get::<uuid::Uuid, _>("product_id"));
+
+    let Some(product_id) = product_id else {
+        return Err(invalid_arg("sku_id not found"));
+    };
+
+    let now = Utc::now();
+    let requested_status = req.status.trim();
+    let status = if requested_status.is_empty() || requested_status == STATUS_DRAFT {
+        STATUS_DRAFT.to_string()
+    } else if requested_status == STATUS_SCHEDULED {
+        if start_at > now {
+            STATUS_SCHEDULED.to_string()
+        } else {
+            STATUS_RUNNING.to_string()
+        }
+    } else {
+        return Err(invalid_arg("status is invalid"));
+    };
+
+    let current_price_amount = if req.auction_type == AUCTION_TYPE_OPEN {
+        Some(start_price_amount)
+    } else {
+        None
+    };
+    let current_price_currency = if req.auction_type == AUCTION_TYPE_OPEN {
+        Some(start_price_currency.clone())
+    } else {
+        None
+    };
+
+    sqlx::query(
+        r#"
+        UPDATE auctions
+        SET sku_id = $1,
+            product_id = $2,
+            auction_type = $3,
+            status = $4,
+            start_at = $5,
+            end_at = $6,
+            bid_increment_amount = $7,
+            bid_increment_currency = $8,
+            start_price_amount = $9,
+            start_price_currency = $10,
+            reserve_price_amount = $11,
+            reserve_price_currency = $12,
+            buyout_price_amount = $13,
+            buyout_price_currency = $14,
+            current_price_amount = $15,
+            current_price_currency = $16,
+            title = $17,
+            description = $18,
+            updated_at = now()
+        WHERE id = $19
+        "#,
+    )
+    .bind(sku_uuid)
+    .bind(product_id)
+    .bind(req.auction_type.as_str())
+    .bind(status.as_str())
+    .bind(start_at)
+    .bind(end_at)
+    .bind(increment_amount)
+    .bind(increment_currency.as_str())
+    .bind(start_price_amount)
+    .bind(start_price_currency.as_str())
+    .bind(reserve_amount)
+    .bind(reserve_currency.as_deref())
+    .bind(buyout_amount)
+    .bind(buyout_currency.as_deref())
+    .bind(current_price_amount)
+    .bind(current_price_currency.as_deref())
+    .bind(req.title.trim())
+    .bind(req.description.trim())
+    .bind(auction_uuid)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db_error)?;
+
+    let updated_row = sqlx::query("SELECT * FROM auctions WHERE id = $1")
+        .bind(auction_uuid)
+        .fetch_one(tx.as_mut())
+        .await
+        .map_err(db_error)?;
+    let auction = auction_from_row(&updated_row);
+
+    audit::record_tx(
+        &mut tx,
+        audit_input(
+            Some(store_id.clone()),
+            AuctionAuditAction::Update.into(),
+            Some("auction"),
+            Some(req.auction_id),
+            None,
+            to_json_opt(Some(auction.clone())),
+            actor,
+        ),
+    )
+    .await?;
+
+    tx.commit().await.map_err(db_error)?;
+
+    Ok(auction)
+}
+
 pub async fn list_auctions(
     state: &AppState,
     store_id: String,

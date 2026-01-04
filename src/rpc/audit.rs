@@ -93,6 +93,7 @@ fn audit_action_type(action: &AuditAction) -> i32 {
         AuditAction::PromotionCreate => pb::AuditActionType::AuditActionPromotionCreate as i32,
         AuditAction::PromotionUpdate => pb::AuditActionType::AuditActionPromotionUpdate as i32,
         AuditAction::AuctionCreate => pb::AuditActionType::AuditActionAuctionCreate as i32,
+        AuditAction::AuctionUpdate => pb::AuditActionType::AuditActionAuctionUpdate as i32,
         AuditAction::AuctionBid => pb::AuditActionType::AuditActionAuctionBid as i32,
         AuditAction::AuctionEnd => pb::AuditActionType::AuditActionAuctionEnd as i32,
         AuditAction::AuctionApprove => pb::AuditActionType::AuditActionAuctionApprove as i32,

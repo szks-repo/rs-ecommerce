@@ -7,6 +7,7 @@ import "ecommerce/v1/common.proto";
 
 service AuctionService {
   rpc CreateAuction(CreateAuctionRequest) returns (CreateAuctionResponse);
+  rpc UpdateAuction(UpdateAuctionRequest) returns (UpdateAuctionResponse);
   rpc ListAuctions(ListAuctionsRequest) returns (ListAuctionsResponse);
   rpc GetAuction(GetAuctionRequest) returns (GetAuctionResponse);
   rpc PlaceBid(PlaceBidRequest) returns (PlaceBidResponse);
@@ -77,6 +78,27 @@ message CreateAuctionRequest {
 }
 
 message CreateAuctionResponse {
+  Auction auction = 1;
+}
+
+message UpdateAuctionRequest {
+  StoreContext store = 1;
+  string auction_id = 2;
+  string sku_id = 3;
+  string auction_type = 4;
+  string status = 5;
+  google.protobuf.Timestamp start_at = 6;
+  google.protobuf.Timestamp end_at = 7;
+  Money start_price = 8;
+  Money reserve_price = 9;
+  Money buyout_price = 10;
+  Money bid_increment = 11;
+  string title = 12;
+  string description = 13;
+  ActorContext actor = 14;
+}
+
+message UpdateAuctionResponse {
   Auction auction = 1;
 }
 

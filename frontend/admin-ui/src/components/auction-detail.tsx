@@ -5,10 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
-import { approveAuction, closeAuction, getAuction, listAutoBids, listBids } from "@/lib/auction";
+import { approveAuction, closeAuction, getAuction, listAutoBids, listBids, updateAuction } from "@/lib/auction";
 import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { Auction, AuctionAutoBid, AuctionBid } from "@/gen/ecommerce/v1/auction_pb";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AuctionDetail({ auctionId }: { auctionId: string }) {
   const [auction, setAuction] = useState<Auction | null>(null);
@@ -16,6 +20,16 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
   const [autoBids, setAutoBids] = useState<AuctionAutoBid[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editAuctionType, setEditAuctionType] = useState("open");
+  const [editStartAt, setEditStartAt] = useState("");
+  const [editEndAt, setEditEndAt] = useState("");
+  const [editStartPrice, setEditStartPrice] = useState("");
+  const [editReservePrice, setEditReservePrice] = useState("");
+  const [editBuyoutPrice, setEditBuyoutPrice] = useState("");
+  const [editBidIncrement, setEditBidIncrement] = useState("");
   const { push } = useToast();
   const { call } = useApiCall();
   const isValidId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
@@ -54,6 +68,27 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
       setAuction(result.auction);
       setBids(result.bids);
       setAutoBids(result.autoBids);
+      if (result.auction?.status === "draft") {
+        const start = result.auction.startAt?.seconds
+          ? new Date(Number(result.auction.startAt.seconds) * 1000 + Number(result.auction.startAt.nanos || 0) / 1e6)
+              .toISOString()
+              .slice(0, 16)
+          : "";
+        const end = result.auction.endAt?.seconds
+          ? new Date(Number(result.auction.endAt.seconds) * 1000 + Number(result.auction.endAt.nanos || 0) / 1e6)
+              .toISOString()
+              .slice(0, 16)
+          : "";
+        setEditTitle(result.auction.title || "");
+        setEditDescription(result.auction.description || "");
+        setEditAuctionType(result.auction.auctionType || "open");
+        setEditStartAt(start);
+        setEditEndAt(end);
+        setEditStartPrice(result.auction.startPrice?.amount?.toString() || "");
+        setEditReservePrice(result.auction.reservePrice?.amount?.toString() || "");
+        setEditBuyoutPrice(result.auction.buyoutPrice?.amount?.toString() || "");
+        setEditBidIncrement(result.auction.bidIncrement?.amount?.toString() || "");
+      }
     }
     setIsLoading(false);
   }
@@ -105,6 +140,72 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
 
   const canApprove = auction?.status === "awaiting_approval";
   const canClose = auction?.status === "running" || auction?.status === "scheduled";
+  const canEdit = auction?.status === "draft";
+
+  async function handleUpdate(nextStatus: "draft" | "scheduled") {
+    if (!auction) {
+      return;
+    }
+    setIsUpdating(true);
+    try {
+      const start = new Date(editStartAt);
+      const end = new Date(editEndAt);
+      if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime())) {
+        throw new Error("Start/End time is required.");
+      }
+      const startAmount = Number(editStartPrice);
+      const bidIncrementAmount = Number(editBidIncrement);
+      const reserveAmount =
+        editReservePrice.trim().length > 0 ? Number(editReservePrice) : undefined;
+      const buyoutAmount =
+        editBuyoutPrice.trim().length > 0 ? Number(editBuyoutPrice) : undefined;
+      const resp = await updateAuction({
+        auctionId: auction.id,
+        skuId: auction.skuId,
+        title: editTitle,
+        description: editDescription,
+        auctionType: editAuctionType,
+        status: nextStatus,
+        startAt: start,
+        endAt: end,
+        startPriceAmount: startAmount,
+        reservePriceAmount: reserveAmount,
+        buyoutPriceAmount: buyoutAmount,
+        bidIncrementAmount: bidIncrementAmount,
+        currency: auction.startPrice?.currency || "JPY",
+      });
+      push({
+        variant: "success",
+        title: nextStatus === "draft" ? "Draft updated" : "Auction published",
+        description:
+          nextStatus === "draft"
+            ? "Draft auction has been updated."
+            : "Auction has been scheduled.",
+      });
+      if (resp.auction) {
+        setAuction(resp.auction);
+      }
+      await loadAuction();
+    } catch (err) {
+      push({
+        variant: "error",
+        title: "Update failed",
+        description: err instanceof Error ? err.message : "Failed to update auction",
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  }
+
+  async function handlePublish() {
+    if (typeof window !== "undefined") {
+      const confirmed = window.confirm("Publish this auction now?");
+      if (!confirmed) {
+        return;
+      }
+    }
+    await handleUpdate("scheduled");
+  }
 
   return (
     <div className="space-y-6">
@@ -181,6 +282,77 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
           )}
         </CardContent>
       </Card>
+
+      {canEdit && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Edit Draft</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Update draft details before publishing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="editTitle">Title</Label>
+                <Input id="editTitle" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="editDescription">Description</Label>
+                <Textarea id="editDescription" value={editDescription} onChange={(e) => setEditDescription(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Auction Type</Label>
+                <Select value={editAuctionType} onValueChange={setEditAuctionType}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open">open</SelectItem>
+                    <SelectItem value="sealed">sealed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>SKU</Label>
+                <Input value={auction?.skuId || ""} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editStartAt">Start At</Label>
+                <Input id="editStartAt" type="datetime-local" value={editStartAt} onChange={(e) => setEditStartAt(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEndAt">End At</Label>
+                <Input id="editEndAt" type="datetime-local" value={editEndAt} onChange={(e) => setEditEndAt(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editStartPrice">Start Price</Label>
+                <Input id="editStartPrice" type="number" value={editStartPrice} onChange={(e) => setEditStartPrice(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editBidIncrement">Bid Increment</Label>
+                <Input id="editBidIncrement" type="number" value={editBidIncrement} onChange={(e) => setEditBidIncrement(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editReservePrice">Reserve Price (optional)</Label>
+                <Input id="editReservePrice" type="number" value={editReservePrice} onChange={(e) => setEditReservePrice(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editBuyoutPrice">Buyout Price (optional)</Label>
+                <Input id="editBuyoutPrice" type="number" value={editBuyoutPrice} onChange={(e) => setEditBuyoutPrice(e.target.value)} />
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={() => handleUpdate("draft")} disabled={isUpdating}>
+                {isUpdating ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button type="button" onClick={handlePublish} disabled={isUpdating}>
+                {isUpdating ? "Publishing..." : "Publish"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

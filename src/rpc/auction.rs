@@ -30,6 +30,24 @@ pub async fn create_auction(
     ))
 }
 
+pub async fn update_auction(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpdateAuctionResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::UpdateAuctionRequest>(&headers, body)?;
+    let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let auction = auction::service::update_auction(&state, store_id, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateAuctionResponse {
+            auction: Some(auction),
+        }),
+    ))
+}
+
 pub async fn list_auctions(
     State(state): State<AppState>,
     headers: HeaderMap,

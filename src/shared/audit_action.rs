@@ -19,6 +19,7 @@ pub enum AuditAction {
     TaxRuleDelete,
     PromotionCreate,
     PromotionUpdate,
+    AuctionUpdate,
     AuctionCreate,
     AuctionBid,
     AuctionEnd,
@@ -65,6 +66,7 @@ impl AuditAction {
             AuditAction::TaxRuleDelete => "tax_rule.delete",
             AuditAction::PromotionCreate => "promotion.create",
             AuditAction::PromotionUpdate => "promotion.update",
+            AuditAction::AuctionUpdate => "auction.update",
             AuditAction::AuctionCreate => "auction.create",
             AuditAction::AuctionBid => "auction.bid",
             AuditAction::AuctionEnd => "auction.end",
@@ -111,6 +113,7 @@ impl AuditAction {
             AuditAction::TaxRuleDelete => "Tax rule deleted",
             AuditAction::PromotionCreate => "Promotion created",
             AuditAction::PromotionUpdate => "Promotion updated",
+            AuditAction::AuctionUpdate => "Auction updated",
             AuditAction::AuctionCreate => "Auction created",
             AuditAction::AuctionBid => "Auction bid placed",
             AuditAction::AuctionEnd => "Auction ended",
@@ -157,6 +160,7 @@ pub const ALL_AUDIT_ACTIONS: &[AuditAction] = &[
     AuditAction::TaxRuleDelete,
     AuditAction::PromotionCreate,
     AuditAction::PromotionUpdate,
+    AuditAction::AuctionUpdate,
     AuditAction::AuctionCreate,
     AuditAction::AuctionBid,
     AuditAction::AuctionEnd,
@@ -243,6 +247,7 @@ pub enum PromotionAuditAction {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AuctionAuditAction {
     Create,
+    Update,
     Bid,
     End,
     Approve,
@@ -375,6 +380,7 @@ impl From<AuctionAuditAction> for AuditAction {
     fn from(action: AuctionAuditAction) -> Self {
         match action {
             AuctionAuditAction::Create => AuditAction::AuctionCreate,
+            AuctionAuditAction::Update => AuditAction::AuctionUpdate,
             AuctionAuditAction::Bid => AuditAction::AuctionBid,
             AuctionAuditAction::End => AuditAction::AuctionEnd,
             AuctionAuditAction::Approve => AuditAction::AuctionApprove,

@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file ecommerce/v1/auction.proto.
  */
 export const file_ecommerce_v1_auction: GenFile = /*@__PURE__*/
-  fileDesc("ChplY29tbWVyY2UvdjEvYXVjdGlvbi5wcm90bxIMZWNvbW1lcmNlLnYxIrIFCgdBdWN0aW9uEgoKAmlkGAEgASgJEhAKCHN0b3JlX2lkGAIgASgJEhIKCnByb2R1Y3RfaWQYAyABKAkSDgoGc2t1X2lkGAQgASgJEhQKDGF1Y3Rpb25fdHlwZRgFIAEoCRIOCgZzdGF0dXMYBiABKAkSLAoIc3RhcnRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKBmVuZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKgoNYmlkX2luY3JlbWVudBgJIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIoCgtzdGFydF9wcmljZRgKIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIqCg1yZXNlcnZlX3ByaWNlGAsgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EikKDGJ1eW91dF9wcmljZRgMIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIqCg1jdXJyZW50X3ByaWNlGA0gASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EioKDXdpbm5pbmdfcHJpY2UYDiABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSFgoOd2lubmluZ19iaWRfaWQYDyABKAkSEwoLYXBwcm92ZWRfYnkYECABKAkSLwoLYXBwcm92ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBXRpdGxlGBQgASgJEhMKC2Rlc2NyaXB0aW9uGBUgASgJIpYBCgpBdWN0aW9uQmlkEgoKAmlkGAEgASgJEhIKCmF1Y3Rpb25faWQYAiABKAkSEwoLY3VzdG9tZXJfaWQYAyABKAkSIwoGYW1vdW50GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Ei4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIt4BCg5BdWN0aW9uQXV0b0JpZBIKCgJpZBgBIAEoCRISCgphdWN0aW9uX2lkGAIgASgJEhMKC2N1c3RvbWVyX2lkGAMgASgJEicKCm1heF9hbW91bnQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wItMDChRDcmVhdGVBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSDgoGc2t1X2lkGAIgASgJEhQKDGF1Y3Rpb25fdHlwZRgEIAEoCRIOCgZzdGF0dXMYBSABKAkSLAoIc3RhcnRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKBmVuZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoLc3RhcnRfcHJpY2UYCCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNcmVzZXJ2ZV9wcmljZRgJIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIpCgxidXlvdXRfcHJpY2UYCiABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNYmlkX2luY3JlbWVudBgLIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIpCgVhY3RvchgMIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQSDQoFdGl0bGUYDSABKAkSEwoLZGVzY3JpcHRpb24YDiABKAlKBAgDEAQiPwoVQ3JlYXRlQXVjdGlvblJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbiJ2ChNMaXN0QXVjdGlvbnNSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIOCgZzdGF0dXMYAiABKAkSJAoEcGFnZRgDIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJnChRMaXN0QXVjdGlvbnNSZXNwb25zZRInCghhdWN0aW9ucxgBIAMoCzIVLmVjb21tZXJjZS52MS5BdWN0aW9uEiYKBHBhZ2UYAiABKAsyGC5lY29tbWVyY2UudjEuUGFnZVJlc3VsdCJSChFHZXRBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSEgoKYXVjdGlvbl9pZBgCIAEoCSI8ChJHZXRBdWN0aW9uUmVzcG9uc2USJgoHYXVjdGlvbhgBIAEoCzIVLmVjb21tZXJjZS52MS5BdWN0aW9uIrUBCg9QbGFjZUJpZFJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EhIKCmF1Y3Rpb25faWQYAiABKAkSEwoLY3VzdG9tZXJfaWQYAyABKAkSIwoGYW1vdW50GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJhChBQbGFjZUJpZFJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbhIlCgNiaWQYAiABKAsyGC5lY29tbWVyY2UudjEuQXVjdGlvbkJpZCJQCg9MaXN0Qmlkc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EhIKCmF1Y3Rpb25faWQYAiABKAkiOgoQTGlzdEJpZHNSZXNwb25zZRImCgRiaWRzGAEgAygLMhguZWNvbW1lcmNlLnYxLkF1Y3Rpb25CaWQizAEKEVNldEF1dG9CaWRSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJEhMKC2N1c3RvbWVyX2lkGAMgASgJEicKCm1heF9hbW91bnQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDwoHZW5hYmxlZBgFIAEoCBIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQibAoSU2V0QXV0b0JpZFJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbhIuCghhdXRvX2JpZBgCIAEoCzIcLmVjb21tZXJjZS52MS5BdWN0aW9uQXV0b0JpZCJUChNMaXN0QXV0b0JpZHNSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJIkcKFExpc3RBdXRvQmlkc1Jlc3BvbnNlEi8KCWF1dG9fYmlkcxgBIAMoCzIcLmVjb21tZXJjZS52MS5BdWN0aW9uQXV0b0JpZCJ/ChNDbG9zZUF1Y3Rpb25SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJEikKBWFjdG9yGAMgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCI+ChRDbG9zZUF1Y3Rpb25SZXNwb25zZRImCgdhdWN0aW9uGAEgASgLMhUuZWNvbW1lcmNlLnYxLkF1Y3Rpb24igQEKFUFwcHJvdmVBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSEgoKYXVjdGlvbl9pZBgCIAEoCRIpCgVhY3RvchgDIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiQAoWQXBwcm92ZUF1Y3Rpb25SZXNwb25zZRImCgdhdWN0aW9uGAEgASgLMhUuZWNvbW1lcmNlLnYxLkF1Y3Rpb24yhAYKDkF1Y3Rpb25TZXJ2aWNlElgKDUNyZWF0ZUF1Y3Rpb24SIi5lY29tbWVyY2UudjEuQ3JlYXRlQXVjdGlvblJlcXVlc3QaIy5lY29tbWVyY2UudjEuQ3JlYXRlQXVjdGlvblJlc3BvbnNlElUKDExpc3RBdWN0aW9ucxIhLmVjb21tZXJjZS52MS5MaXN0QXVjdGlvbnNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkxpc3RBdWN0aW9uc1Jlc3BvbnNlEk8KCkdldEF1Y3Rpb24SHy5lY29tbWVyY2UudjEuR2V0QXVjdGlvblJlcXVlc3QaIC5lY29tbWVyY2UudjEuR2V0QXVjdGlvblJlc3BvbnNlEkkKCFBsYWNlQmlkEh0uZWNvbW1lcmNlLnYxLlBsYWNlQmlkUmVxdWVzdBoeLmVjb21tZXJjZS52MS5QbGFjZUJpZFJlc3BvbnNlEkkKCExpc3RCaWRzEh0uZWNvbW1lcmNlLnYxLkxpc3RCaWRzUmVxdWVzdBoeLmVjb21tZXJjZS52MS5MaXN0Qmlkc1Jlc3BvbnNlEk8KClNldEF1dG9CaWQSHy5lY29tbWVyY2UudjEuU2V0QXV0b0JpZFJlcXVlc3QaIC5lY29tbWVyY2UudjEuU2V0QXV0b0JpZFJlc3BvbnNlElUKDExpc3RBdXRvQmlkcxIhLmVjb21tZXJjZS52MS5MaXN0QXV0b0JpZHNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkxpc3RBdXRvQmlkc1Jlc3BvbnNlElUKDENsb3NlQXVjdGlvbhIhLmVjb21tZXJjZS52MS5DbG9zZUF1Y3Rpb25SZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkNsb3NlQXVjdGlvblJlc3BvbnNlElsKDkFwcHJvdmVBdWN0aW9uEiMuZWNvbW1lcmNlLnYxLkFwcHJvdmVBdWN0aW9uUmVxdWVzdBokLmVjb21tZXJjZS52MS5BcHByb3ZlQXVjdGlvblJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
+  fileDesc("ChplY29tbWVyY2UvdjEvYXVjdGlvbi5wcm90bxIMZWNvbW1lcmNlLnYxIrIFCgdBdWN0aW9uEgoKAmlkGAEgASgJEhAKCHN0b3JlX2lkGAIgASgJEhIKCnByb2R1Y3RfaWQYAyABKAkSDgoGc2t1X2lkGAQgASgJEhQKDGF1Y3Rpb25fdHlwZRgFIAEoCRIOCgZzdGF0dXMYBiABKAkSLAoIc3RhcnRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKBmVuZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKgoNYmlkX2luY3JlbWVudBgJIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIoCgtzdGFydF9wcmljZRgKIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIqCg1yZXNlcnZlX3ByaWNlGAsgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EikKDGJ1eW91dF9wcmljZRgMIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIqCg1jdXJyZW50X3ByaWNlGA0gASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EioKDXdpbm5pbmdfcHJpY2UYDiABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSFgoOd2lubmluZ19iaWRfaWQYDyABKAkSEwoLYXBwcm92ZWRfYnkYECABKAkSLwoLYXBwcm92ZWRfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCmNyZWF0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYEyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBXRpdGxlGBQgASgJEhMKC2Rlc2NyaXB0aW9uGBUgASgJIpYBCgpBdWN0aW9uQmlkEgoKAmlkGAEgASgJEhIKCmF1Y3Rpb25faWQYAiABKAkSEwoLY3VzdG9tZXJfaWQYAyABKAkSIwoGYW1vdW50GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5Ei4KCmNyZWF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIt4BCg5BdWN0aW9uQXV0b0JpZBIKCgJpZBgBIAEoCRISCgphdWN0aW9uX2lkGAIgASgJEhMKC2N1c3RvbWVyX2lkGAMgASgJEicKCm1heF9hbW91bnQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDgoGc3RhdHVzGAUgASgJEi4KCmNyZWF0ZWRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnVwZGF0ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wItMDChRDcmVhdGVBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSDgoGc2t1X2lkGAIgASgJEhQKDGF1Y3Rpb25fdHlwZRgEIAEoCRIOCgZzdGF0dXMYBSABKAkSLAoIc3RhcnRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKBmVuZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoLc3RhcnRfcHJpY2UYCCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNcmVzZXJ2ZV9wcmljZRgJIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIpCgxidXlvdXRfcHJpY2UYCiABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNYmlkX2luY3JlbWVudBgLIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIpCgVhY3RvchgMIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQSDQoFdGl0bGUYDSABKAkSEwoLZGVzY3JpcHRpb24YDiABKAlKBAgDEAQiPwoVQ3JlYXRlQXVjdGlvblJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbiLhAwoUVXBkYXRlQXVjdGlvblJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EhIKCmF1Y3Rpb25faWQYAiABKAkSDgoGc2t1X2lkGAMgASgJEhQKDGF1Y3Rpb25fdHlwZRgEIAEoCRIOCgZzdGF0dXMYBSABKAkSLAoIc3RhcnRfYXQYBiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKBmVuZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKAoLc3RhcnRfcHJpY2UYCCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNcmVzZXJ2ZV9wcmljZRgJIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRIpCgxidXlvdXRfcHJpY2UYCiABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSKgoNYmlkX2luY3JlbWVudBgLIAEoCzITLmVjb21tZXJjZS52MS5Nb25leRINCgV0aXRsZRgMIAEoCRITCgtkZXNjcmlwdGlvbhgNIAEoCRIpCgVhY3RvchgOIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiPwoVVXBkYXRlQXVjdGlvblJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbiJ2ChNMaXN0QXVjdGlvbnNSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBIOCgZzdGF0dXMYAiABKAkSJAoEcGFnZRgDIAEoCzIWLmVjb21tZXJjZS52MS5QYWdlSW5mbyJnChRMaXN0QXVjdGlvbnNSZXNwb25zZRInCghhdWN0aW9ucxgBIAMoCzIVLmVjb21tZXJjZS52MS5BdWN0aW9uEiYKBHBhZ2UYAiABKAsyGC5lY29tbWVyY2UudjEuUGFnZVJlc3VsdCJSChFHZXRBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSEgoKYXVjdGlvbl9pZBgCIAEoCSI8ChJHZXRBdWN0aW9uUmVzcG9uc2USJgoHYXVjdGlvbhgBIAEoCzIVLmVjb21tZXJjZS52MS5BdWN0aW9uIrUBCg9QbGFjZUJpZFJlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EhIKCmF1Y3Rpb25faWQYAiABKAkSEwoLY3VzdG9tZXJfaWQYAyABKAkSIwoGYW1vdW50GAQgASgLMhMuZWNvbW1lcmNlLnYxLk1vbmV5EikKBWFjdG9yGAUgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCJhChBQbGFjZUJpZFJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbhIlCgNiaWQYAiABKAsyGC5lY29tbWVyY2UudjEuQXVjdGlvbkJpZCJQCg9MaXN0Qmlkc1JlcXVlc3QSKQoFc3RvcmUYASABKAsyGi5lY29tbWVyY2UudjEuU3RvcmVDb250ZXh0EhIKCmF1Y3Rpb25faWQYAiABKAkiOgoQTGlzdEJpZHNSZXNwb25zZRImCgRiaWRzGAEgAygLMhguZWNvbW1lcmNlLnYxLkF1Y3Rpb25CaWQizAEKEVNldEF1dG9CaWRSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJEhMKC2N1c3RvbWVyX2lkGAMgASgJEicKCm1heF9hbW91bnQYBCABKAsyEy5lY29tbWVyY2UudjEuTW9uZXkSDwoHZW5hYmxlZBgFIAEoCBIpCgVhY3RvchgGIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQibAoSU2V0QXV0b0JpZFJlc3BvbnNlEiYKB2F1Y3Rpb24YASABKAsyFS5lY29tbWVyY2UudjEuQXVjdGlvbhIuCghhdXRvX2JpZBgCIAEoCzIcLmVjb21tZXJjZS52MS5BdWN0aW9uQXV0b0JpZCJUChNMaXN0QXV0b0JpZHNSZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJIkcKFExpc3RBdXRvQmlkc1Jlc3BvbnNlEi8KCWF1dG9fYmlkcxgBIAMoCzIcLmVjb21tZXJjZS52MS5BdWN0aW9uQXV0b0JpZCJ/ChNDbG9zZUF1Y3Rpb25SZXF1ZXN0EikKBXN0b3JlGAEgASgLMhouZWNvbW1lcmNlLnYxLlN0b3JlQ29udGV4dBISCgphdWN0aW9uX2lkGAIgASgJEikKBWFjdG9yGAMgASgLMhouZWNvbW1lcmNlLnYxLkFjdG9yQ29udGV4dCI+ChRDbG9zZUF1Y3Rpb25SZXNwb25zZRImCgdhdWN0aW9uGAEgASgLMhUuZWNvbW1lcmNlLnYxLkF1Y3Rpb24igQEKFUFwcHJvdmVBdWN0aW9uUmVxdWVzdBIpCgVzdG9yZRgBIAEoCzIaLmVjb21tZXJjZS52MS5TdG9yZUNvbnRleHQSEgoKYXVjdGlvbl9pZBgCIAEoCRIpCgVhY3RvchgDIAEoCzIaLmVjb21tZXJjZS52MS5BY3RvckNvbnRleHQiQAoWQXBwcm92ZUF1Y3Rpb25SZXNwb25zZRImCgdhdWN0aW9uGAEgASgLMhUuZWNvbW1lcmNlLnYxLkF1Y3Rpb24y3gYKDkF1Y3Rpb25TZXJ2aWNlElgKDUNyZWF0ZUF1Y3Rpb24SIi5lY29tbWVyY2UudjEuQ3JlYXRlQXVjdGlvblJlcXVlc3QaIy5lY29tbWVyY2UudjEuQ3JlYXRlQXVjdGlvblJlc3BvbnNlElgKDVVwZGF0ZUF1Y3Rpb24SIi5lY29tbWVyY2UudjEuVXBkYXRlQXVjdGlvblJlcXVlc3QaIy5lY29tbWVyY2UudjEuVXBkYXRlQXVjdGlvblJlc3BvbnNlElUKDExpc3RBdWN0aW9ucxIhLmVjb21tZXJjZS52MS5MaXN0QXVjdGlvbnNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkxpc3RBdWN0aW9uc1Jlc3BvbnNlEk8KCkdldEF1Y3Rpb24SHy5lY29tbWVyY2UudjEuR2V0QXVjdGlvblJlcXVlc3QaIC5lY29tbWVyY2UudjEuR2V0QXVjdGlvblJlc3BvbnNlEkkKCFBsYWNlQmlkEh0uZWNvbW1lcmNlLnYxLlBsYWNlQmlkUmVxdWVzdBoeLmVjb21tZXJjZS52MS5QbGFjZUJpZFJlc3BvbnNlEkkKCExpc3RCaWRzEh0uZWNvbW1lcmNlLnYxLkxpc3RCaWRzUmVxdWVzdBoeLmVjb21tZXJjZS52MS5MaXN0Qmlkc1Jlc3BvbnNlEk8KClNldEF1dG9CaWQSHy5lY29tbWVyY2UudjEuU2V0QXV0b0JpZFJlcXVlc3QaIC5lY29tbWVyY2UudjEuU2V0QXV0b0JpZFJlc3BvbnNlElUKDExpc3RBdXRvQmlkcxIhLmVjb21tZXJjZS52MS5MaXN0QXV0b0JpZHNSZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkxpc3RBdXRvQmlkc1Jlc3BvbnNlElUKDENsb3NlQXVjdGlvbhIhLmVjb21tZXJjZS52MS5DbG9zZUF1Y3Rpb25SZXF1ZXN0GiIuZWNvbW1lcmNlLnYxLkNsb3NlQXVjdGlvblJlc3BvbnNlElsKDkFwcHJvdmVBdWN0aW9uEiMuZWNvbW1lcmNlLnYxLkFwcHJvdmVBdWN0aW9uUmVxdWVzdBokLmVjb21tZXJjZS52MS5BcHByb3ZlQXVjdGlvblJlc3BvbnNlYgZwcm90bzM", [file_google_protobuf_timestamp, file_ecommerce_v1_common]);
 
 /**
  * @generated from message ecommerce.v1.Auction
@@ -316,6 +316,105 @@ export const CreateAuctionResponseSchema: GenMessage<CreateAuctionResponse> = /*
   messageDesc(file_ecommerce_v1_auction, 4);
 
 /**
+ * @generated from message ecommerce.v1.UpdateAuctionRequest
+ */
+export type UpdateAuctionRequest = Message<"ecommerce.v1.UpdateAuctionRequest"> & {
+  /**
+   * @generated from field: ecommerce.v1.StoreContext store = 1;
+   */
+  store?: StoreContext;
+
+  /**
+   * @generated from field: string auction_id = 2;
+   */
+  auctionId: string;
+
+  /**
+   * @generated from field: string sku_id = 3;
+   */
+  skuId: string;
+
+  /**
+   * @generated from field: string auction_type = 4;
+   */
+  auctionType: string;
+
+  /**
+   * @generated from field: string status = 5;
+   */
+  status: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp start_at = 6;
+   */
+  startAt?: Timestamp;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp end_at = 7;
+   */
+  endAt?: Timestamp;
+
+  /**
+   * @generated from field: ecommerce.v1.Money start_price = 8;
+   */
+  startPrice?: Money;
+
+  /**
+   * @generated from field: ecommerce.v1.Money reserve_price = 9;
+   */
+  reservePrice?: Money;
+
+  /**
+   * @generated from field: ecommerce.v1.Money buyout_price = 10;
+   */
+  buyoutPrice?: Money;
+
+  /**
+   * @generated from field: ecommerce.v1.Money bid_increment = 11;
+   */
+  bidIncrement?: Money;
+
+  /**
+   * @generated from field: string title = 12;
+   */
+  title: string;
+
+  /**
+   * @generated from field: string description = 13;
+   */
+  description: string;
+
+  /**
+   * @generated from field: ecommerce.v1.ActorContext actor = 14;
+   */
+  actor?: ActorContext;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpdateAuctionRequest.
+ * Use `create(UpdateAuctionRequestSchema)` to create a new message.
+ */
+export const UpdateAuctionRequestSchema: GenMessage<UpdateAuctionRequest> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_auction, 5);
+
+/**
+ * @generated from message ecommerce.v1.UpdateAuctionResponse
+ */
+export type UpdateAuctionResponse = Message<"ecommerce.v1.UpdateAuctionResponse"> & {
+  /**
+   * @generated from field: ecommerce.v1.Auction auction = 1;
+   */
+  auction?: Auction;
+};
+
+/**
+ * Describes the message ecommerce.v1.UpdateAuctionResponse.
+ * Use `create(UpdateAuctionResponseSchema)` to create a new message.
+ */
+export const UpdateAuctionResponseSchema: GenMessage<UpdateAuctionResponse> = /*@__PURE__*/
+  messageDesc(file_ecommerce_v1_auction, 6);
+
+/**
  * @generated from message ecommerce.v1.ListAuctionsRequest
  */
 export type ListAuctionsRequest = Message<"ecommerce.v1.ListAuctionsRequest"> & {
@@ -340,7 +439,7 @@ export type ListAuctionsRequest = Message<"ecommerce.v1.ListAuctionsRequest"> & 
  * Use `create(ListAuctionsRequestSchema)` to create a new message.
  */
 export const ListAuctionsRequestSchema: GenMessage<ListAuctionsRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 5);
+  messageDesc(file_ecommerce_v1_auction, 7);
 
 /**
  * @generated from message ecommerce.v1.ListAuctionsResponse
@@ -362,7 +461,7 @@ export type ListAuctionsResponse = Message<"ecommerce.v1.ListAuctionsResponse"> 
  * Use `create(ListAuctionsResponseSchema)` to create a new message.
  */
 export const ListAuctionsResponseSchema: GenMessage<ListAuctionsResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 6);
+  messageDesc(file_ecommerce_v1_auction, 8);
 
 /**
  * @generated from message ecommerce.v1.GetAuctionRequest
@@ -384,7 +483,7 @@ export type GetAuctionRequest = Message<"ecommerce.v1.GetAuctionRequest"> & {
  * Use `create(GetAuctionRequestSchema)` to create a new message.
  */
 export const GetAuctionRequestSchema: GenMessage<GetAuctionRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 7);
+  messageDesc(file_ecommerce_v1_auction, 9);
 
 /**
  * @generated from message ecommerce.v1.GetAuctionResponse
@@ -401,7 +500,7 @@ export type GetAuctionResponse = Message<"ecommerce.v1.GetAuctionResponse"> & {
  * Use `create(GetAuctionResponseSchema)` to create a new message.
  */
 export const GetAuctionResponseSchema: GenMessage<GetAuctionResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 8);
+  messageDesc(file_ecommerce_v1_auction, 10);
 
 /**
  * @generated from message ecommerce.v1.PlaceBidRequest
@@ -438,7 +537,7 @@ export type PlaceBidRequest = Message<"ecommerce.v1.PlaceBidRequest"> & {
  * Use `create(PlaceBidRequestSchema)` to create a new message.
  */
 export const PlaceBidRequestSchema: GenMessage<PlaceBidRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 9);
+  messageDesc(file_ecommerce_v1_auction, 11);
 
 /**
  * @generated from message ecommerce.v1.PlaceBidResponse
@@ -460,7 +559,7 @@ export type PlaceBidResponse = Message<"ecommerce.v1.PlaceBidResponse"> & {
  * Use `create(PlaceBidResponseSchema)` to create a new message.
  */
 export const PlaceBidResponseSchema: GenMessage<PlaceBidResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 10);
+  messageDesc(file_ecommerce_v1_auction, 12);
 
 /**
  * @generated from message ecommerce.v1.ListBidsRequest
@@ -482,7 +581,7 @@ export type ListBidsRequest = Message<"ecommerce.v1.ListBidsRequest"> & {
  * Use `create(ListBidsRequestSchema)` to create a new message.
  */
 export const ListBidsRequestSchema: GenMessage<ListBidsRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 11);
+  messageDesc(file_ecommerce_v1_auction, 13);
 
 /**
  * @generated from message ecommerce.v1.ListBidsResponse
@@ -499,7 +598,7 @@ export type ListBidsResponse = Message<"ecommerce.v1.ListBidsResponse"> & {
  * Use `create(ListBidsResponseSchema)` to create a new message.
  */
 export const ListBidsResponseSchema: GenMessage<ListBidsResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 12);
+  messageDesc(file_ecommerce_v1_auction, 14);
 
 /**
  * @generated from message ecommerce.v1.SetAutoBidRequest
@@ -541,7 +640,7 @@ export type SetAutoBidRequest = Message<"ecommerce.v1.SetAutoBidRequest"> & {
  * Use `create(SetAutoBidRequestSchema)` to create a new message.
  */
 export const SetAutoBidRequestSchema: GenMessage<SetAutoBidRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 13);
+  messageDesc(file_ecommerce_v1_auction, 15);
 
 /**
  * @generated from message ecommerce.v1.SetAutoBidResponse
@@ -563,7 +662,7 @@ export type SetAutoBidResponse = Message<"ecommerce.v1.SetAutoBidResponse"> & {
  * Use `create(SetAutoBidResponseSchema)` to create a new message.
  */
 export const SetAutoBidResponseSchema: GenMessage<SetAutoBidResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 14);
+  messageDesc(file_ecommerce_v1_auction, 16);
 
 /**
  * @generated from message ecommerce.v1.ListAutoBidsRequest
@@ -585,7 +684,7 @@ export type ListAutoBidsRequest = Message<"ecommerce.v1.ListAutoBidsRequest"> & 
  * Use `create(ListAutoBidsRequestSchema)` to create a new message.
  */
 export const ListAutoBidsRequestSchema: GenMessage<ListAutoBidsRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 15);
+  messageDesc(file_ecommerce_v1_auction, 17);
 
 /**
  * @generated from message ecommerce.v1.ListAutoBidsResponse
@@ -602,7 +701,7 @@ export type ListAutoBidsResponse = Message<"ecommerce.v1.ListAutoBidsResponse"> 
  * Use `create(ListAutoBidsResponseSchema)` to create a new message.
  */
 export const ListAutoBidsResponseSchema: GenMessage<ListAutoBidsResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 16);
+  messageDesc(file_ecommerce_v1_auction, 18);
 
 /**
  * @generated from message ecommerce.v1.CloseAuctionRequest
@@ -629,7 +728,7 @@ export type CloseAuctionRequest = Message<"ecommerce.v1.CloseAuctionRequest"> & 
  * Use `create(CloseAuctionRequestSchema)` to create a new message.
  */
 export const CloseAuctionRequestSchema: GenMessage<CloseAuctionRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 17);
+  messageDesc(file_ecommerce_v1_auction, 19);
 
 /**
  * @generated from message ecommerce.v1.CloseAuctionResponse
@@ -646,7 +745,7 @@ export type CloseAuctionResponse = Message<"ecommerce.v1.CloseAuctionResponse"> 
  * Use `create(CloseAuctionResponseSchema)` to create a new message.
  */
 export const CloseAuctionResponseSchema: GenMessage<CloseAuctionResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 18);
+  messageDesc(file_ecommerce_v1_auction, 20);
 
 /**
  * @generated from message ecommerce.v1.ApproveAuctionRequest
@@ -673,7 +772,7 @@ export type ApproveAuctionRequest = Message<"ecommerce.v1.ApproveAuctionRequest"
  * Use `create(ApproveAuctionRequestSchema)` to create a new message.
  */
 export const ApproveAuctionRequestSchema: GenMessage<ApproveAuctionRequest> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 19);
+  messageDesc(file_ecommerce_v1_auction, 21);
 
 /**
  * @generated from message ecommerce.v1.ApproveAuctionResponse
@@ -690,7 +789,7 @@ export type ApproveAuctionResponse = Message<"ecommerce.v1.ApproveAuctionRespons
  * Use `create(ApproveAuctionResponseSchema)` to create a new message.
  */
 export const ApproveAuctionResponseSchema: GenMessage<ApproveAuctionResponse> = /*@__PURE__*/
-  messageDesc(file_ecommerce_v1_auction, 20);
+  messageDesc(file_ecommerce_v1_auction, 22);
 
 /**
  * @generated from service ecommerce.v1.AuctionService
@@ -703,6 +802,14 @@ export const AuctionService: GenService<{
     methodKind: "unary";
     input: typeof CreateAuctionRequestSchema;
     output: typeof CreateAuctionResponseSchema;
+  },
+  /**
+   * @generated from rpc ecommerce.v1.AuctionService.UpdateAuction
+   */
+  updateAuction: {
+    methodKind: "unary";
+    input: typeof UpdateAuctionRequestSchema;
+    output: typeof UpdateAuctionResponseSchema;
   },
   /**
    * @generated from rpc ecommerce.v1.AuctionService.ListAuctions
