@@ -8,6 +8,8 @@ import { useToast } from "@/components/ui/toast";
 import { Button } from "@/components/ui/button";
 import ProductUpdateForm from "@/components/product-update-form";
 import VariantUpdateForm from "@/components/variant-update-form";
+import VariantCreateForm from "@/components/variant-create-form";
+import VariantBulkUpdateForm from "@/components/variant-bulk-update-form";
 import SkuImageManager from "@/components/sku-image-manager";
 import SkuDigitalAssetManager from "@/components/sku-digital-asset-manager";
 import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
@@ -15,6 +17,7 @@ import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin, VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import { useApiCall } from "@/lib/use-api-call";
+import { formatTimestampWithStoreTz } from "@/lib/time";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -28,6 +31,7 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState<ProductAdmin | null>(null);
   const [variants, setVariants] = useState<VariantAdmin[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<VariantAdmin | null>(null);
+  const [variantAxes, setVariantAxes] = useState<{ name: string; position?: number }[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { push } = useToast();
   const { notifyError } = useApiCall();
@@ -56,6 +60,7 @@ export default function ProductDetailPage() {
       setProduct(found);
       const variantsResp = await listVariantsAdmin({ productId });
       setVariants(variantsResp.variants ?? []);
+      setVariantAxes(variantsResp.variantAxes ?? []);
       if (variantsResp.variants && variantsResp.variants.length > 0) {
         const next = selectedVariant
           ? variantsResp.variants.find((v) => v.id === selectedVariant.id) ?? variantsResp.variants[0]
@@ -85,7 +90,7 @@ export default function ProductDetailPage() {
             {product?.title || "Product details"}
           </h1>
           <p className="mt-2 text-sm text-neutral-600">
-            Review the product and manage its variants.
+            Review the product and manage its SKUs.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -123,6 +128,22 @@ export default function ProductDetailPage() {
               <div className="text-xs text-neutral-500">
                 tax rule: {product.taxRuleId || "default"}
               </div>
+              <div className="text-xs text-neutral-500">
+                sale period:{" "}
+                {product.saleStartAt
+                  ? formatTimestampWithStoreTz(
+                      product.saleStartAt.seconds,
+                      product.saleStartAt.nanos
+                    )
+                  : "always"}{" "}
+                -{" "}
+                {product.saleEndAt
+                  ? formatTimestampWithStoreTz(
+                      product.saleEndAt.seconds,
+                      product.saleEndAt.nanos
+                    )
+                  : "always"}
+              </div>
               {product.description ? <div>{product.description}</div> : <div>No description.</div>}
             </>
           ) : (
@@ -133,12 +154,16 @@ export default function ProductDetailPage() {
 
       <div className="grid gap-6 md:grid-cols-2">
         <ProductUpdateForm product={product} onUpdated={loadData} />
-        <VariantUpdateForm variant={selectedVariant} onUpdated={loadData} />
+        <VariantCreateForm
+          productId={productId}
+          variantAxes={variantAxes}
+          onCreated={loadData}
+        />
       </div>
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
-          <CardTitle>Variants</CardTitle>
+          <CardTitle>SKUs</CardTitle>
           <CardDescription className="text-neutral-500">
             Select a variant to edit.
           </CardDescription>
@@ -162,11 +187,23 @@ export default function ProductDetailPage() {
                 <div className="text-xs text-neutral-500">
                   id: {variant.id} / status: {variant.status} / type: {variant.fulfillmentType}
                 </div>
+                {variant.axisValues && variant.axisValues.length > 0 ? (
+                  <div className="mt-1 text-xs text-neutral-600">
+                    {variant.axisValues
+                      .map((axis) => `${axis.name}: ${axis.value}`)
+                      .join(" / ")}
+                  </div>
+                ) : null}
               </button>
             ))
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 md:grid-cols-2">
+        <VariantUpdateForm variant={selectedVariant} onUpdated={loadData} />
+        <VariantBulkUpdateForm variants={variants} onUpdated={loadData} />
+      </div>
 
       {selectedVariant ? (
         <div className="space-y-6">

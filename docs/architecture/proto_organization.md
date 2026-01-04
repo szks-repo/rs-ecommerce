@@ -28,4 +28,3 @@ Goal: keep context boundaries explicit and allow growth without cross-contaminat
 
 ## Versioning
 - Keep package as `ecommerce.v1`
-- Add `ecommerce.v2` when breaking changes accumulate

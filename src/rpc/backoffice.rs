@@ -39,7 +39,7 @@ pub async fn list_variants(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::ListVariantsAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListVariantsAdminRequest>(&headers, body)?;
-    let variants =
+    let (variants, variant_axes) =
         product::service::list_variants_admin(&state, req.tenant, req.store, req.product_id)
             .await?;
     Ok((
@@ -49,6 +49,7 @@ pub async fn list_variants(
             page: Some(pb::PageResult {
                 next_page_token: String::new(),
             }),
+            variant_axes,
         }),
     ))
 }

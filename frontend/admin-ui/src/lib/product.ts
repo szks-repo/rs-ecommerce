@@ -1,5 +1,6 @@
 import { create } from "@bufbuild/protobuf";
 import { createServiceClient } from "@/lib/connect";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import {
   BackofficeService,
   ListProductsAdminRequestSchema,
@@ -49,6 +50,8 @@ export async function createProduct(params: {
   description: string;
   status: string;
   taxRuleId?: string;
+  saleStartAt?: Timestamp;
+  saleEndAt?: Timestamp;
   variantAxes?: { name: string; position?: number }[];
   defaultVariant?: {
     sku: string;
@@ -92,6 +95,8 @@ export async function createProduct(params: {
     description: string;
     status: string;
     taxRuleId: string;
+    saleStartAt?: Timestamp;
+    saleEndAt?: Timestamp;
     variantAxes: { name: string; position: number }[];
     defaultVariant?: {
       sku: string;
@@ -106,6 +111,8 @@ export async function createProduct(params: {
     description: params.description,
     status: params.status,
     taxRuleId: params.taxRuleId || "",
+    saleStartAt: params.saleStartAt,
+    saleEndAt: params.saleEndAt,
     variantAxes: variantAxes.map((axis, index) => ({
       name: axis.name,
       position: axis.position ?? index + 1,
@@ -140,6 +147,9 @@ export async function updateProduct(params: {
   description: string;
   status: string;
   taxRuleId?: string;
+  saleStartAt?: Timestamp;
+  saleEndAt?: Timestamp;
+  applyTaxRuleToVariants?: boolean;
 }) {
   return client.updateProduct(
     create(UpdateProductRequestSchema, {
@@ -148,6 +158,9 @@ export async function updateProduct(params: {
       description: params.description,
       status: params.status,
       taxRuleId: params.taxRuleId || "",
+      saleStartAt: params.saleStartAt,
+      saleEndAt: params.saleEndAt,
+      applyTaxRuleToVariants: Boolean(params.applyTaxRuleToVariants),
     })
   );
 }
@@ -160,6 +173,7 @@ export async function createVariant(params: {
   compareAtAmount?: number;
   currency: string;
   status: string;
+  axisValues?: { name: string; value: string }[];
 }) {
   return client.createVariant(
     create(CreateVariantRequestSchema, {
@@ -172,6 +186,7 @@ export async function createVariant(params: {
           ? { amount: BigInt(params.compareAtAmount), currency: params.currency }
           : undefined,
       status: params.status,
+      axisValues: params.axisValues ?? [],
     })
   );
 }
@@ -228,7 +243,7 @@ export async function createMediaAsset(params: {
   bucket?: string;
   objectKey?: string;
   contentType?: string;
-  sizeBytes?: number;
+  sizeBytes?: number | bigint;
 }) {
   return client.createMediaAsset(
     create(CreateMediaAssetRequestSchema, {
@@ -238,7 +253,8 @@ export async function createMediaAsset(params: {
         bucket: params.bucket || "",
         objectKey: params.objectKey || "",
         contentType: params.contentType || "",
-        sizeBytes: params.sizeBytes ?? 0,
+        sizeBytes:
+          typeof params.sizeBytes === "bigint" ? params.sizeBytes : BigInt(params.sizeBytes ?? 0),
       },
     })
   );
@@ -247,13 +263,14 @@ export async function createMediaAsset(params: {
 export async function createMediaUploadUrl(params: {
   filename: string;
   contentType?: string;
-  sizeBytes?: number;
+  sizeBytes?: number | bigint;
 }) {
   return client.createMediaUploadUrl(
     create(CreateMediaUploadUrlRequestSchema, {
       filename: params.filename,
       contentType: params.contentType || "",
-      sizeBytes: params.sizeBytes ?? 0,
+      sizeBytes:
+        typeof params.sizeBytes === "bigint" ? params.sizeBytes : BigInt(params.sizeBytes ?? 0),
     })
   );
 }
@@ -272,7 +289,7 @@ export async function createDigitalAsset(params: {
   bucket: string;
   objectKey: string;
   contentType?: string;
-  sizeBytes?: number;
+  sizeBytes?: number | bigint;
 }) {
   return client.createDigitalAsset(
     create(CreateDigitalAssetRequestSchema, {
@@ -282,7 +299,8 @@ export async function createDigitalAsset(params: {
         bucket: params.bucket,
         objectKey: params.objectKey,
         contentType: params.contentType || "",
-        sizeBytes: params.sizeBytes ?? 0,
+        sizeBytes:
+          typeof params.sizeBytes === "bigint" ? params.sizeBytes : BigInt(params.sizeBytes ?? 0),
       },
     })
   );
@@ -292,14 +310,15 @@ export async function createDigitalUploadUrl(params: {
   skuId: string;
   filename: string;
   contentType?: string;
-  sizeBytes?: number;
+  sizeBytes?: number | bigint;
 }) {
   return client.createDigitalUploadUrl(
     create(CreateDigitalUploadUrlRequestSchema, {
       skuId: params.skuId,
       filename: params.filename,
       contentType: params.contentType || "",
-      sizeBytes: params.sizeBytes ?? 0,
+      sizeBytes:
+        typeof params.sizeBytes === "bigint" ? params.sizeBytes : BigInt(params.sizeBytes ?? 0),
     })
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,18 +17,38 @@ import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useApiCall } from "@/lib/use-api-call";
 
-export default function VariantCreateForm() {
-  const [productId, setProductId] = useState("");
+type VariantCreateFormProps = {
+  productId?: string;
+  variantAxes?: { name: string; position?: number }[];
+  onCreated?: () => void;
+};
+
+export default function VariantCreateForm({
+  productId: initialProductId,
+  variantAxes = [],
+  onCreated,
+}: VariantCreateFormProps) {
+  const [productId, setProductId] = useState(initialProductId ?? "");
   const [sku, setSku] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
   const [priceAmount, setPriceAmount] = useState("0");
   const [compareAtAmount, setCompareAtAmount] = useState("");
   const [status, setStatus] = useState("active");
+  const [axisValues, setAxisValues] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
   const { push } = useToast();
   const { notifyError } = useApiCall();
+  const axes = variantAxes
+    .slice()
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
+  useEffect(() => {
+    if (initialProductId) {
+      setProductId(initialProductId);
+    }
+  }, [initialProductId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -45,6 +65,13 @@ export default function VariantCreateForm() {
       if (typeof compareAt === "number" && !Number.isFinite(compareAt)) {
         throw new Error("compare_at_amount must be a number.");
       }
+      const axisValuesPayload = axes.map((axis) => {
+        const value = axisValues[axis.name]?.trim() ?? "";
+        if (!value) {
+          throw new Error(`${axis.name} is required.`);
+        }
+        return { name: axis.name, value };
+      });
       const data = await createVariant({
         productId,
         sku,
@@ -53,6 +80,7 @@ export default function VariantCreateForm() {
         compareAtAmount: compareAt,
         currency: "JPY",
         status,
+        axisValues: axisValuesPayload,
       });
       push({
         variant: "success",
@@ -65,6 +93,8 @@ export default function VariantCreateForm() {
       setPriceAmount("0");
       setCompareAtAmount("");
       setStatus("active");
+      setAxisValues({});
+      onCreated?.();
     } catch (err) {
       notifyError(err, "Create failed", "Unknown error");
     } finally {
@@ -82,19 +112,39 @@ export default function VariantCreateForm() {
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={handleSubmit}>
-          <div className="space-y-2">
-            <Label htmlFor="variantProductId">Product ID</Label>
-            <Input
-              id="variantProductId"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              required
-            />
-          </div>
+          {initialProductId ? null : (
+            <div className="space-y-2">
+              <Label htmlFor="variantProductId">Product ID</Label>
+              <Input
+                id="variantProductId"
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+                required
+              />
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="variantSku">SKU</Label>
             <Input id="variantSku" value={sku} onChange={(e) => setSku(e.target.value)} required />
           </div>
+          {axes.length > 0 ? (
+            <div className="grid gap-4 md:grid-cols-2">
+              {axes.map((axis) => (
+                <div key={axis.name} className="space-y-2">
+                  <Label htmlFor={`variantAxis-${axis.name}`}>{axis.name}</Label>
+                  <Input
+                    id={`variantAxis-${axis.name}`}
+                    value={axisValues[axis.name] ?? ""}
+                    onChange={(e) =>
+                      setAxisValues((prev) => ({ ...prev, [axis.name]: e.target.value }))
+                    }
+                    placeholder={`${axis.name} value`}
+                    required
+                  />
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="variantFulfillment">Fulfillment Type</Label>
             <Select value={fulfillmentType} onValueChange={setFulfillmentType}>

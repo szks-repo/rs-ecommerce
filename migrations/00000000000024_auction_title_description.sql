@@ -1,3 +1,0 @@
-ALTER TABLE auctions
-    ADD COLUMN IF NOT EXISTS title text NOT NULL DEFAULT '',
-    ADD COLUMN IF NOT EXISTS description text NOT NULL DEFAULT '';

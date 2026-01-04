@@ -19,6 +19,7 @@ import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
 import { useApiCall } from "@/lib/use-api-call";
+import { dateInputToTimestamp } from "@/lib/time";
 
 export default function ProductCreateForm() {
   const [title, setTitle] = useState("");
@@ -26,6 +27,8 @@ export default function ProductCreateForm() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("active");
   const [taxRuleId, setTaxRuleId] = useState("__default__");
+  const [saleStartDate, setSaleStartDate] = useState("");
+  const [saleEndDate, setSaleEndDate] = useState("");
   const [variantAxes, setVariantAxes] = useState("");
   const [sku, setSku] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
@@ -64,6 +67,16 @@ export default function ProductCreateForm() {
         .split(",")
         .map((axis) => axis.trim())
         .filter((axis) => axis.length > 0);
+      const saleStartAt = dateInputToTimestamp(saleStartDate, false);
+      const saleEndAt = dateInputToTimestamp(saleEndDate, true);
+      const hasSaleStart = Boolean(saleStartAt);
+      const hasSaleEnd = Boolean(saleEndAt);
+      if (hasSaleStart !== hasSaleEnd) {
+        throw new Error("sale_start_at and sale_end_at must both be set or both be empty.");
+      }
+      if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
+        throw new Error("sale_end_at must be later than sale_start_at.");
+      }
       let defaultVariant = undefined as
         | {
             sku: string;
@@ -106,6 +119,8 @@ export default function ProductCreateForm() {
         description,
         status,
         taxRuleId: taxRuleId === "__default__" ? undefined : taxRuleId || undefined,
+        saleStartAt,
+        saleEndAt,
         variantAxes: axes.map((name, index) => ({ name, position: index + 1 })),
       };
       if (defaultVariant) {
@@ -122,6 +137,8 @@ export default function ProductCreateForm() {
       setDescription("");
       setStatus("active");
       setTaxRuleId("__default__");
+      setSaleStartDate("");
+      setSaleEndDate("");
       setVariantAxes("");
       setSku("");
       setFulfillmentType("physical");
@@ -202,6 +219,29 @@ export default function ProductCreateForm() {
                 ))}
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="productSaleStart">Sale start date (optional)</Label>
+              <Input
+                id="productSaleStart"
+                type="date"
+                value={saleStartDate}
+                onChange={(e) => setSaleStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="productSaleEnd">Sale end date (optional)</Label>
+              <Input
+                id="productSaleEnd"
+                type="date"
+                value={saleEndDate}
+                onChange={(e) => setSaleEndDate(e.target.value)}
+              />
+            </div>
+            <div className="text-xs text-neutral-500 md:col-span-2">
+              If set, both start and end dates are required. Leave both empty to keep it always purchasable.
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="productVariantAxes">Variant Axes (comma separated)</Label>

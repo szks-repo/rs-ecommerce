@@ -61,7 +61,7 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - status (text)
 - created_at, updated_at
 
-## Product (v2)
+## Product
 
 ### products
 - id (uuid, pk)
@@ -101,7 +101,7 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 - status (text)
 - created_at, updated_at
 
-## Inventory (v2)
+## Inventory
 
 ### inventory_stocks
 - id (uuid, pk)

@@ -21,6 +21,41 @@ export function formatDateWithStoreTz(date: Date): string {
   return date.toLocaleString("ja-JP", { timeZone: getStoreTimeZone() });
 }
 
+export type TimestampLike = {
+  seconds: bigint | number | string;
+  nanos: number;
+};
+
+export function timestampToDateInput(ts?: TimestampLike): string {
+  if (!ts) {
+    return "";
+  }
+  const sec = typeof ts.seconds === "bigint" ? Number(ts.seconds) : Number(ts.seconds);
+  if (!Number.isFinite(sec)) {
+    return "";
+  }
+  const date = new Date(sec * 1000);
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: getStoreTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return formatter.format(date);
+}
+
+export function dateInputToTimestamp(
+  dateInput: string,
+  endOfDay: boolean
+): TimestampLike | undefined {
+  const date = toUtcDateFromStoreDateInput(dateInput, endOfDay);
+  if (!date) {
+    return undefined;
+  }
+  const seconds = Math.floor(date.getTime() / 1000);
+  return { seconds: BigInt(seconds), nanos: 0 };
+}
+
 function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
   const formatter = new Intl.DateTimeFormat("en-US", {
     timeZone,

@@ -46,11 +46,18 @@ message ProductAdmin {
   google.protobuf.Timestamp updated_at = 6;
   string store_id = 7;
   string tax_rule_id = 8;
+  google.protobuf.Timestamp sale_start_at = 9;
+  google.protobuf.Timestamp sale_end_at = 10;
 }
 
 message VariantAxis {
   string name = 1;
   uint32 position = 2;
+}
+
+message VariantAxisValue {
+  string name = 1;
+  string value = 2;
 }
 
 message DefaultVariantInput {
@@ -69,6 +76,8 @@ message VariantAdmin {
   Money price = 5;
   Money compare_at = 6;
   string status = 7;
+  string tax_rule_id = 8;
+  repeated VariantAxisValue axis_values = 9;
 }
 
 message SkuAdmin {
@@ -162,6 +171,7 @@ message ListVariantsAdminRequest {
 message ListVariantsAdminResponse {
   repeated VariantAdmin variants = 1;
   PageResult page = 2;
+  repeated VariantAxis variant_axes = 3;
 }
 
 message ListSkusAdminRequest {
@@ -187,6 +197,8 @@ message CreateProductRequest {
   repeated VariantAxis variant_axes = 8;
   DefaultVariantInput default_variant = 9;
   StoreContext store = 10;
+  google.protobuf.Timestamp sale_start_at = 11;
+  google.protobuf.Timestamp sale_end_at = 12;
 }
 
 message CreateProductResponse {
@@ -202,6 +214,9 @@ message UpdateProductRequest {
   ActorContext actor = 6;
   string tax_rule_id = 7;
   StoreContext store = 10;
+  google.protobuf.Timestamp sale_start_at = 11;
+  google.protobuf.Timestamp sale_end_at = 12;
+  bool apply_tax_rule_to_variants = 13;
 }
 
 message UpdateProductResponse {
@@ -217,6 +232,7 @@ message CreateVariantRequest {
   Money compare_at = 6;
   string status = 7;
   ActorContext actor = 8;
+  repeated VariantAxisValue axis_values = 9;
 }
 
 message CreateVariantResponse {

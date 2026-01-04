@@ -1,6 +1,5 @@
 import Link from "next/link";
 import ProductCreateForm from "@/components/product-create-form";
-import VariantCreateForm from "@/components/variant-create-form";
 import { Button } from "@/components/ui/button";
 
 export default function ProductCreatePage() {
@@ -19,9 +18,8 @@ export default function ProductCreatePage() {
         </div>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6">
         <ProductCreateForm />
-        <VariantCreateForm />
       </div>
     </div>
   );

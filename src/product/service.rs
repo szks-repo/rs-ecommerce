@@ -14,6 +14,7 @@ use crate::{
         ids::{ProductId, StoreId, TenantId, nullable_uuid, parse_uuid},
         money::{money_from_parts, money_to_parts, money_to_parts_opt},
         status::{FulfillmentType, ProductStatus, VariantStatus},
+        time::{chrono_to_timestamp, timestamp_to_chrono},
     },
 };
 
@@ -107,7 +108,15 @@ pub async fn list_products_admin(
     let tenant_id = TenantId::parse(&tenant_id)?;
     let rows = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
+        SELECT id::text as id,
+               store_id::text as store_id,
+               vendor_id::text as vendor_id,
+               title,
+               description,
+               status,
+               tax_rule_id::text as tax_rule_id,
+               sale_start_at,
+               sale_end_at
         FROM products
         WHERE tenant_id = $1 AND store_id = $2
         ORDER BY created_at DESC
@@ -135,6 +144,12 @@ pub async fn list_products_admin(
             tax_rule_id: row
                 .get::<Option<String>, _>("tax_rule_id")
                 .unwrap_or_default(),
+            sale_start_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>(
+                "sale_start_at",
+            )),
+            sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>(
+                "sale_end_at",
+            )),
         })
         .collect())
 }
@@ -144,21 +159,41 @@ pub async fn list_variants_admin(
     tenant: Option<pb::TenantContext>,
     store: Option<pb::StoreContext>,
     product_id: String,
-) -> Result<Vec<pb::VariantAdmin>, (StatusCode, Json<ConnectError>)> {
+) -> Result<(Vec<pb::VariantAdmin>, Vec<pb::VariantAxis>), (StatusCode, Json<ConnectError>)> {
     let (store_id, _tenant_id) = resolve_store_context(state, store, tenant).await?;
     let store_id = StoreId::parse(&store_id)?;
     let product_id = ProductId::parse(&product_id)?;
+    let axes_rows = sqlx::query(
+        r#"
+        SELECT id, name, position
+        FROM product_variant_axes
+        WHERE product_id = $1
+        ORDER BY position ASC
+        "#,
+    )
+    .bind(product_id.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    let variant_axes = axes_rows
+        .iter()
+        .map(|row| pb::VariantAxis {
+            name: row.get::<String, _>("name"),
+            position: row.get::<i32, _>("position") as u32,
+        })
+        .collect::<Vec<_>>();
     let rows = sqlx::query(
         r#"
-        SELECT v.id::text as id,
-               v.product_id::text as product_id,
+        SELECT v.id,
+               v.product_id,
                v.sku,
                v.fulfillment_type,
                v.price_amount,
                v.price_currency,
                v.compare_at_amount,
                v.compare_at_currency,
-               v.status
+               v.status,
+               v.tax_rule_id
         FROM variants v
         JOIN products p ON p.id = v.product_id
         WHERE p.store_id = $1 AND v.product_id = $2
@@ -171,11 +206,15 @@ pub async fn list_variants_admin(
     .await
     .map_err(db::error)?;
 
-    Ok(rows
-        .into_iter()
-        .map(|row| pb::VariantAdmin {
-            id: row.get("id"),
-            product_id: row.get("product_id"),
+    let mut variants = Vec::with_capacity(rows.len());
+    let mut variant_ids = Vec::with_capacity(rows.len());
+    for row in rows {
+        let variant_id: uuid::Uuid = row.get("id");
+        let product_uuid: uuid::Uuid = row.get("product_id");
+        variant_ids.push(variant_id);
+        variants.push(pb::VariantAdmin {
+            id: variant_id.to_string(),
+            product_id: product_uuid.to_string(),
             sku: row.get("sku"),
             fulfillment_type: row.get("fulfillment_type"),
             price: Some(money_from_parts(
@@ -191,8 +230,55 @@ pub async fn list_variants_admin(
                 None => None,
             },
             status: row.get("status"),
-        })
-        .collect())
+            tax_rule_id: row
+                .get::<Option<uuid::Uuid>, _>("tax_rule_id")
+                .map(|id| id.to_string())
+                .unwrap_or_default(),
+            axis_values: Vec::new(),
+        });
+    }
+
+    if !variant_ids.is_empty() {
+        let axis_rows = sqlx::query(
+            r#"
+            SELECT vav.variant_id,
+                   ax.name as axis_name,
+                   vav.value as axis_value
+            FROM variant_axis_values vav
+            JOIN product_variant_axes ax ON ax.id = vav.axis_id
+            WHERE ax.product_id = $1
+              AND vav.variant_id = ANY($2)
+            ORDER BY ax.position ASC
+            "#,
+        )
+        .bind(product_id.as_uuid())
+        .bind(&variant_ids)
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?;
+
+        let mut axis_map: std::collections::HashMap<uuid::Uuid, Vec<pb::VariantAxisValue>> =
+            std::collections::HashMap::new();
+        for row in axis_rows {
+            let variant_id: uuid::Uuid = row.get("variant_id");
+            axis_map
+                .entry(variant_id)
+                .or_default()
+                .push(pb::VariantAxisValue {
+                    name: row.get::<String, _>("axis_name"),
+                    value: row.get::<String, _>("axis_value"),
+                });
+        }
+        for variant in variants.iter_mut() {
+            if let Ok(variant_uuid) = uuid::Uuid::parse_str(&variant.id) {
+                if let Some(values) = axis_map.remove(&variant_uuid) {
+                    variant.axis_values = values;
+                }
+            }
+        }
+    }
+
+    Ok((variants, variant_axes))
 }
 
 pub async fn list_skus_admin(
@@ -261,12 +347,38 @@ pub async fn create_product(
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let product_id = uuid::Uuid::new_v4();
     let tax_rule_id = nullable_uuid(req.tax_rule_id.clone());
+    let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
+    let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
+    if sale_start_at.is_some() ^ sale_end_at.is_some() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sale_start_at and sale_end_at must both be set or both be empty"
+                    .to_string(),
+            }),
+        ));
+    }
+    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
+        if start > end {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "sale_end_at must be later than sale_start_at".to_string(),
+                }),
+            ));
+        }
+    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
-        INSERT INTO products (id, tenant_id, store_id, vendor_id, title, description, status, tax_rule_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        INSERT INTO products (
+            id, tenant_id, store_id, vendor_id, title, description, status, tax_rule_id,
+            sale_start_at, sale_end_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         "#,
     )
     .bind(product_id)
@@ -276,7 +388,9 @@ pub async fn create_product(
     .bind(&req.title)
     .bind(&req.description)
     .bind(&status)
-    .bind(tax_rule_id)
+    .bind(tax_rule_id.clone())
+    .bind(sale_start_at.clone())
+    .bind(sale_end_at.clone())
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -354,8 +468,8 @@ pub async fn create_product(
             r#"
             INSERT INTO variants (
                 id, product_id, sku, fulfillment_type, price_amount, price_currency,
-                compare_at_amount, compare_at_currency, status
-            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+                compare_at_amount, compare_at_currency, status, tax_rule_id
+            ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
             "#,
         )
         .bind(uuid::Uuid::new_v4())
@@ -367,6 +481,7 @@ pub async fn create_product(
         .bind(compare_amount)
         .bind(compare_currency)
         .bind(&variant_status)
+        .bind(tax_rule_id)
         .execute(&mut *tx)
         .await
         .map_err(db::error)?;
@@ -381,6 +496,8 @@ pub async fn create_product(
         updated_at: None,
         store_id: store_id.clone(),
         tax_rule_id: req.tax_rule_id,
+        sale_start_at: chrono_to_timestamp(sale_start_at),
+        sale_end_at: chrono_to_timestamp(sale_end_at),
     };
 
     let _ = state
@@ -428,25 +545,71 @@ pub async fn update_product(
         .await
         .ok();
     let tax_rule_id = nullable_uuid(req.tax_rule_id.clone());
+    let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
+    let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
+    if sale_start_at.is_some() ^ sale_end_at.is_some() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sale_start_at and sale_end_at must both be set or both be empty"
+                    .to_string(),
+            }),
+        ));
+    }
+    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
+        if start > end {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "sale_end_at must be later than sale_start_at".to_string(),
+                }),
+            ));
+        }
+    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
         r#"
         UPDATE products
-        SET title = $1, description = $2, status = $3, tax_rule_id = $4, updated_at = now()
-        WHERE id = $5 AND tenant_id = $6 AND store_id = $7
+        SET title = $1,
+            description = $2,
+            status = $3,
+            tax_rule_id = $4,
+            sale_start_at = $5,
+            sale_end_at = $6,
+            updated_at = now()
+        WHERE id = $7 AND tenant_id = $8 AND store_id = $9
         "#,
     )
     .bind(&req.title)
     .bind(&req.description)
     .bind(&status)
-    .bind(tax_rule_id)
+    .bind(tax_rule_id.clone())
+    .bind(sale_start_at.clone())
+    .bind(sale_end_at.clone())
     .bind(product_uuid.as_uuid())
     .bind(tenant_uuid.as_uuid())
     .bind(store_uuid.as_uuid())
     .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
+
+    if req.apply_tax_rule_to_variants {
+        sqlx::query(
+            r#"
+            UPDATE variants
+            SET tax_rule_id = $1, updated_at = now()
+            WHERE product_id = $2
+            "#,
+        )
+        .bind(tax_rule_id)
+        .bind(product_uuid.as_uuid())
+        .execute(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+    }
 
     let product = pb::ProductAdmin {
         id: req.product_id,
@@ -457,12 +620,22 @@ pub async fn update_product(
         updated_at: None,
         store_id: store_id.clone(),
         tax_rule_id: req.tax_rule_id,
+        sale_start_at: chrono_to_timestamp(sale_start_at),
+        sale_end_at: chrono_to_timestamp(sale_end_at),
     };
 
     let mut after = product.clone();
     if let Ok(row) = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
+        SELECT id::text as id,
+               store_id::text as store_id,
+               vendor_id::text as vendor_id,
+               title,
+               description,
+               status,
+               tax_rule_id::text as tax_rule_id,
+               sale_start_at,
+               sale_end_at
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
@@ -482,6 +655,12 @@ pub async fn update_product(
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
             tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+            sale_start_at: chrono_to_timestamp(
+                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
+            ),
+            sale_end_at: chrono_to_timestamp(
+                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
+            ),
         };
     }
 
@@ -549,12 +728,85 @@ pub async fn create_variant(
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
     let sku = SkuCode::parse(&req.sku)?;
     let mut tx = state.db.begin().await.map_err(db::error)?;
+    let axes_rows = sqlx::query(
+        r#"
+        SELECT id, name, position
+        FROM product_variant_axes
+        WHERE product_id = $1
+        ORDER BY position ASC
+        "#,
+    )
+    .bind(parse_uuid(&req.product_id, "product_id")?)
+    .fetch_all(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
+    for axis_value in req.axis_values.iter() {
+        let name = axis_value.name.trim().to_lowercase();
+        let value = axis_value.value.trim();
+        if name.is_empty() || value.is_empty() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "axis_values.name and axis_values.value are required".to_string(),
+                }),
+            ));
+        }
+        if axis_value_map.insert(name, value.to_string()).is_some() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "axis_values contains duplicate axis names".to_string(),
+                }),
+            ));
+        }
+    }
+    if axes_rows.is_empty() && !req.axis_values.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "axis_values cannot be set when variant axes are not defined".to_string(),
+            }),
+        ));
+    }
+    let mut axis_values_for_response = Vec::new();
+    if !axes_rows.is_empty() {
+        for row in axes_rows.iter() {
+            let axis_name = row.get::<String, _>("name");
+            let key = axis_name.trim().to_lowercase();
+            let value = axis_value_map.get(&key).cloned().unwrap_or_default();
+            if value.is_empty() {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::InvalidArgument,
+                        message: format!("axis value is required for {}", axis_name),
+                    }),
+                ));
+            }
+            axis_values_for_response.push(pb::VariantAxisValue {
+                name: axis_name.clone(),
+                value: value.clone(),
+            });
+        }
+    }
+    let product_tax_rule_id = sqlx::query(
+        "SELECT tax_rule_id FROM products WHERE id = $1",
+    )
+    .bind(parse_uuid(&req.product_id, "product_id")?)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db::error)?
+    .and_then(|row| row.get::<Option<uuid::Uuid>, _>("tax_rule_id"));
     sqlx::query(
         r#"
         INSERT INTO variants (
             id, product_id, sku, fulfillment_type, price_amount, price_currency,
-            compare_at_amount, compare_at_currency, status
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+            compare_at_amount, compare_at_currency, status, tax_rule_id
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         "#,
     )
     .bind(variant_id)
@@ -566,9 +818,31 @@ pub async fn create_variant(
     .bind(compare_amount)
     .bind(compare_currency)
     .bind(&status)
+    .bind(product_tax_rule_id)
     .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
+
+    for row in axes_rows.iter() {
+        let axis_id: uuid::Uuid = row.get("id");
+        let axis_name = row.get::<String, _>("name");
+        let key = axis_name.trim().to_lowercase();
+        if let Some(value) = axis_value_map.get(&key) {
+            sqlx::query(
+                r#"
+                INSERT INTO variant_axis_values (id, variant_id, axis_id, value)
+                VALUES ($1, $2, $3, $4)
+                "#,
+            )
+            .bind(uuid::Uuid::new_v4())
+            .bind(variant_id)
+            .bind(axis_id)
+            .bind(value)
+            .execute(tx.as_mut())
+            .await
+            .map_err(db::error)?;
+        }
+    }
 
     let variant = pb::VariantAdmin {
         id: variant_id.to_string(),
@@ -578,6 +852,8 @@ pub async fn create_variant(
         price: req.price,
         compare_at: req.compare_at,
         status,
+        tax_rule_id: product_tax_rule_id.map(|id| id.to_string()).unwrap_or_default(),
+        axis_values: axis_values_for_response,
     };
 
     audit::record_tx(
@@ -660,14 +936,47 @@ pub async fn update_variant(
     .await
     .map_err(db::error)?;
 
+    let row = sqlx::query(
+        r#"
+        SELECT id::text as id,
+               product_id::text as product_id,
+               sku,
+               fulfillment_type,
+               price_amount,
+               price_currency,
+               compare_at_amount,
+               compare_at_currency,
+               status,
+               tax_rule_id::text as tax_rule_id
+        FROM variants
+        WHERE id = $1
+        "#,
+    )
+    .bind(parse_uuid(&req.variant_id, "variant_id")?)
+    .fetch_one(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+
     let variant = pb::VariantAdmin {
-        id: req.variant_id,
-        product_id: String::new(),
-        sku: String::new(),
-        fulfillment_type: fulfillment_type.unwrap_or_default(),
-        price: req.price,
-        compare_at: req.compare_at,
-        status,
+        id: row.get("id"),
+        product_id: row.get("product_id"),
+        sku: row.get("sku"),
+        fulfillment_type: row.get("fulfillment_type"),
+        price: Some(money_from_parts(
+            row.get::<i64, _>("price_amount"),
+            row.get::<String, _>("price_currency"),
+        )),
+        compare_at: match row.get::<Option<i64>, _>("compare_at_amount") {
+            Some(amount) => Some(money_from_parts(
+                amount,
+                row.get::<Option<String>, _>("compare_at_currency")
+                    .unwrap_or_default(),
+            )),
+            None => None,
+        },
+        status: row.get("status"),
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+        axis_values: Vec::new(),
     };
 
     audit::record_tx(
@@ -792,7 +1101,15 @@ async fn fetch_product_admin(
     let product_uuid = ProductId::parse(product_id)?;
     let row = sqlx::query(
         r#"
-        SELECT id::text as id, store_id::text as store_id, vendor_id::text as vendor_id, title, description, status, tax_rule_id::text as tax_rule_id
+        SELECT id::text as id,
+               store_id::text as store_id,
+               vendor_id::text as vendor_id,
+               title,
+               description,
+               status,
+               tax_rule_id::text as tax_rule_id,
+               sale_start_at,
+               sale_end_at
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
@@ -817,6 +1134,12 @@ async fn fetch_product_admin(
         tax_rule_id: row
             .get::<Option<String>, _>("tax_rule_id")
             .unwrap_or_default(),
+        sale_start_at: chrono_to_timestamp(
+            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
+        ),
+        sale_end_at: chrono_to_timestamp(
+            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
+        ),
     })
 }
 
