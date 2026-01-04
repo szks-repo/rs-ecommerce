@@ -52,6 +52,8 @@ export async function createProduct(params: {
   taxRuleId?: string;
   saleStartAt?: Timestamp;
   saleEndAt?: Timestamp;
+  primaryCategoryId: string;
+  categoryIds: string[];
   variantAxes?: { name: string; position?: number }[];
   defaultVariant?: {
     sku: string;
@@ -98,6 +100,8 @@ export async function createProduct(params: {
     taxRuleId: string;
     saleStartAt?: Timestamp;
     saleEndAt?: Timestamp;
+    primaryCategoryId: string;
+    categoryIds: string[];
     variantAxes: { name: string; position: number }[];
     defaultVariant?: {
       sku: string;
@@ -115,6 +119,8 @@ export async function createProduct(params: {
     taxRuleId: params.taxRuleId || "",
     saleStartAt: params.saleStartAt,
     saleEndAt: params.saleEndAt,
+    primaryCategoryId: params.primaryCategoryId,
+    categoryIds: params.categoryIds,
     variantAxes: variantAxes.map((axis, index) => ({
       name: axis.name,
       position: axis.position ?? index + 1,
@@ -153,6 +159,8 @@ export async function updateProduct(params: {
   saleStartAt?: Timestamp;
   saleEndAt?: Timestamp;
   applyTaxRuleToVariants?: boolean;
+  primaryCategoryId: string;
+  categoryIds: string[];
 }) {
   return client.updateProduct(
     create(UpdateProductRequestSchema, {
@@ -164,6 +172,8 @@ export async function updateProduct(params: {
       saleStartAt: params.saleStartAt,
       saleEndAt: params.saleEndAt,
       applyTaxRuleToVariants: Boolean(params.applyTaxRuleToVariants),
+      primaryCategoryId: params.primaryCategoryId,
+      categoryIds: params.categoryIds,
     })
   );
 }

@@ -340,6 +340,40 @@ CREATE INDEX IF NOT EXISTS products_tax_rule_id_idx
 CREATE INDEX IF NOT EXISTS products_sale_period_idx
     ON products (sale_start_at, sale_end_at);
 
+CREATE TABLE IF NOT EXISTS product_categories (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL REFERENCES tenants(id),
+    store_id uuid NOT NULL REFERENCES stores(id),
+    parent_id uuid REFERENCES product_categories(id),
+    name text NOT NULL,
+    slug text NOT NULL,
+    description text,
+    status text NOT NULL DEFAULT 'active',
+    position int NOT NULL DEFAULT 0,
+    visibility_json jsonb,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (store_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS product_categories_store_parent_pos_idx
+    ON product_categories (store_id, parent_id, position);
+CREATE INDEX IF NOT EXISTS product_categories_store_status_idx
+    ON product_categories (store_id, status);
+
+CREATE TABLE IF NOT EXISTS product_category_closure (
+    store_id uuid NOT NULL REFERENCES stores(id),
+    ancestor_id uuid NOT NULL REFERENCES product_categories(id) ON DELETE CASCADE,
+    descendant_id uuid NOT NULL REFERENCES product_categories(id) ON DELETE CASCADE,
+    depth int NOT NULL,
+    PRIMARY KEY (ancestor_id, descendant_id)
+);
+
+CREATE INDEX IF NOT EXISTS product_category_closure_store_ancestor_idx
+    ON product_category_closure (store_id, ancestor_id);
+CREATE INDEX IF NOT EXISTS product_category_closure_store_descendant_idx
+    ON product_category_closure (store_id, descendant_id);
+
 CREATE TABLE IF NOT EXISTS product_locations (
     product_id uuid NOT NULL REFERENCES products(id),
     location_id uuid NOT NULL REFERENCES store_locations(id),
@@ -380,6 +414,21 @@ CREATE UNIQUE INDEX IF NOT EXISTS product_skus_product_sku_idx
     ON product_skus (product_id, sku);
 CREATE INDEX IF NOT EXISTS product_skus_tax_rule_id_idx
     ON product_skus (tax_rule_id);
+
+CREATE TABLE IF NOT EXISTS product_category_links (
+    product_id uuid NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    category_id uuid NOT NULL REFERENCES product_categories(id) ON DELETE CASCADE,
+    is_primary bool NOT NULL DEFAULT false,
+    position int NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (product_id, category_id)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS product_category_links_primary_idx
+    ON product_category_links (product_id)
+    WHERE is_primary = true;
+CREATE INDEX IF NOT EXISTS product_category_links_category_idx
+    ON product_category_links (category_id, position);
 
 CREATE TABLE IF NOT EXISTS product_variant_axes (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

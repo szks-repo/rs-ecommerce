@@ -15,11 +15,15 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { label: "Overview", href: "/admin" },
   { label: "Orders", href: "/admin/orders", permission: "orders.read" },
-  { label: "Products", href: "/admin/products", permission: "catalog.read" },
   { label: "Auctions", href: "/admin/auctions", permission: "auction.read" },
   { label: "Customers", href: "/admin/customers", permission: "customers.read" },
-  { label: "Inventory", href: "/admin/inventory", permission: "catalog.read" },
   { label: "Audit Logs", href: "/admin/audit", permission: "audit.read" },
+];
+
+const CATALOG_ITEMS: NavItem[] = [
+  { label: "Products", href: "/admin/products", permission: "catalog.read" },
+  { label: "Categories", href: "/admin/categories", permission: "catalog.read" },
+  { label: "Inventory", href: "/admin/inventory", permission: "catalog.read" },
 ];
 
 const SETTINGS_ITEMS: NavItem[] = [
@@ -35,8 +39,15 @@ const IDENTITY_ITEMS: NavItem[] = [
 export default function AdminSidebarNav() {
   const pathname = usePathname();
   const permissions = usePermissions();
+  const [catalogOpen, setCatalogOpen] = useState(() => pathname?.startsWith("/admin/products") ?? false);
   const [settingsOpen, setSettingsOpen] = useState(() => pathname?.startsWith("/admin/settings") ?? false);
   const [identityOpen, setIdentityOpen] = useState(() => pathname?.startsWith("/admin/identity") ?? false);
+
+  useEffect(() => {
+    if (pathname?.startsWith("/admin/products") || pathname?.startsWith("/admin/categories") || pathname?.startsWith("/admin/inventory")) {
+      setCatalogOpen(true);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (pathname?.startsWith("/admin/settings")) {
@@ -77,6 +88,37 @@ export default function AdminSidebarNav() {
           </a>
         );
       })}
+      {CATALOG_ITEMS.some((item) => permissions.has(item.permission)) && (
+        <div className="space-y-1">
+          <button
+            type="button"
+            onClick={() => setCatalogOpen((prev) => !prev)}
+            className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-neutral-700 hover:bg-neutral-100"
+            aria-expanded={catalogOpen}
+          >
+            <span>Catalog</span>
+            <span className={`text-xs text-neutral-400 transition ${catalogOpen ? "rotate-90" : ""}`}>›</span>
+          </button>
+          {catalogOpen && (
+            <div className="space-y-1 pl-2">
+              {CATALOG_ITEMS.filter((item) => permissions.has(item.permission)).map((item) => {
+                const isActive = pathname?.startsWith(item.href);
+                return (
+                  <a
+                    key={item.href}
+                    className={`block rounded-lg px-3 py-2 text-xs ${
+                      isActive ? "bg-neutral-100 text-neutral-900" : "text-neutral-600 hover:bg-neutral-100"
+                    }`}
+                    href={item.href}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
       {SETTINGS_ITEMS.some((item) => permissions.has(item.permission)) && (
         <div className="space-y-1">
           <button

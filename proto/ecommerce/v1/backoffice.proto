@@ -9,6 +9,11 @@ service BackofficeService {
   rpc ListProducts(ListProductsAdminRequest) returns (ListProductsAdminResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
+  rpc ListCategories(ListCategoriesAdminRequest) returns (ListCategoriesAdminResponse);
+  rpc CreateCategory(CreateCategoryRequest) returns (CreateCategoryResponse);
+  rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
+  rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
+  rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse);
 
   rpc ListVariants(ListVariantsAdminRequest) returns (ListVariantsAdminResponse);
   rpc ListSkus(ListSkusAdminRequest) returns (ListSkusAdminResponse);
@@ -48,6 +53,8 @@ message ProductAdmin {
   string tax_rule_id = 8;
   google.protobuf.Timestamp sale_start_at = 9;
   google.protobuf.Timestamp sale_end_at = 10;
+  string primary_category_id = 11;
+  repeated string category_ids = 12;
 }
 
 message VariantAxis {
@@ -202,6 +209,8 @@ message CreateProductRequest {
   StoreContext store = 10;
   google.protobuf.Timestamp sale_start_at = 11;
   google.protobuf.Timestamp sale_end_at = 12;
+  string primary_category_id = 13;
+  repeated string category_ids = 14;
 }
 
 message CreateProductResponse {
@@ -220,10 +229,85 @@ message UpdateProductRequest {
   google.protobuf.Timestamp sale_start_at = 11;
   google.protobuf.Timestamp sale_end_at = 12;
   bool apply_tax_rule_to_variants = 13;
+  string primary_category_id = 14;
+  repeated string category_ids = 15;
 }
 
 message UpdateProductResponse {
   ProductAdmin product = 1;
+}
+
+message Category {
+  string id = 1;
+  string store_id = 2;
+  string name = 3;
+  string slug = 4;
+  string description = 5;
+  string status = 6;
+  string parent_id = 7;
+  int32 position = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message CategoryInput {
+  string name = 1;
+  string slug = 2;
+  string description = 3;
+  string status = 4;
+  string parent_id = 5;
+  int32 position = 6;
+}
+
+message ListCategoriesAdminRequest {
+  StoreContext store = 1;
+  string status = 2;
+}
+
+message ListCategoriesAdminResponse {
+  repeated Category categories = 1;
+}
+
+message CreateCategoryRequest {
+  StoreContext store = 1;
+  CategoryInput category = 2;
+  ActorContext actor = 3;
+}
+
+message CreateCategoryResponse {
+  Category category = 1;
+}
+
+message UpdateCategoryRequest {
+  StoreContext store = 1;
+  string category_id = 2;
+  CategoryInput category = 3;
+  ActorContext actor = 4;
+}
+
+message UpdateCategoryResponse {
+  Category category = 1;
+}
+
+message DeleteCategoryRequest {
+  StoreContext store = 1;
+  string category_id = 2;
+  ActorContext actor = 3;
+}
+
+message DeleteCategoryResponse {
+  bool deleted = 1;
+}
+
+message ReorderCategoriesRequest {
+  StoreContext store = 1;
+  string parent_id = 2;
+  repeated string ordered_ids = 3;
+  ActorContext actor = 4;
+}
+
+message ReorderCategoriesResponse {
+  repeated Category categories = 1;
 }
 
 message CreateVariantRequest {

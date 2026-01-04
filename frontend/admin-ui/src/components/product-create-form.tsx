@@ -22,6 +22,9 @@ import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
 import { useApiCall } from "@/lib/use-api-call";
 import { dateInputToTimestamp } from "@/lib/time";
 import { getSkuCodeRegex, validateSkuCode } from "@/lib/sku-code";
+import { listCategoriesAdmin } from "@/lib/category";
+import type { Category } from "@/gen/ecommerce/v1/backoffice_pb";
+import { categoryLabel, flattenCategories } from "@/lib/category-utils";
 
 export default function ProductCreateForm() {
   const router = useRouter();
@@ -43,6 +46,9 @@ export default function ProductCreateForm() {
   const [compareAtAmount, setCompareAtAmount] = useState("");
   const [variantStatus, setVariantStatus] = useState("active");
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [primaryCategoryId, setPrimaryCategoryId] = useState("");
+  const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
   const { notifyError } = useApiCall();
@@ -82,6 +88,19 @@ export default function ProductCreateForm() {
   }, []);
 
   useEffect(() => {
+    if (!getActiveAccessToken()) {
+      return;
+    }
+    listCategoriesAdmin()
+      .then((data) => {
+        setCategories(data.categories ?? []);
+      })
+      .catch(() => {
+        setCategories([]);
+      });
+  }, []);
+
+  useEffect(() => {
     if (!sku.trim()) {
       setSkuError(null);
       return;
@@ -101,9 +120,12 @@ export default function ProductCreateForm() {
       if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
         throw new Error("sale_end_at must be later than sale_start_at.");
       }
+      const normalizedPrimary =
+        primaryCategoryId || additionalCategoryIds[0] || "";
       let defaultVariant = undefined as
         | {
             sku: string;
+            janCode?: string;
             fulfillmentType: string;
             priceAmount: number;
             compareAtAmount?: number;
@@ -149,6 +171,13 @@ export default function ProductCreateForm() {
         taxRuleId: taxRuleId === "__default__" ? undefined : taxRuleId || undefined,
         saleStartAt,
         saleEndAt,
+        primaryCategoryId: normalizedPrimary,
+        categoryIds: normalizedPrimary
+          ? [
+              normalizedPrimary,
+              ...additionalCategoryIds.filter((id) => id !== normalizedPrimary),
+            ]
+          : [],
         variantAxes: axes.map((name, index) => ({ name, position: index + 1 })),
       };
       if (defaultVariant) {
@@ -168,6 +197,8 @@ export default function ProductCreateForm() {
       setTaxRuleId("__default__");
       setSaleStartDate("");
       setSaleEndDate("");
+      setPrimaryCategoryId("");
+      setAdditionalCategoryIds([]);
       setVariantAxes([]);
       setNewAxis("");
       setSku("");
@@ -193,6 +224,58 @@ export default function ProductCreateForm() {
       </CardHeader>
       <CardContent>
         <form className="grid gap-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="productPrimaryCategory">Primary Category (optional)</Label>
+            <Select value={primaryCategoryId} onValueChange={setPrimaryCategoryId}>
+              <SelectTrigger id="productPrimaryCategory" className="bg-white">
+                <SelectValue placeholder="Select primary category" />
+              </SelectTrigger>
+              <SelectContent>
+                {flattenCategories(categories).map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {categoryLabel(category)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {categories.length === 0 && (
+              <p className="text-xs text-neutral-500">
+                No categories yet. Create one in the Categories menu.
+              </p>
+            )}
+            <p className="text-xs text-neutral-500">
+              Categories are optional. If you choose additional categories, the first one becomes
+              the primary category unless you pick one here.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Additional Categories (optional)</Label>
+            <div className="grid gap-2 rounded-md border border-neutral-200 p-3 text-sm text-neutral-600">
+              {flattenCategories(categories).map((category) => (
+                <label key={category.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={additionalCategoryIds.includes(category.id)}
+                    onChange={(event) => {
+                      setAdditionalCategoryIds((prev) => {
+                        if (event.target.checked) {
+                          return [...prev, category.id];
+                        }
+                        return prev.filter((id) => id !== category.id);
+                      });
+                    }}
+                  />
+                  <span>{categoryLabel(category)}</span>
+                </label>
+              ))}
+              {categories.length === 0 && (
+                <span className="text-xs text-neutral-500">
+                  Register categories to assign them here.
+                </span>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="productTitle">Title</Label>
             <Input

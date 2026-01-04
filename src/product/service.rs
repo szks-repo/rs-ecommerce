@@ -116,7 +116,14 @@ pub async fn list_products_admin(
                status,
                tax_rule_id::text as tax_rule_id,
                sale_start_at,
-               sale_end_at
+               sale_end_at,
+               (SELECT category_id::text
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id AND pc.is_primary = true
+                LIMIT 1) as primary_category_id,
+               (SELECT array_agg(category_id::text ORDER BY position)
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id) as category_ids
         FROM products
         WHERE tenant_id = $1 AND store_id = $2
         ORDER BY created_at DESC
@@ -150,6 +157,12 @@ pub async fn list_products_admin(
             sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>(
                 "sale_end_at",
             )),
+            primary_category_id: row
+                .get::<Option<String>, _>("primary_category_id")
+                .unwrap_or_default(),
+            category_ids: row
+                .get::<Option<Vec<String>>, _>("category_ids")
+                .unwrap_or_default(),
         })
         .collect())
 }
@@ -354,6 +367,8 @@ pub async fn create_product(
     let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
     let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
+    let (primary_category_id, category_ids) =
+        normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
         if start > end {
             return Err((
@@ -366,6 +381,7 @@ pub async fn create_product(
         }
     }
     let mut tx = state.db.begin().await.map_err(db::error)?;
+    ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
         r#"
         INSERT INTO products (
@@ -388,6 +404,25 @@ pub async fn create_product(
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
+
+    for (idx, category_id) in category_ids.iter().enumerate() {
+        let category_uuid = parse_uuid(category_id, "category_id")?;
+        let is_primary = !primary_category_id.is_empty() && category_id == &primary_category_id;
+        sqlx::query(
+            r#"
+            INSERT INTO product_category_links (
+                product_id, category_id, is_primary, position
+            ) VALUES ($1, $2, $3, $4)
+            "#,
+        )
+        .bind(product_id)
+        .bind(category_uuid)
+        .bind(is_primary)
+        .bind((idx + 1) as i32)
+        .execute(&mut *tx)
+        .await
+        .map_err(db::error)?;
+    }
 
     if !req.variant_axes.is_empty() {
         for (idx, axis) in req.variant_axes.iter().enumerate() {
@@ -497,6 +532,8 @@ pub async fn create_product(
         tax_rule_id: req.tax_rule_id,
         sale_start_at: chrono_to_timestamp(sale_start_at),
         sale_end_at: chrono_to_timestamp(sale_end_at),
+        primary_category_id,
+        category_ids: category_ids.clone(),
     };
 
     let _ = state
@@ -530,6 +567,70 @@ pub async fn create_product(
     Ok(product)
 }
 
+fn normalize_category_ids(
+    primary_category_id: &str,
+    category_ids: Vec<String>,
+) -> Result<(String, Vec<String>), (StatusCode, Json<ConnectError>)> {
+    let primary = primary_category_id.trim();
+    let mut ordered = category_ids
+        .into_iter()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty())
+        .collect::<Vec<_>>();
+    if ordered.is_empty() && primary.is_empty() {
+        return Ok((String::new(), Vec::new()));
+    }
+    if primary.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "primary_category_id is required when category_ids are provided"
+                    .to_string(),
+            }),
+        ));
+    }
+    if ordered.is_empty() {
+        ordered.push(primary.to_string());
+    }
+    if !ordered.iter().any(|id| id == primary) {
+        ordered.insert(0, primary.to_string());
+    }
+    let mut seen = std::collections::HashSet::new();
+    ordered.retain(|id| seen.insert(id.clone()));
+    Ok((primary.to_string(), ordered))
+}
+
+async fn ensure_category_ids_exist(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    store_id: &uuid::Uuid,
+    category_ids: &[String],
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    let parsed = category_ids
+        .iter()
+        .map(|id| parse_uuid(id, "category_id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    if parsed.is_empty() {
+        return Ok(());
+    }
+    let rows = sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = ANY($2)")
+        .bind(store_id)
+        .bind(&parsed)
+        .fetch_all(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+    if rows.len() != parsed.len() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category_id is invalid".to_string(),
+            }),
+        ));
+    }
+    Ok(())
+}
+
 pub async fn update_product(
     state: &AppState,
     req: pb::UpdateProductRequest,
@@ -547,6 +648,8 @@ pub async fn update_product(
     let sale_start_at = timestamp_to_chrono(req.sale_start_at.clone());
     let sale_end_at = timestamp_to_chrono(req.sale_end_at.clone());
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
+    let (primary_category_id, category_ids) =
+        normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
         if start > end {
             return Err((
@@ -559,6 +662,7 @@ pub async fn update_product(
         }
     }
     let mut tx = state.db.begin().await.map_err(db::error)?;
+    ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
         r#"
         UPDATE products
@@ -584,6 +688,31 @@ pub async fn update_product(
     .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
+
+    sqlx::query("DELETE FROM product_category_links WHERE product_id = $1")
+        .bind(product_uuid.as_uuid())
+        .execute(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+
+    for (idx, category_id) in category_ids.iter().enumerate() {
+        let category_uuid = parse_uuid(category_id, "category_id")?;
+        let is_primary = !primary_category_id.is_empty() && category_id == &primary_category_id;
+        sqlx::query(
+            r#"
+            INSERT INTO product_category_links (
+                product_id, category_id, is_primary, position
+            ) VALUES ($1, $2, $3, $4)
+            "#,
+        )
+        .bind(product_uuid.as_uuid())
+        .bind(category_uuid)
+        .bind(is_primary)
+        .bind((idx + 1) as i32)
+        .execute(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+    }
 
     if req.apply_tax_rule_to_variants {
         sqlx::query(
@@ -611,6 +740,8 @@ pub async fn update_product(
         tax_rule_id: req.tax_rule_id,
         sale_start_at: chrono_to_timestamp(sale_start_at),
         sale_end_at: chrono_to_timestamp(sale_end_at),
+        primary_category_id: primary_category_id.clone(),
+        category_ids: category_ids.clone(),
     };
 
     let mut after = product.clone();
@@ -624,7 +755,14 @@ pub async fn update_product(
                status,
                tax_rule_id::text as tax_rule_id,
                sale_start_at,
-               sale_end_at
+               sale_end_at,
+               (SELECT category_id::text
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id AND pc.is_primary = true
+                LIMIT 1) as primary_category_id,
+               (SELECT array_agg(category_id::text ORDER BY position)
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id) as category_ids
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
@@ -650,6 +788,12 @@ pub async fn update_product(
             sale_end_at: chrono_to_timestamp(
                 row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
             ),
+            primary_category_id: row
+                .get::<Option<String>, _>("primary_category_id")
+                .unwrap_or_default(),
+            category_ids: row
+                .get::<Option<Vec<String>>, _>("category_ids")
+                .unwrap_or_default(),
         };
     }
 
@@ -682,6 +826,430 @@ pub async fn update_product(
         .await;
 
     Ok(product)
+}
+
+pub async fn list_categories_admin(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    status: String,
+) -> Result<Vec<pb::Category>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let rows = if status.trim().is_empty() {
+        sqlx::query(
+            r#"
+            SELECT id::text as id,
+                   store_id::text as store_id,
+                   name,
+                   slug,
+                   description,
+                   status,
+                   parent_id::text as parent_id,
+                   position,
+                   created_at,
+                   updated_at
+            FROM product_categories
+            WHERE store_id = $1
+            ORDER BY parent_id NULLS FIRST, position ASC
+            "#,
+        )
+        .bind(store_uuid.as_uuid())
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?
+    } else {
+        sqlx::query(
+            r#"
+            SELECT id::text as id,
+                   store_id::text as store_id,
+                   name,
+                   slug,
+                   description,
+                   status,
+                   parent_id::text as parent_id,
+                   position,
+                   created_at,
+                   updated_at
+            FROM product_categories
+            WHERE store_id = $1 AND status = $2
+            ORDER BY parent_id NULLS FIRST, position ASC
+            "#,
+        )
+        .bind(store_uuid.as_uuid())
+        .bind(status.trim())
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?
+    };
+    Ok(rows.into_iter().map(category_from_row).collect())
+}
+
+pub async fn create_category(
+    state: &AppState,
+    req: pb::CreateCategoryRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<pb::Category, (StatusCode, Json<ConnectError>)> {
+    let category = req.category.unwrap_or_default();
+    let (store_id, tenant_id) = resolve_store_context(state, req.store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
+    let name = category.name.trim();
+    if name.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category.name is required".to_string(),
+            }),
+        ));
+    }
+    let slug = category.slug.trim();
+    if slug.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category.slug is required".to_string(),
+            }),
+        ));
+    }
+    let status = if category.status.trim().is_empty() {
+        "active".to_string()
+    } else {
+        category.status.trim().to_string()
+    };
+    let parent_id = if category.parent_id.trim().is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&category.parent_id, "parent_id")?)
+    };
+    if let Some(parent_id) = parent_id {
+        let exists = sqlx::query(
+            "SELECT id FROM product_categories WHERE store_id = $1 AND id = $2",
+        )
+        .bind(store_uuid.as_uuid())
+        .bind(parent_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
+        if exists.is_none() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "parent_id is invalid".to_string(),
+                }),
+            ));
+        }
+    }
+    let position = if category.position > 0 {
+        category.position as i32
+    } else {
+        let row = sqlx::query(
+            "SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM product_categories WHERE store_id = $1 AND parent_id IS NOT DISTINCT FROM $2",
+        )
+        .bind(store_uuid.as_uuid())
+        .bind(parent_id)
+        .fetch_one(&state.db)
+        .await
+        .map_err(db::error)?;
+        row.get::<i64, _>("next_pos") as i32
+    };
+    let row = sqlx::query(
+        r#"
+        INSERT INTO product_categories (
+            tenant_id, store_id, parent_id, name, slug, description, status, position
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        RETURNING id::text as id,
+                  store_id::text as store_id,
+                  name,
+                  slug,
+                  description,
+                  status,
+                  parent_id::text as parent_id,
+                  position,
+                  created_at,
+                  updated_at
+        "#,
+    )
+    .bind(tenant_uuid.as_uuid())
+    .bind(store_uuid.as_uuid())
+    .bind(parent_id)
+    .bind(name)
+    .bind(slug)
+    .bind(if category.description.trim().is_empty() {
+        None
+    } else {
+        Some(category.description.trim())
+    })
+    .bind(&status)
+    .bind(position)
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+    Ok(category_from_row(row))
+}
+
+pub async fn update_category(
+    state: &AppState,
+    req: pb::UpdateCategoryRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<pb::Category, (StatusCode, Json<ConnectError>)> {
+    let category = req.category.unwrap_or_default();
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let category_uuid = parse_uuid(&req.category_id, "category_id")?;
+    let name = category.name.trim();
+    if name.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category.name is required".to_string(),
+            }),
+        ));
+    }
+    let slug = category.slug.trim();
+    if slug.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category.slug is required".to_string(),
+            }),
+        ));
+    }
+    let status = if category.status.trim().is_empty() {
+        "active".to_string()
+    } else {
+        category.status.trim().to_string()
+    };
+    let parent_id = if category.parent_id.trim().is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&category.parent_id, "parent_id")?)
+    };
+    if let Some(parent_id) = parent_id {
+        if parent_id == category_uuid {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "parent_id cannot be same as category_id".to_string(),
+                }),
+            ));
+        }
+        let exists = sqlx::query(
+            "SELECT id FROM product_categories WHERE store_id = $1 AND id = $2",
+        )
+        .bind(store_uuid.as_uuid())
+        .bind(parent_id)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
+        if exists.is_none() {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "parent_id is invalid".to_string(),
+                }),
+            ));
+        }
+    }
+    let position = if category.position > 0 {
+        Some(category.position as i32)
+    } else {
+        None
+    };
+    let row = sqlx::query(
+        r#"
+        UPDATE product_categories
+        SET name = $1,
+            slug = $2,
+            description = $3,
+            status = $4,
+            parent_id = $5,
+            position = COALESCE($6, position),
+            updated_at = now()
+        WHERE id = $7 AND store_id = $8
+        RETURNING id::text as id,
+                  store_id::text as store_id,
+                  name,
+                  slug,
+                  description,
+                  status,
+                  parent_id::text as parent_id,
+                  position,
+                  created_at,
+                  updated_at
+        "#,
+    )
+    .bind(name)
+    .bind(slug)
+    .bind(if category.description.trim().is_empty() {
+        None
+    } else {
+        Some(category.description.trim())
+    })
+    .bind(&status)
+    .bind(parent_id)
+    .bind(position)
+    .bind(category_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_one(&state.db)
+    .await
+    .map_err(db::error)?;
+    Ok(category_from_row(row))
+}
+
+pub async fn delete_category(
+    state: &AppState,
+    req: pb::DeleteCategoryRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let category_uuid = parse_uuid(&req.category_id, "category_id")?;
+    let children = sqlx::query(
+        "SELECT 1 FROM product_categories WHERE store_id = $1 AND parent_id = $2 LIMIT 1",
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(category_uuid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if children.is_some() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category has children".to_string(),
+            }),
+        ));
+    }
+    let linked = sqlx::query(
+        "SELECT 1 FROM product_category_links WHERE category_id = $1 LIMIT 1",
+    )
+    .bind(category_uuid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if linked.is_some() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "category is used by products".to_string(),
+            }),
+        ));
+    }
+    let result = sqlx::query("DELETE FROM product_categories WHERE id = $1 AND store_id = $2")
+        .bind(category_uuid)
+        .bind(store_uuid.as_uuid())
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    Ok(result.rows_affected() > 0)
+}
+
+pub async fn reorder_categories(
+    state: &AppState,
+    req: pb::ReorderCategoriesRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<Vec<pb::Category>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let ordered_ids = req
+        .ordered_ids
+        .iter()
+        .map(|id| parse_uuid(id, "category_id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    if ordered_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+    let parent_id = if req.parent_id.trim().is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.parent_id, "parent_id")?)
+    };
+    let rows = sqlx::query(
+        "SELECT id FROM product_categories WHERE store_id = $1 AND parent_id IS NOT DISTINCT FROM $2 AND id = ANY($3)",
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(parent_id)
+    .bind(&ordered_ids)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    if rows.len() != ordered_ids.len() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "ordered_ids contains invalid category".to_string(),
+            }),
+        ));
+    }
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    for (idx, category_id) in ordered_ids.iter().enumerate() {
+        sqlx::query(
+            "UPDATE product_categories SET position = $1, updated_at = now() WHERE id = $2 AND store_id = $3",
+        )
+        .bind((idx + 1) as i32)
+        .bind(category_id)
+        .bind(store_uuid.as_uuid())
+        .execute(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+    }
+    tx.commit().await.map_err(db::error)?;
+    let rows = sqlx::query(
+        r#"
+        SELECT id::text as id,
+               store_id::text as store_id,
+               name,
+               slug,
+               description,
+               status,
+               parent_id::text as parent_id,
+               position,
+               created_at,
+               updated_at
+        FROM product_categories
+        WHERE store_id = $1 AND parent_id IS NOT DISTINCT FROM $2
+        ORDER BY position ASC
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(parent_id)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    Ok(rows.into_iter().map(category_from_row).collect())
+}
+
+fn category_from_row(row: sqlx::postgres::PgRow) -> pb::Category {
+    pb::Category {
+        id: row.get::<String, _>("id"),
+        store_id: row.get::<String, _>("store_id"),
+        name: row.get("name"),
+        slug: row.get("slug"),
+        description: row
+            .get::<Option<String>, _>("description")
+            .unwrap_or_default(),
+        status: row.get("status"),
+        parent_id: row
+            .get::<Option<String>, _>("parent_id")
+            .unwrap_or_default(),
+        position: row.get::<i32, _>("position"),
+        created_at: chrono_to_timestamp(
+            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
+        ),
+        updated_at: chrono_to_timestamp(
+            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at"),
+        ),
+    }
 }
 
 pub async fn create_variant(
@@ -1112,7 +1680,14 @@ async fn fetch_product_admin(
                status,
                tax_rule_id::text as tax_rule_id,
                sale_start_at,
-               sale_end_at
+               sale_end_at,
+               (SELECT category_id::text
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id AND pc.is_primary = true
+                LIMIT 1) as primary_category_id,
+               (SELECT array_agg(category_id::text ORDER BY position)
+                FROM product_category_links pc
+                WHERE pc.product_id = products.id) as category_ids
         FROM products
         WHERE tenant_id = $1 AND store_id = $2 AND id = $3
         "#,
@@ -1143,6 +1718,12 @@ async fn fetch_product_admin(
         sale_end_at: chrono_to_timestamp(
             row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
         ),
+        primary_category_id: row
+            .get::<Option<String>, _>("primary_category_id")
+            .unwrap_or_default(),
+        category_ids: row
+            .get::<Option<Vec<String>>, _>("category_ids")
+            .unwrap_or_default(),
     })
 }
 

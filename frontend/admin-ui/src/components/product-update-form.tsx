@@ -17,11 +17,13 @@ import {
 import { updateProduct } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
-import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
+import { listCategoriesAdmin } from "@/lib/category";
+import type { Category, ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
 import { useApiCall } from "@/lib/use-api-call";
 import { dateInputToTimestamp, timestampToDateInput } from "@/lib/time";
 import { Switch } from "@/components/ui/switch";
+import { categoryLabel, flattenCategories } from "@/lib/category-utils";
 
 type ProductUpdateFormProps = {
   product?: ProductAdmin | null;
@@ -40,6 +42,9 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
   const [saleEndDate, setSaleEndDate] = useState(
     product?.saleEndAt ? timestampToDateInput(product.saleEndAt) : ""
   );
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [primaryCategoryId, setPrimaryCategoryId] = useState(product?.primaryCategoryId ?? "");
+  const [additionalCategoryIds, setAdditionalCategoryIds] = useState<string[]>([]);
   const [applyTaxRuleToSkus, setApplyTaxRuleToSkus] = useState(false);
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -59,6 +64,10 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
     setTaxRuleId(product.taxRuleId || "__default__");
     setSaleStartDate(product.saleStartAt ? timestampToDateInput(product.saleStartAt) : "");
     setSaleEndDate(product.saleEndAt ? timestampToDateInput(product.saleEndAt) : "");
+    setPrimaryCategoryId(product.primaryCategoryId ?? "");
+    setAdditionalCategoryIds(
+      (product.categoryIds ?? []).filter((id) => id && id !== product.primaryCategoryId)
+    );
   }, [product]);
 
   useEffect(() => {
@@ -74,6 +83,19 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
       });
   }, []);
 
+  useEffect(() => {
+    if (!getActiveAccessToken()) {
+      return;
+    }
+    listCategoriesAdmin()
+      .then((data) => {
+        setCategories(data.categories ?? []);
+      })
+      .catch(() => {
+        setCategories([]);
+      });
+  }, []);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -81,13 +103,13 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
+      const normalizedPrimary =
+        primaryCategoryId || additionalCategoryIds[0] || "";
       const saleStartAt = dateInputToTimestamp(saleStartDate, false);
       const saleEndAt = dateInputToTimestamp(saleEndDate, true);
-      const hasSaleStart = Boolean(saleStartAt);
-      const hasSaleEnd = Boolean(saleEndAt);
-    if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
-      throw new Error("sale_end_at must be later than sale_start_at.");
-    }
+      if (saleStartAt && saleEndAt && saleStartAt.seconds > saleEndAt.seconds) {
+        throw new Error("sale_end_at must be later than sale_start_at.");
+      }
       const data = await updateProduct({
         productId,
         title,
@@ -97,6 +119,13 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
         saleStartAt,
         saleEndAt,
         applyTaxRuleToVariants: applyTaxRuleToSkus,
+        primaryCategoryId: normalizedPrimary,
+        categoryIds: normalizedPrimary
+          ? [
+              normalizedPrimary,
+              ...additionalCategoryIds.filter((id) => id !== normalizedPrimary),
+            ]
+          : [],
       });
       push({
         variant: "success",
@@ -131,6 +160,58 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
               Select a product from the details page to edit.
             </div>
           )}
+          <div className="space-y-2">
+            <Label htmlFor="updateProductPrimaryCategory">Primary Category (optional)</Label>
+            <Select value={primaryCategoryId} onValueChange={setPrimaryCategoryId}>
+              <SelectTrigger id="updateProductPrimaryCategory" className="bg-white">
+                <SelectValue placeholder="Select primary category" />
+              </SelectTrigger>
+              <SelectContent>
+                {flattenCategories(categories).map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {categoryLabel(category)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {categories.length === 0 && (
+              <p className="text-xs text-neutral-500">
+                No categories yet. Create one in the Categories menu.
+              </p>
+            )}
+            <p className="text-xs text-neutral-500">
+              Categories are optional. If you choose additional categories, the first one becomes
+              the primary category unless you pick one here.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>Additional Categories (optional)</Label>
+            <div className="grid gap-2 rounded-md border border-neutral-200 p-3 text-sm text-neutral-600">
+              {flattenCategories(categories).map((category) => (
+                <label key={category.id} className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={additionalCategoryIds.includes(category.id)}
+                    onChange={(event) => {
+                      setAdditionalCategoryIds((prev) => {
+                        if (event.target.checked) {
+                          return [...prev, category.id];
+                        }
+                        return prev.filter((id) => id !== category.id);
+                      });
+                    }}
+                  />
+                  <span>{categoryLabel(category)}</span>
+                </label>
+              ))}
+              {categories.length === 0 && (
+                <span className="text-xs text-neutral-500">
+                  Register categories to assign them here.
+                </span>
+              )}
+            </div>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="updateProductTitle">Title</Label>
             <Input
@@ -209,7 +290,7 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
               />
             </div>
             <div className="text-xs text-neutral-500 md:col-span-2">
-              Both dates must be set together. Leave both empty to keep it always purchasable.
+              Set either date or both. Leave empty to keep it always purchasable.
             </div>
           </div>
           <div>

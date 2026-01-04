@@ -107,6 +107,84 @@ pub async fn update_product(
     ))
 }
 
+pub async fn list_categories(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListCategoriesAdminResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListCategoriesAdminRequest>(&headers, body)?;
+    let categories = product::service::list_categories_admin(&state, req.store, req.status).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListCategoriesAdminResponse { categories }),
+    ))
+}
+
+pub async fn create_category(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreateCategoryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreateCategoryRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let category = product::service::create_category(&state, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateCategoryResponse {
+            category: Some(category),
+        }),
+    ))
+}
+
+pub async fn update_category(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpdateCategoryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::UpdateCategoryRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let category = product::service::update_category(&state, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateCategoryResponse {
+            category: Some(category),
+        }),
+    ))
+}
+
+pub async fn delete_category(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::DeleteCategoryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::DeleteCategoryRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let deleted = product::service::delete_category(&state, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::DeleteCategoryResponse { deleted }),
+    ))
+}
+
+pub async fn reorder_categories(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ReorderCategoriesResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ReorderCategoriesRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let categories = product::service::reorder_categories(&state, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ReorderCategoriesResponse { categories }),
+    ))
+}
+
 pub async fn create_variant(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

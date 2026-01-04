@@ -118,6 +118,61 @@ pub fn router(state: AppState) -> Router<()> {
             })),
         )
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListCategories",
+            post(backoffice::list_categories).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogRead,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateCategory",
+            post(backoffice::create_category).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/UpdateCategory",
+            post(backoffice::update_category).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/DeleteCategory",
+            post(backoffice::delete_category).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ReorderCategories",
+            post(backoffice::reorder_categories).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                permissions::require_permission_key(
+                    state,
+                    req,
+                    next,
+                    permissions::PermissionKey::CatalogWrite,
+                )
+            })),
+        )
+        .route(
             "/rpc/ecommerce.v1.BackofficeService/ListVariants",
             post(backoffice::list_variants).route_layer(middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
                 permissions::require_permission_key(
