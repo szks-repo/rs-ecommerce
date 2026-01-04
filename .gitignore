@@ -3,8 +3,9 @@
 *.swo
 *.swx
 .DS_Store
-.idea
-.vscode
+.idea/
+.vscode/
+.serena/
 node_modules
 .next
 dist
