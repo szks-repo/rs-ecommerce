@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useToast } from "@/components/ui/toast";
+import { formatConnectError } from "@/lib/handle-error";
 
 type ToastMessage = {
   title?: string;

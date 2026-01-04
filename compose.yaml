@@ -122,6 +122,19 @@ services:
       - "1025:1025"
       - "8025:8025"
 
+  pgadmin:
+    image: dpage/pgadmin4:8.14
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+    depends_on:
+      - db
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+
   # minio:
   #   image: minio/minio:RELEASE.2024-12-18T15-07-50Z
   #   command: server /data --console-address ":9001"
@@ -150,4 +163,5 @@ volumes:
   cargo-registry:
   cargo-git:
   target:
+  pgadmin-data:
   # minio-data:
