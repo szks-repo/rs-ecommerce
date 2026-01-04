@@ -16,7 +16,7 @@ import {
 import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useApiCall } from "@/lib/use-api-call";
-import { validateSkuCode } from "@/lib/sku-code";
+import { getSkuCodeRegex, validateSkuCode } from "@/lib/sku-code";
 
 type VariantCreateFormProps = {
   productId?: string;
@@ -31,6 +31,7 @@ export default function VariantCreateForm({
 }: VariantCreateFormProps) {
   const [productId, setProductId] = useState(initialProductId ?? "");
   const [sku, setSku] = useState("");
+  const [skuError, setSkuError] = useState<string | null>(null);
   const [janCode, setJanCode] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
   const [priceAmount, setPriceAmount] = useState("0");
@@ -52,6 +53,14 @@ export default function VariantCreateForm({
     }
   }, [initialProductId]);
 
+  useEffect(() => {
+    if (!sku.trim()) {
+      setSkuError(null);
+      return;
+    }
+    setSkuError(validateSkuCode(sku.trim()));
+  }, [sku]);
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
@@ -67,7 +76,6 @@ export default function VariantCreateForm({
       if (typeof compareAt === "number" && !Number.isFinite(compareAt)) {
         throw new Error("compare_at_amount must be a number.");
       }
-      const skuError = validateSkuCode(sku.trim());
       if (skuError) {
         throw new Error(skuError);
       }
@@ -134,6 +142,12 @@ export default function VariantCreateForm({
           <div className="space-y-2">
             <Label htmlFor="variantSku">SKU</Label>
             <Input id="variantSku" value={sku} onChange={(e) => setSku(e.target.value)} required />
+            {skuError ? (
+              <p className="text-xs text-red-600">{skuError}</p>
+            ) : null}
+            {getSkuCodeRegex() && !skuError ? (
+              <p className="text-xs text-neutral-500">Rule: {getSkuCodeRegex()}</p>
+            ) : null}
           </div>
           <div className="space-y-2">
             <Label htmlFor="variantJanCode">JAN Code (optional)</Label>

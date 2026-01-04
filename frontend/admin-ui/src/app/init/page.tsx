@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { initializeStore, validateStoreCode } from "@/lib/setup";
 import { useApiCall } from "@/lib/use-api-call";
+import { identitySignIn } from "@/lib/identity";
 
 export default function InitPage() {
   const router = useRouter();
@@ -73,7 +74,12 @@ export default function InitPage() {
       sessionStorage.setItem("store_id", data.storeId);
       sessionStorage.setItem("tenant_id", data.tenantId);
       sessionStorage.setItem("store_code", data.storeCode);
-      router.push("/login");
+      await identitySignIn({
+        storeCode: data.storeCode,
+        email: ownerEmail,
+        password: ownerPassword,
+      });
+      router.push("/admin");
     } catch (err) {
       notifyError(err, "Init failed", "Unknown error");
     } finally {

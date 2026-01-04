@@ -20,7 +20,7 @@ export function validateSkuCode(sku: string): string | null {
   try {
     const regex = new RegExp(rule);
     if (!regex.test(sku)) {
-      return "SKU format does not match store settings.";
+      return `SKU format does not match store settings. (rule: ${rule})`;
     }
   } catch {
     return "SKU validation rule is invalid. Please update store settings.";

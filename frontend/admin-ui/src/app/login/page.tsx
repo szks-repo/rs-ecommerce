@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/components/ui/toast";
-import { consumeAuthFlashMessage } from "@/lib/auth";
+import { consumeAuthFlashMessage, getActiveAccessToken } from "@/lib/auth";
 import { identitySignIn } from "@/lib/identity";
 import { useApiCall } from "@/lib/use-api-call";
 
@@ -24,6 +24,10 @@ export default function LoginPage() {
   const { notifyError } = useApiCall();
 
   useEffect(() => {
+    if (getActiveAccessToken()) {
+      router.replace("/admin");
+      return;
+    }
     const saved = sessionStorage.getItem("store_code");
     if (saved) {
       setStoreCode(saved);
