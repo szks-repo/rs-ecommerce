@@ -88,7 +88,7 @@ export default function SettingsPaymentPage() {
   return (
     <div className="space-y-8">
       <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Shop Settings</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Settings</div>
         <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Payment</h1>
         <p className="mt-2 text-sm text-neutral-600">
           Enable the payment methods available in your store.

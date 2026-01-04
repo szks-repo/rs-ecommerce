@@ -65,7 +65,10 @@ export default function MetafieldsPage() {
     void load();
   }, [push, ownerType]);
 
-  const newLink = useMemo(() => `/admin/metafields/new?ownerType=${ownerType}`, [ownerType]);
+  const newLink = useMemo(
+    () => `/admin/settings/metafields/new?ownerType=${ownerType}`,
+    [ownerType]
+  );
 
   return (
     <div className="space-y-8">
@@ -134,7 +137,7 @@ export default function MetafieldsPage() {
               return (
                 <Link
                   key={definition.id}
-                  href={`/admin/metafields/${definition.id}`}
+                  href={`/admin/settings/metafields/${definition.id}`}
                   className="block rounded-lg border border-neutral-200 p-3 transition hover:border-neutral-300"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">

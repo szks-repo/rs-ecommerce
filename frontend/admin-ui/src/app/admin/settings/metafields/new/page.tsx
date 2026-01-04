@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,12 +16,8 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
-import {
-  listCustomerMetafieldDefinitions,
-  updateCustomerMetafieldDefinition,
-} from "@/lib/customer";
+import { createCustomerMetafieldDefinition } from "@/lib/customer";
 import { identityListRoles } from "@/lib/identity";
-import type { MetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
 import { CalendarDays, Clock, Palette, Type } from "lucide-react";
 
 const VALUE_TYPES = [
@@ -35,23 +31,19 @@ const VALUE_TYPES = [
   { value: "color", label: "color", Icon: Palette },
 ];
 
-const OWNER_TYPE_LABELS: Record<string, string> = {
-  customer: "Customers",
-  product: "Products",
-  order: "Orders",
-};
+const OWNER_TYPES = [
+  { value: "customer", label: "Customers", enabled: true },
+  { value: "product", label: "Products", enabled: false },
+  { value: "order", label: "Orders", enabled: false },
+];
 
-export default function MetafieldDetailPage() {
-  const params = useParams<{ definitionId: string }>();
+export default function NewMetafieldPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { push } = useToast();
   const { notifyError } = useApiCall();
 
-  const definitionId = params.definitionId;
-  const [definition, setDefinition] = useState<MetafieldDefinition | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-
+  const [ownerType, setOwnerType] = useState("customer");
   const [namespace, setNamespace] = useState("");
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
@@ -60,6 +52,7 @@ export default function MetafieldDetailPage() {
   const [isList, setIsList] = useState(false);
   const [validationsJson, setValidationsJson] = useState("{}");
   const [visibilityJson, setVisibilityJson] = useState("{}");
+  const [isSaving, setIsSaving] = useState(false);
   const [validationRequired, setValidationRequired] = useState(false);
   const [validationMin, setValidationMin] = useState("");
   const [validationMax, setValidationMax] = useState("");
@@ -72,65 +65,17 @@ export default function MetafieldDetailPage() {
   const [roleOptions, setRoleOptions] = useState<{ key: string; name: string }[]>([]);
 
   useEffect(() => {
-    async function load() {
-      setIsLoading(true);
-      try {
-        const resp = await listCustomerMetafieldDefinitions();
-        const found = (resp.definitions ?? []).find((item) => item.id === definitionId) || null;
-        if (!found) {
-          push({
-            variant: "error",
-            title: "Not found",
-            description: "Metafield definition not found.",
-          });
-          router.push("/admin/metafields");
-          return;
-        }
-        setDefinition(found);
-        setNamespace(found.namespace);
-        setKey(found.key);
-        setName(found.name);
-        setDescription(found.description || "");
-        setValueType(found.valueType || "string");
-        setIsList(found.isList ?? false);
-        setValidationsJson(found.validationsJson || "{}");
-        setVisibilityJson(found.visibilityJson || "{}");
-        try {
-          const parsed = found.validationsJson ? JSON.parse(found.validationsJson) : {};
-          if (typeof parsed === "object" && parsed) {
-            setValidationRequired(Boolean(parsed.required));
-            setValidationMin(parsed.min != null ? String(parsed.min) : "");
-            setValidationMax(parsed.max != null ? String(parsed.max) : "");
-            setValidationRegex(parsed.regex ?? "");
-            setValidationEnumValues(Array.isArray(parsed.enum) ? parsed.enum.map(String) : []);
-          }
-        } catch {
-          setValidationRequired(false);
-          setValidationMin("");
-          setValidationMax("");
-          setValidationRegex("");
-          setValidationEnumValues([]);
-        }
-        try {
-          const parsed = found.visibilityJson ? JSON.parse(found.visibilityJson) : {};
-          if (typeof parsed === "object" && parsed) {
-            setVisibilityAdminOnly(Boolean(parsed.adminOnly));
-            setVisibilityPublic(Boolean(parsed.public));
-            setVisibilityRoles(Array.isArray(parsed.roles) ? parsed.roles.map(String) : []);
-          }
-        } catch {
-          setVisibilityAdminOnly(true);
-          setVisibilityPublic(false);
-          setVisibilityRoles([]);
-        }
-      } catch (err) {
-        notifyError(err, "Load failed", "Failed to load metafield definition");
-      } finally {
-        setIsLoading(false);
-      }
+    const param = searchParams?.get("ownerType");
+    if (param) {
+      setOwnerType(param);
     }
-    void load();
-  }, [definitionId, push]);
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (valueType === "bool" || valueType === "boolean") {
+      setIsList(false);
+    }
+  }, [valueType]);
 
   useEffect(() => {
     async function loadRoles() {
@@ -149,98 +94,24 @@ export default function MetafieldDetailPage() {
     void loadRoles();
   }, [push]);
 
-  useEffect(() => {
-    if (valueType === "bool" || valueType === "boolean") {
-      setIsList(false);
-    }
-  }, [valueType]);
-
-  const valueTypeLabel = useMemo(() => {
-    const entry = VALUE_TYPES.find((option) => option.value === valueType);
-    return entry?.label ?? valueType;
-  }, [valueType]);
-
-  const ownerTypeLabel = useMemo(() => {
-    if (!definition) {
-      return "-";
-    }
-    return OWNER_TYPE_LABELS[definition.ownerType] ?? (definition.ownerType || "-");
-  }, [definition]);
-
-  const computedValidationsJson = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          required: validationRequired || undefined,
-          min:
-            valueType === "number"
-              ? validationMin.trim() === ""
-                ? undefined
-                : Number(validationMin)
-              : valueType === "date" || valueType === "dateTime"
-                  ? validationMin.trim() === ""
-                    ? undefined
-                    : validationMin.trim()
-                  : undefined,
-          max:
-            valueType === "number"
-              ? validationMax.trim() === ""
-                ? undefined
-                : Number(validationMax)
-              : valueType === "date" || valueType === "dateTime"
-                  ? validationMax.trim() === ""
-                    ? undefined
-                    : validationMax.trim()
-                  : undefined,
-          regex:
-            valueType === "string"
-              ? validationRegex.trim() === ""
-                ? undefined
-                : validationRegex.trim()
-              : undefined,
-          enum:
-            valueType === "enum" && validationEnumValues.length > 0
-              ? validationEnumValues
-              : undefined,
-        },
-        null,
-        2
-      ),
-    [
-      valueType,
-      validationRequired,
-      validationMin,
-      validationMax,
-      validationRegex,
-      validationEnumValues,
-    ]
-  );
-
-  const computedVisibilityJson = useMemo(
-    () =>
-      JSON.stringify(
-        {
-          adminOnly: visibilityAdminOnly || undefined,
-          public: visibilityPublic || undefined,
-          roles: visibilityRoles.length === 0 ? undefined : visibilityRoles,
-        },
-        null,
-        2
-      ),
-    [visibilityAdminOnly, visibilityPublic, visibilityRoles]
-  );
-
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (isSaving || !definitionId) {
+    if (isSaving) {
+      return;
+    }
+    if (ownerType !== "customer") {
+      push({
+        variant: "error",
+        title: "Not supported yet",
+        description: "Metafields are only available for customers right now.",
+      });
       return;
     }
     setIsSaving(true);
     try {
       setValidationsJson(computedValidationsJson);
       setVisibilityJson(computedVisibilityJson);
-      await updateCustomerMetafieldDefinition({
-        definitionId,
+      const resp = await createCustomerMetafieldDefinition({
         namespace,
         key,
         name,
@@ -250,11 +121,17 @@ export default function MetafieldDetailPage() {
         validationsJson: computedValidationsJson,
         visibilityJson: computedVisibilityJson,
       });
+      const id = resp.definition?.id;
       push({
         variant: "success",
-        title: "Definition updated",
-        description: "Metafield definition has been saved.",
+        title: "Definition created",
+        description: "Customer metafield definition has been created.",
       });
+      if (id) {
+        router.push(`/admin/settings/metafields/${id}`);
+      } else {
+        router.push("/admin/settings/metafields");
+      }
     } catch (err) {
       notifyError(err, "Save failed", "Failed to save metafield definition");
     } finally {
@@ -262,60 +139,95 @@ export default function MetafieldDetailPage() {
     }
   }
 
-  if (isLoading) {
-    return <div className="text-sm text-neutral-600">Loading definition...</div>;
-  }
-
-  if (!definition) {
-    return null;
-  }
+  const formDisabled = ownerType !== "customer";
+  const computedValidationsJson = JSON.stringify(
+    {
+      required: validationRequired || undefined,
+      min:
+        valueType === "number"
+          ? validationMin.trim() === ""
+            ? undefined
+            : Number(validationMin)
+          : valueType === "date" || valueType === "dateTime"
+              ? validationMin.trim() === ""
+                ? undefined
+                : validationMin.trim()
+              : undefined,
+      max:
+        valueType === "number"
+          ? validationMax.trim() === ""
+            ? undefined
+            : Number(validationMax)
+          : valueType === "date" || valueType === "dateTime"
+              ? validationMax.trim() === ""
+                ? undefined
+                : validationMax.trim()
+              : undefined,
+      regex:
+        valueType === "string"
+          ? validationRegex.trim() === ""
+            ? undefined
+            : validationRegex.trim()
+          : undefined,
+      enum:
+        valueType === "enum" && validationEnumValues.length > 0
+          ? validationEnumValues
+          : undefined,
+    },
+    null,
+    2
+  );
+  const computedVisibilityJson = JSON.stringify(
+    {
+      adminOnly: visibilityAdminOnly || undefined,
+      public: visibilityPublic || undefined,
+      roles: visibilityRoles.length === 0 ? undefined : visibilityRoles,
+    },
+    null,
+    2
+  );
 
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Metafields</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Definition detail</h1>
+          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">New definition</h1>
           <p className="mt-2 text-sm text-neutral-500">
-            Owner type: <span className="font-medium text-neutral-900">{ownerTypeLabel}</span> · Value type: {valueTypeLabel}
+            Create a new metafield definition for a resource type.
           </p>
         </div>
-        <Button variant="outline" onClick={() => router.push("/admin/metafields")}>
-          Back to list
-        </Button>
+        <Button variant="outline" onClick={() => router.push("/admin/settings/metafields")}>Back to list</Button>
       </div>
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
-          <CardTitle>Edit definition</CardTitle>
+          <CardTitle>Definition</CardTitle>
           <CardDescription className="text-neutral-500">
-            Update namespace, key, labels, and validation rules.
+            Namespace + key must be unique. JSON fields should be valid JSON objects.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4" onSubmit={handleSubmit}>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="namespace">Namespace</Label>
-                <Input
-                  id="namespace"
-                  value={namespace}
-                  onChange={(event) => setNamespace(event.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="key">Key</Label>
-                <Input id="key" value={key} onChange={(event) => setKey(event.target.value)} />
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
+                <Label>Resource</Label>
+                <Select value={ownerType} onValueChange={setOwnerType}>
+                  <SelectTrigger className="bg-white">
+                    <SelectValue placeholder="Select resource" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OWNER_TYPES.map((option) => (
+                      <SelectItem key={option.value} value={option.value} disabled={!option.enabled}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="valueType">Value type</Label>
-                <Select value={valueType} onValueChange={setValueType}>
+                <Select value={valueType} onValueChange={setValueType} disabled={formDisabled}>
                   <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Select type" />
                   </SelectTrigger>
@@ -332,13 +244,55 @@ export default function MetafieldDetailPage() {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-              />
+            {formDisabled ? (
+              <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-600">
+                This resource is planned but not available yet. Switch back to Customers to create a
+                definition.
+              </div>
+            ) : null}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="namespace">Namespace</Label>
+                <Input
+                  id="namespace"
+                  value={namespace}
+                  onChange={(event) => setNamespace(event.target.value)}
+                  placeholder="profile"
+                  disabled={formDisabled}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="key">Key</Label>
+                <Input
+                  id="key"
+                  value={key}
+                  onChange={(event) => setKey(event.target.value)}
+                  placeholder="membership_rank"
+                  disabled={formDisabled}
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Membership Rank"
+                  disabled={formDisabled}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  value={description}
+                  onChange={(event) => setDescription(event.target.value)}
+                  placeholder="Optional description"
+                  disabled={formDisabled}
+                />
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <input
@@ -347,7 +301,7 @@ export default function MetafieldDetailPage() {
                 className="h-4 w-4 accent-neutral-900"
                 checked={isList}
                 onChange={(event) => setIsList(event.target.checked)}
-                disabled={valueType === "bool" || valueType === "boolean"}
+                disabled={formDisabled || valueType === "bool" || valueType === "boolean"}
               />
               <Label htmlFor="isList">Treat as list (array)</Label>
             </div>
@@ -361,6 +315,7 @@ export default function MetafieldDetailPage() {
                       className="h-4 w-4 accent-neutral-900"
                       checked={validationRequired}
                       onChange={(event) => setValidationRequired(event.target.checked)}
+                      disabled={formDisabled}
                     />
                     Required
                   </label>
@@ -370,11 +325,13 @@ export default function MetafieldDetailPage() {
                         placeholder="Min value"
                         value={validationMin}
                         onChange={(event) => setValidationMin(event.target.value)}
+                        disabled={formDisabled}
                       />
                       <Input
                         placeholder="Max value"
                         value={validationMax}
                         onChange={(event) => setValidationMax(event.target.value)}
+                        disabled={formDisabled}
                       />
                     </div>
                   ) : null}
@@ -385,12 +342,14 @@ export default function MetafieldDetailPage() {
                         placeholder="Min"
                         value={validationMin}
                         onChange={(event) => setValidationMin(event.target.value)}
+                        disabled={formDisabled}
                       />
                       <Input
                         type={valueType === "date" ? "date" : "datetime-local"}
                         placeholder="Max"
                         value={validationMax}
                         onChange={(event) => setValidationMax(event.target.value)}
+                        disabled={formDisabled}
                       />
                     </div>
                   ) : null}
@@ -399,6 +358,7 @@ export default function MetafieldDetailPage() {
                       placeholder="Regex (optional)"
                       value={validationRegex}
                       onChange={(event) => setValidationRegex(event.target.value)}
+                      disabled={formDisabled}
                     />
                   ) : null}
                   {valueType === "enum" ? (
@@ -431,10 +391,15 @@ export default function MetafieldDetailPage() {
                             setValidationEnumInput("");
                           }
                         }}
+                        disabled={formDisabled}
                       />
                     </div>
                   ) : null}
-                  <Textarea value={computedValidationsJson} readOnly className="bg-white text-xs" />
+                  <Textarea
+                    value={computedValidationsJson}
+                    readOnly
+                    className="bg-white text-xs"
+                  />
                 </div>
               </div>
               <div className="space-y-2">
@@ -446,6 +411,7 @@ export default function MetafieldDetailPage() {
                       className="h-4 w-4 accent-neutral-900"
                       checked={visibilityAdminOnly}
                       onChange={(event) => setVisibilityAdminOnly(event.target.checked)}
+                      disabled={formDisabled}
                     />
                     Admin only
                   </label>
@@ -455,6 +421,7 @@ export default function MetafieldDetailPage() {
                       className="h-4 w-4 accent-neutral-900"
                       checked={visibilityPublic}
                       onChange={(event) => setVisibilityPublic(event.target.checked)}
+                      disabled={formDisabled}
                     />
                     Public
                   </label>
@@ -483,6 +450,7 @@ export default function MetafieldDetailPage() {
                                     );
                                   }
                                 }}
+                                disabled={formDisabled}
                               />
                               {role.name}
                             </label>
@@ -491,13 +459,17 @@ export default function MetafieldDetailPage() {
                       </div>
                     )}
                   </div>
-                  <Textarea value={computedVisibilityJson} readOnly className="bg-white text-xs" />
+                  <Textarea
+                    value={computedVisibilityJson}
+                    readOnly
+                    className="bg-white text-xs"
+                  />
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save changes"}
+              <Button type="submit" disabled={isSaving || formDisabled}>
+                {isSaving ? "Saving..." : "Create definition"}
               </Button>
             </div>
           </form>
