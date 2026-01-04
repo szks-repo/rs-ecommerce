@@ -60,6 +60,14 @@ pub trait IdentityRepository {
         staff_uuid: &uuid::Uuid,
     ) -> IdentityResult<Option<String>>;
 
+    async fn list_staff_permission_keys(
+        &self,
+        store_uuid: &uuid::Uuid,
+        staff_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Vec<String>>;
+
+    async fn list_all_permission_keys(&self) -> IdentityResult<Vec<String>>;
+
     /// role_by_id
     async fn role_by_id(
         &self,
@@ -247,6 +255,46 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         .await
         .map_err(IdentityError::from)?;
         Ok(row.map(|row| row.get("role_key")))
+    }
+
+    async fn list_staff_permission_keys(
+        &self,
+        store_uuid: &uuid::Uuid,
+        staff_uuid: &uuid::Uuid,
+    ) -> IdentityResult<Vec<String>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT p.key
+            FROM store_staff ss
+            JOIN store_roles sr ON sr.id = ss.role_id
+            JOIN store_role_permissions srp ON srp.role_id = sr.id
+            JOIN permissions p ON p.id = srp.permission_id
+            WHERE ss.id = $1 AND ss.store_id = $2 AND ss.status = 'active'
+            ORDER BY p.key ASC
+            "#,
+        )
+        .bind(staff_uuid)
+        .bind(store_uuid)
+        .fetch_all(self.db)
+        .await
+        .map_err(IdentityError::from)?;
+
+        Ok(rows.into_iter().map(|row| row.get("key")).collect())
+    }
+
+    async fn list_all_permission_keys(&self) -> IdentityResult<Vec<String>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT key
+            FROM permissions
+            ORDER BY key ASC
+            "#,
+        )
+        .fetch_all(self.db)
+        .await
+        .map_err(IdentityError::from)?;
+
+        Ok(rows.into_iter().map(|row| row.get("key")).collect())
     }
 
     async fn role_by_id(

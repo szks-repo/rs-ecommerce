@@ -123,6 +123,14 @@ impl<'a> IdentityService<'a> {
         list_roles_with_permissions(self.state, req).await
     }
 
+    pub async fn list_my_permissions(
+        &self,
+        auth_ctx: Option<crate::rpc::actor::AuthContext>,
+        req: pb::IdentityListMyPermissionsRequest,
+    ) -> IdentityResult<pb::IdentityListMyPermissionsResponse> {
+        list_my_permissions(self.state, auth_ctx, req).await
+    }
+
     pub async fn update_role(
         &self,
         req: pb::IdentityUpdateRoleRequest,
@@ -1395,6 +1403,39 @@ pub async fn list_roles(
                 description: role.description,
             })
             .collect(),
+    })
+}
+
+pub async fn list_my_permissions(
+    state: &AppState,
+    auth_ctx: Option<crate::rpc::actor::AuthContext>,
+    req: pb::IdentityListMyPermissionsRequest,
+) -> IdentityResult<pb::IdentityListMyPermissionsResponse> {
+    let auth_ctx = auth_ctx.ok_or_else(|| IdentityError::unauthenticated("unauthenticated"))?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let repo = PgIdentityRepository::new(&state.db);
+
+    if auth_ctx.actor_type == "owner" {
+        let keys = repo.list_all_permission_keys().await?;
+        return Ok(pb::IdentityListMyPermissionsResponse {
+            permission_keys: keys,
+            role_key: "owner".to_string(),
+        });
+    }
+
+    let staff_uuid = parse_uuid(&auth_ctx.actor_id, "staff_id")?;
+    let permission_keys = repo
+        .list_staff_permission_keys(&store_uuid.as_uuid(), &staff_uuid)
+        .await?;
+    let role_key = repo
+        .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
+        .await?
+        .unwrap_or_default();
+
+    Ok(pb::IdentityListMyPermissionsResponse {
+        permission_keys,
+        role_key,
     })
 }
 

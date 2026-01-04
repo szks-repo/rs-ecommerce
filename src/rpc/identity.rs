@@ -109,6 +109,20 @@ pub async fn refresh_token(
     Ok(response)
 }
 
+pub async fn list_my_permissions(
+    State(state): State<AppState>,
+    Extension(auth_ctx): Extension<Option<AuthContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::IdentityListMyPermissionsResponse>), (StatusCode, Json<ConnectError>)>
+{
+    let req = parse_request::<pb::IdentityListMyPermissionsRequest>(&headers, body)?;
+    let resp = identity::service::list_my_permissions(&state, auth_ctx, req)
+        .await
+        .map_err(|err| err.into_connect())?;
+    Ok((StatusCode::OK, Json(resp)))
+}
+
 pub async fn create_staff(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,

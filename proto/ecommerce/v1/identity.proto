@@ -9,6 +9,7 @@ service IdentityService {
   rpc SignIn(IdentitySignInRequest) returns (IdentitySignInResponse);
   rpc SignOut(IdentitySignOutRequest) returns (IdentitySignOutResponse);
   rpc RefreshToken(IdentityRefreshTokenRequest) returns (IdentityRefreshTokenResponse);
+  rpc ListMyPermissions(IdentityListMyPermissionsRequest) returns (IdentityListMyPermissionsResponse);
   rpc ListStaffSessions(IdentityListStaffSessionsRequest) returns (IdentityListStaffSessionsResponse);
   rpc ForceSignOutStaff(IdentityForceSignOutStaffRequest) returns (IdentityForceSignOutStaffResponse);
   rpc CreateStaff(IdentityCreateStaffRequest) returns (IdentityCreateStaffResponse);
@@ -64,6 +65,16 @@ message IdentityRefreshTokenResponse {
   string staff_id = 4;
   string role = 5;
   google.protobuf.Timestamp expires_at = 6;
+}
+
+message IdentityListMyPermissionsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message IdentityListMyPermissionsResponse {
+  repeated string permission_keys = 1;
+  string role_key = 2;
 }
 
 message IdentityStaffSession {

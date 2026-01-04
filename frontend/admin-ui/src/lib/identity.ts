@@ -5,6 +5,7 @@ import {
   IdentityService,
   IdentitySignInRequestSchema,
   IdentitySignOutRequestSchema,
+  IdentityListMyPermissionsRequestSchema,
   IdentityCreateStaffRequestSchema,
   IdentityListStaffRequestSchema,
   IdentityUpdateStaffRequestSchema,
@@ -54,6 +55,12 @@ export async function identitySignOut(params?: { storeId?: string; tenantId?: st
       store: params?.storeId ? { storeId: params.storeId } : undefined,
       tenant: params?.tenantId ? { tenantId: params.tenantId } : undefined,
     })
+  );
+}
+
+export async function identityListMyPermissions() {
+  return client.listMyPermissions(
+    create(IdentityListMyPermissionsRequestSchema, {})
   );
 }
 

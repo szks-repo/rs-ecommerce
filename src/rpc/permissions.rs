@@ -8,7 +8,8 @@ use axum::{
 
 use crate::{AppState, rpc::actor::AuthContext, rpc::json::ConnectError};
 
-pub async fn require_permission(
+pub async fn require_permission_with_state(
+    state: AppState,
     req: axum::http::Request<Body>,
     next: Next,
     permission_key: &'static str,
@@ -27,13 +28,6 @@ pub async fn require_permission(
 
     let Some(store_id) = auth.store_id.clone() else {
         return error_response(StatusCode::FORBIDDEN, "store_id is required");
-    };
-
-    let state = match req.extensions().get::<AppState>().cloned() {
-        Some(state) => state,
-        None => {
-            return error_response(StatusCode::INTERNAL_SERVER_ERROR, "state missing");
-        }
     };
 
     let staff_uuid = match uuid::Uuid::parse_str(&auth.actor_id) {
@@ -128,9 +122,10 @@ impl PermissionKey {
 }
 
 pub async fn require_permission_key(
+    state: AppState,
     req: axum::http::Request<Body>,
     next: Next,
     permission: PermissionKey,
 ) -> Response {
-    require_permission(req, next, permission.as_str()).await
+    require_permission_with_state(state, req, next, permission.as_str()).await
 }
