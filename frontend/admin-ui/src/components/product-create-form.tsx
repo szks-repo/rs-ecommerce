@@ -29,7 +29,9 @@ export default function ProductCreateForm() {
   const [taxRuleId, setTaxRuleId] = useState("__default__");
   const [saleStartDate, setSaleStartDate] = useState("");
   const [saleEndDate, setSaleEndDate] = useState("");
-  const [variantAxes, setVariantAxes] = useState("");
+  const [variantAxes, setVariantAxes] = useState<string[]>([]);
+  const [newAxis, setNewAxis] = useState("");
+  const [draggingAxisIndex, setDraggingAxisIndex] = useState<number | null>(null);
   const [sku, setSku] = useState("");
   const [fulfillmentType, setFulfillmentType] = useState("physical");
   const [priceAmount, setPriceAmount] = useState("0");
@@ -42,6 +44,24 @@ export default function ProductCreateForm() {
   const statusOptions = ["active", "inactive", "draft"] as const;
   const variantStatusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
+  const axes = variantAxes.map((axis) => axis.trim()).filter((axis) => axis.length > 0);
+
+  function addAxis(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    if (variantAxes.some((axis) => axis.trim().toLowerCase() === trimmed.toLowerCase())) {
+      push({
+        variant: "error",
+        title: "Axis already exists",
+        description: "Please use a unique axis name.",
+      });
+      return;
+    }
+    setVariantAxes([...variantAxes, trimmed]);
+    setNewAxis("");
+  }
 
   useEffect(() => {
     if (!getActiveAccessToken()) {
@@ -63,10 +83,6 @@ export default function ProductCreateForm() {
       if (!getActiveAccessToken()) {
         throw new Error("access_token is missing. Please sign in first.");
       }
-      const axes = variantAxes
-        .split(",")
-        .map((axis) => axis.trim())
-        .filter((axis) => axis.length > 0);
       const saleStartAt = dateInputToTimestamp(saleStartDate, false);
       const saleEndAt = dateInputToTimestamp(saleEndDate, true);
       const hasSaleStart = Boolean(saleStartAt);
@@ -139,7 +155,8 @@ export default function ProductCreateForm() {
       setTaxRuleId("__default__");
       setSaleStartDate("");
       setSaleEndDate("");
-      setVariantAxes("");
+      setVariantAxes([]);
+      setNewAxis("");
       setSku("");
       setFulfillmentType("physical");
       setPriceAmount("0");
@@ -244,13 +261,70 @@ export default function ProductCreateForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="productVariantAxes">Variant Axes (comma separated)</Label>
-            <Input
-              id="productVariantAxes"
-              value={variantAxes}
-              onChange={(e) => setVariantAxes(e.target.value)}
-              placeholder="Size, Color"
-            />
+            <Label htmlFor="productVariantAxes">Variant Axes</Label>
+            <div className="space-y-3">
+              <div className="flex flex-wrap gap-2">
+                {axes.length === 0 ? (
+                  <span className="rounded-full border border-dashed border-neutral-200 px-3 py-1 text-xs text-neutral-400">
+                    No axes yet
+                  </span>
+                ) : (
+                  axes.map((axis, index) => (
+                    <div
+                      key={`${axis}-${index}`}
+                      className="flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs text-neutral-700 shadow-sm"
+                      draggable
+                      onDragStart={() => setDraggingAxisIndex(index)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => {
+                        if (draggingAxisIndex === null || draggingAxisIndex === index) {
+                          setDraggingAxisIndex(null);
+                          return;
+                        }
+                        const next = [...axes];
+                        const [moved] = next.splice(draggingAxisIndex, 1);
+                        next.splice(index, 0, moved);
+                        setVariantAxes(next);
+                        setDraggingAxisIndex(null);
+                      }}
+                    >
+                      <span className="cursor-grab text-neutral-400">⋮⋮</span>
+                      <span>{axis}</span>
+                      <button
+                        type="button"
+                        className="text-neutral-400 hover:text-neutral-700"
+                        onClick={() => {
+                          const next = axes.filter((_, idx) => idx !== index);
+                          setVariantAxes(next);
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex flex-col gap-2 md:flex-row md:items-center">
+                <Input
+                  id="productVariantAxes"
+                  value={newAxis}
+                  onChange={(e) => setNewAxis(e.target.value)}
+                  placeholder="Add axis (e.g. Size)"
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      addAxis(newAxis);
+                    }
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={() => addAxis(newAxis)}>
+                  Add axis
+                </Button>
+              </div>
+              <div className="text-xs text-neutral-500">
+                Drag chips to reorder axes. The order affects SKU creation.
+              </div>
+            </div>
             <p className="text-xs text-neutral-500">
               If you set axes, the default SKU will not be created automatically.
             </p>
@@ -267,8 +341,8 @@ export default function ProductCreateForm() {
                   id="defaultSku"
                   value={sku}
                   onChange={(e) => setSku(e.target.value)}
-                  disabled={variantAxes.trim().length > 0}
-                  required={variantAxes.trim().length === 0}
+                  disabled={axes.length > 0}
+                  required={axes.length === 0}
                 />
               </div>
               <div className="space-y-2">
@@ -276,7 +350,7 @@ export default function ProductCreateForm() {
                 <Select
                   value={fulfillmentType}
                   onValueChange={setFulfillmentType}
-                  disabled={variantAxes.trim().length > 0}
+                  disabled={axes.length > 0}
                 >
                   <SelectTrigger id="defaultFulfillment" className="bg-white">
                     <SelectValue placeholder="Select fulfillment type" />
@@ -297,8 +371,8 @@ export default function ProductCreateForm() {
                     id="defaultPrice"
                     value={priceAmount}
                     onChange={(e) => setPriceAmount(e.target.value)}
-                    disabled={variantAxes.trim().length > 0}
-                    required={variantAxes.trim().length === 0}
+                    disabled={axes.length > 0}
+                    required={axes.length === 0}
                   />
                 </div>
                 <div className="space-y-2">
@@ -307,7 +381,7 @@ export default function ProductCreateForm() {
                     id="defaultCompareAt"
                     value={compareAtAmount}
                     onChange={(e) => setCompareAtAmount(e.target.value)}
-                    disabled={variantAxes.trim().length > 0}
+                    disabled={axes.length > 0}
                   />
                 </div>
               </div>
@@ -316,7 +390,7 @@ export default function ProductCreateForm() {
                 <Select
                   value={variantStatus}
                   onValueChange={setVariantStatus}
-                  disabled={variantAxes.trim().length > 0}
+                  disabled={axes.length > 0}
                 >
                   <SelectTrigger id="defaultVariantStatus" className="bg-white">
                     <SelectValue placeholder="Select status" />
