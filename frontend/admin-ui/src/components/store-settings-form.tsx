@@ -20,6 +20,14 @@ import { useApiCall } from "@/lib/use-api-call";
 
 type StoreSettingsSection =
   | "basic"
+  | "profile"
+  | "address"
+  | "contact-email"
+  | "contact-phone"
+  | "legal"
+  | "sku"
+  | "locale"
+  | "domain"
   | "payment"
   | "payment-cod"
   | "payment-bank"
@@ -34,6 +42,8 @@ export default function StoreSettingsForm({
   submitLabel?: string;
 }) {
   const visible = sections ?? ["basic", "payment", "tax", "appearance"];
+  const showBasicSection = (section: StoreSettingsSection) =>
+    visible.includes("basic") || visible.includes(section);
   const [storeName, setStoreName] = useState("");
   const [legalName, setLegalName] = useState("");
   const [contactEmail, setContactEmail] = useState("");
@@ -206,12 +216,12 @@ export default function StoreSettingsForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      {visible.includes("basic") && (
+      {showBasicSection("profile") && (
         <Card className="border-neutral-200 bg-white text-neutral-900">
           <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
+            <CardTitle>Store Profile</CardTitle>
             <CardDescription className="text-neutral-500">
-              Store identity and contact details.
+              Store name and legal name.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
@@ -223,14 +233,53 @@ export default function StoreSettingsForm({
               <Label htmlFor="legalName">Legal Name</Label>
               <Input id="legalName" value={legalName} onChange={(e) => setLegalName(e.target.value)} required />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("contact-email") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Contact Email</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Email used for customer inquiries.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
               <Label htmlFor="contactEmail">Contact Email</Label>
               <Input id="contactEmail" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("contact-phone") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Contact Phone</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Phone number shown in store info.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
             <div className="space-y-2">
               <Label htmlFor="contactPhone">Contact Phone</Label>
               <Input id="contactPhone" value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} required />
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("address") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Address</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Business address used for legal notice.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="addressPrefecture">Prefecture</Label>
               <Input id="addressPrefecture" value={addressPrefecture} onChange={(e) => setAddressPrefecture(e.target.value)} required />
@@ -247,11 +296,37 @@ export default function StoreSettingsForm({
               <Label htmlFor="addressLine2">Address Line 2</Label>
               <Input id="addressLine2" value={addressLine2} onChange={(e) => setAddressLine2(e.target.value)} />
             </div>
-            <div className="space-y-2 md:col-span-2">
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("legal") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Legal Notice</CardTitle>
+            <CardDescription className="text-neutral-500">
+              "Tokutei Shotorihiki-ho" disclosure.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
               <Label htmlFor="legalNotice">Legal Notice</Label>
-              <Textarea id="legalNotice" value={legalNotice} onChange={(e) => setLegalNotice(e.target.value)} rows={3} required />
+              <Textarea id="legalNotice" value={legalNotice} onChange={(e) => setLegalNotice(e.target.value)} rows={4} required />
             </div>
-            <div className="space-y-2 md:col-span-2">
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("sku") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>SKU Rule</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Client-side validation rule for SKU codes.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
               <Label htmlFor="skuCodeRegex">SKU Code Rule (Regex)</Label>
               <Input
                 id="skuCodeRegex"
@@ -263,6 +338,19 @@ export default function StoreSettingsForm({
                 Used for client-side validation when creating SKUs. Leave blank to skip validation.
               </p>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("locale") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Locale</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Language, timezone, and currency defaults.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="defaultLanguage">Default Language</Label>
               <Select value={defaultLanguage} onValueChange={setDefaultLanguage}>
@@ -301,6 +389,19 @@ export default function StoreSettingsForm({
                 </SelectContent>
               </Select>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {showBasicSection("domain") && (
+        <Card className="border-neutral-200 bg-white text-neutral-900">
+          <CardHeader>
+            <CardTitle>Domain</CardTitle>
+            <CardDescription className="text-neutral-500">
+              Storefront domain settings.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="primaryDomain">Primary Domain</Label>
               <Input id="primaryDomain" value={primaryDomain} onChange={(e) => setPrimaryDomain(e.target.value)} />
