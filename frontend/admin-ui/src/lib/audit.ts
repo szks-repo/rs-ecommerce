@@ -1,4 +1,5 @@
 import { create } from "@bufbuild/protobuf";
+import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import { createServiceClient } from "@/lib/connect";
 import {
   AuditService,
@@ -13,8 +14,8 @@ export async function listAuditLogs(params?: {
   action?: string;
   actorId?: string;
   actorType?: string;
-  targetType?: string;
-  targetId?: string;
+  fromTime?: Date | null;
+  toTime?: Date | null;
   pageToken?: string;
   pageSize?: number;
 }) {
@@ -28,8 +29,8 @@ export async function listAuditLogs(params?: {
       action: params?.action ?? "",
       actorId: params?.actorId ?? "",
       actorType: params?.actorType ?? "",
-      targetType: params?.targetType ?? "",
-      targetId: params?.targetId ?? "",
+      fromTime: params?.fromTime ? timestampFromDate(params.fromTime) : undefined,
+      toTime: params?.toTime ? timestampFromDate(params.toTime) : undefined,
       page: {
         pageToken: params?.pageToken ?? "",
         pageSize: params?.pageSize ?? 50,

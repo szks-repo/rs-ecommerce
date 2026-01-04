@@ -1,4 +1,4 @@
-use lettre::message::Mailbox;
+use lettre::message::{Mailbox, SinglePart};
 use lettre::{AsyncSmtpTransport, AsyncTransport, Message, Tokio1Executor};
 
 use crate::rpc::json::ConnectError;
@@ -84,7 +84,7 @@ pub async fn send_invite_email(
         .from(from)
         .to(to)
         .subject(subject)
-        .body(body)
+        .singlepart(SinglePart::plain(body))
         .map_err(|_| {
             (
                 StatusCode::INTERNAL_SERVER_ERROR,

@@ -20,3 +20,50 @@ export function formatTimestampWithStoreTz(seconds?: string | number | bigint, n
 export function formatDateWithStoreTz(date: Date): string {
   return date.toLocaleString("ja-JP", { timeZone: getStoreTimeZone() });
 }
+
+function getTimeZoneOffsetMinutes(date: Date, timeZone: string): number {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+  const parts = formatter.formatToParts(date);
+  const values: Record<string, string> = {};
+  parts.forEach((part) => {
+    values[part.type] = part.value;
+  });
+  const asUtc = Date.UTC(
+    Number(values.year),
+    Number(values.month) - 1,
+    Number(values.day),
+    Number(values.hour),
+    Number(values.minute),
+    Number(values.second)
+  );
+  return (asUtc - date.getTime()) / 60000;
+}
+
+export function toUtcDateFromStoreDateInput(dateInput: string, endOfDay: boolean): Date | null {
+  if (!dateInput) {
+    return null;
+  }
+  const [yearStr, monthStr, dayStr] = dateInput.split("-");
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return null;
+  }
+  const hour = endOfDay ? 23 : 0;
+  const minute = endOfDay ? 59 : 0;
+  const second = endOfDay ? 59 : 0;
+  const timeZone = getStoreTimeZone();
+  const utcDate = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  const offsetMinutes = getTimeZoneOffsetMinutes(utcDate, timeZone);
+  return new Date(utcDate.getTime() - offsetMinutes * 60000);
+}

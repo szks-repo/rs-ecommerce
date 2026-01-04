@@ -180,6 +180,11 @@ export default function StaffListForm() {
                       {isOwner ? (
                         <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
                       ) : null}
+                      <div className="mt-2 space-y-1 text-xs text-neutral-500">
+                        {row.email ? <div>{`email: ${row.email}`}</div> : null}
+                        {row.loginId ? <div>{`login_id: ${row.loginId}`}</div> : null}
+                        {!row.loginId && row.phone ? <div>{`phone: ${row.phone}`}</div> : null}
+                      </div>
                     </div>
                     {!isOwner ? (
                       <div className="space-y-1">

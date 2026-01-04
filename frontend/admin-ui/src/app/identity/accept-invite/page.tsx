@@ -66,16 +66,18 @@ export default function AcceptInvitePage() {
           <CardContent>
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-2">
-                <Label htmlFor="token">Invite token</Label>
-                <Input id="token" value={token} readOnly />
+                <div className="rounded-md border border-dashed border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-500">
+                  Invite token is detected from the URL.
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="displayName">Display name (optional)</Label>
+                <Label htmlFor="displayName">Display name</Label>
                 <Input
                   id="displayName"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   placeholder="Your name"
+                  required
                 />
               </div>
               <div className="space-y-2">

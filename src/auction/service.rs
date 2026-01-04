@@ -11,7 +11,7 @@ use crate::{
         audit_action::AuctionAuditAction,
         audit_helpers::{audit_input, to_json_opt},
         ids::{StoreId, parse_uuid},
-        money::{money_from_parts, money_to_parts_opt},
+        money::{money_from_parts, money_to_parts, money_to_parts_opt},
         time::chrono_to_timestamp,
     },
     store_settings::service::resolve_store_context,
@@ -81,11 +81,11 @@ pub async fn create_auction(
     let (reserve_amount, reserve_currency) = money_to_parts_opt(req.reserve_price)?;
     let (buyout_amount, buyout_currency) = money_to_parts_opt(req.buyout_price)?;
 
-    let (increment_amount, increment_currency) = if req.bid_increment.is_some() {
-        money_to_parts(req.bid_increment)?
-    } else {
-        let settings = get_auction_settings(state, store_id.clone()).await?;
-        money_to_parts(settings.bid_increment)?
+    let (increment_amount, increment_currency) = match req.bid_increment {
+        Some(_) => money_to_parts(req.bid_increment)?,
+        None => {
+            return Err(invalid_arg("bid_increment is required"));
+        }
     };
 
     let now = Utc::now();

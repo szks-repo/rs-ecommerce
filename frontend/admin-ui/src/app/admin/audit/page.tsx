@@ -17,7 +17,7 @@ import { listAuditActions, listAuditLogs } from "@/lib/audit";
 import { identityListStaff } from "@/lib/identity";
 import { formatConnectError } from "@/lib/handle-error";
 import { getActiveAccessToken } from "@/lib/auth";
-import { formatTimestampWithStoreTz } from "@/lib/time";
+import { formatTimestampWithStoreTz, getStoreTimeZone, toUtcDateFromStoreDateInput } from "@/lib/time";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
 
 type AuditActionItem = {
@@ -55,8 +55,8 @@ export default function AuditLogsPage() {
   const [action, setAction] = useState("__all__");
   const [actorId, setActorId] = useState("__all__");
   const [actorType, setActorType] = useState("");
-  const [targetType, setTargetType] = useState("");
-  const [targetId, setTargetId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [pageToken, setPageToken] = useState("");
   const [nextPageToken, setNextPageToken] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -70,9 +70,9 @@ export default function AuditLogsPage() {
       (action !== "__all__" && action.trim()) ||
       (actorId !== "__all__" && actorId.trim()) ||
       actorType.trim() ||
-      targetType.trim() ||
-      targetId.trim(),
-    [action, actorId, actorType, targetType, targetId]
+      fromDate.trim() ||
+      toDate.trim(),
+    [action, actorId, actorType, fromDate, toDate]
   );
 
   const staffLabelMap = useMemo(() => {
@@ -94,14 +94,16 @@ export default function AuditLogsPage() {
     }
     const nextToken = options?.resetPage ? "" : pageToken;
     const actionFilter = action === "__all__" ? undefined : action.trim() || undefined;
+    const fromTime = toUtcDateFromStoreDateInput(fromDate, false);
+    const toTime = toUtcDateFromStoreDateInput(toDate, true);
     setIsLoading(true);
     try {
       const data = await listAuditLogs({
         action: actionFilter,
         actorId: actorId === "__all__" ? undefined : actorId.trim() || undefined,
         actorType: actorType.trim() || undefined,
-        targetType: targetType.trim() || undefined,
-        targetId: targetId.trim() || undefined,
+        fromTime,
+        toTime,
         pageToken: nextToken,
       });
       setLogs(data.logs ?? []);
@@ -168,7 +170,7 @@ export default function AuditLogsPage() {
         <CardHeader>
           <CardTitle>Filters</CardTitle>
           <CardDescription className="text-neutral-500">
-            Narrow down audit logs by action, actor, or target.
+            Narrow down audit logs by action, actor, or date range.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-3">
@@ -209,12 +211,22 @@ export default function AuditLogsPage() {
             <Input id="filterActorType" value={actorType} onChange={(e) => setActorType(e.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="filterTargetType">Target Type</Label>
-            <Input id="filterTargetType" value={targetType} onChange={(e) => setTargetType(e.target.value)} />
+            <Label htmlFor="filterFromDate">From date ({getStoreTimeZone()})</Label>
+            <Input
+              id="filterFromDate"
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="filterTargetId">Target ID</Label>
-            <Input id="filterTargetId" value={targetId} onChange={(e) => setTargetId(e.target.value)} />
+            <Label htmlFor="filterToDate">To date ({getStoreTimeZone()})</Label>
+            <Input
+              id="filterToDate"
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
           </div>
           <div className="flex items-end gap-2">
             <Button type="button" onClick={() => loadLogs({ resetPage: true })} disabled={isLoading}>
@@ -228,8 +240,8 @@ export default function AuditLogsPage() {
                   setAction("__all__");
                   setActorId("__all__");
                   setActorType("");
-                  setTargetType("");
-                  setTargetId("");
+                  setFromDate("");
+                  setToDate("");
                   setPageToken("");
                   void loadLogs({ resetPage: true });
                 }}

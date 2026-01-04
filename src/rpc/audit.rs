@@ -112,6 +112,9 @@ fn audit_action_type(action: &AuditAction) -> i32 {
         AuditAction::IdentityStaffInvite => {
             pb::AuditActionType::AuditActionIdentityStaffInvite as i32
         }
+        AuditAction::IdentityInviteAccept => {
+            pb::AuditActionType::AuditActionIdentityInviteAccept as i32
+        }
         AuditAction::IdentityRoleCreate => {
             pb::AuditActionType::AuditActionIdentityRoleCreate as i32
         }

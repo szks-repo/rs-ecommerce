@@ -21,7 +21,7 @@ use crate::{
     shared::validation::{Email, Phone},
     shared::{
         audit_action::IdentityAuditAction,
-        ids::{StoreId, TenantId, parse_uuid},
+        ids::{StoreId, TenantId},
         time::chrono_to_timestamp,
     },
 };
@@ -691,11 +691,10 @@ pub async fn accept_invite(
     let store_uuid = StoreId::parse(&invite.store_id)?;
     let staff_uuid = parse_uuid(&invite.staff_id, "staff_id")?;
     let password_hash = hash_password(&req.password)?;
-    let display_name = if req.display_name.is_empty() {
-        None
-    } else {
-        Some(req.display_name.as_str())
-    };
+    if req.display_name.trim().is_empty() {
+        return Err(IdentityError::invalid_argument("display_name is required"));
+    }
+    let display_name = Some(req.display_name.as_str());
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     sqlx::query(
@@ -736,7 +735,7 @@ pub async fn accept_invite(
             store_id: Some(invite.store_id.clone()),
             actor_id: Some(invite.staff_id.clone()),
             actor_type: invite.role_key.clone(),
-            action: IdentityAuditAction::StaffCreate.into(),
+            action: IdentityAuditAction::InviteAccept.into(),
             target_type: Some("store_staff".to_string()),
             target_id: Some(invite.staff_id.clone()),
             request_id: None,
@@ -1687,13 +1686,75 @@ async fn sign_in_core(
 
     let staff_id: String = row.staff_id;
     let role: String = row.role_key;
-    let session_id = uuid::Uuid::new_v4();
-
     let jwt_secret = std::env::var("AUTH_JWT_SECRET")
         .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
 
     let now = chrono::Utc::now();
     let exp = now + chrono::Duration::minutes(ACCESS_TOKEN_TTL_MINUTES);
+    let staff_uuid = parse_uuid(&staff_id, "staff_id")
+        .map_err(|_| IdentityError::internal("invalid staff_id"))?;
+    let ctx = crate::rpc::request_context::current();
+    let ip_address = ctx.as_ref().and_then(|c| c.ip_address.clone());
+    let user_agent = ctx.as_ref().and_then(|c| c.user_agent.clone());
+    let existing_session = sqlx::query(
+        r#"
+        SELECT id
+        FROM store_staff_sessions
+        WHERE store_id = $1
+          AND staff_id = $2
+          AND revoked_at IS NULL
+          AND ip_address IS NOT DISTINCT FROM $3
+          AND user_agent IS NOT DISTINCT FROM $4
+        ORDER BY last_seen_at DESC
+        LIMIT 1
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(staff_uuid)
+    .bind(ip_address.as_deref())
+    .bind(user_agent.as_deref())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(|_| IdentityError::internal("failed to lookup staff session"))?;
+
+    let session_id = if let Some(row) = existing_session {
+        let session_id: uuid::Uuid = row.get("id");
+        sqlx::query(
+            r#"
+            UPDATE store_staff_sessions
+            SET last_seen_at = now(),
+                expires_at = $1,
+                revoked_at = NULL
+            WHERE id = $2
+            "#,
+        )
+        .bind(exp)
+        .bind(session_id)
+        .execute(&state.db)
+        .await
+        .map_err(|_| IdentityError::internal("failed to update staff session"))?;
+        session_id
+    } else {
+        let session_id = uuid::Uuid::new_v4();
+        sqlx::query(
+            r#"
+            INSERT INTO store_staff_sessions
+                (id, store_id, staff_id, ip_address, user_agent, last_seen_at, expires_at)
+            VALUES ($1,$2,$3,$4,$5,now(),$6)
+            "#,
+        )
+        .bind(session_id)
+        .bind(store_uuid.as_uuid())
+        .bind(staff_uuid)
+        .bind(ip_address.clone())
+        .bind(user_agent.clone())
+        .bind(exp)
+        .execute(&state.db)
+        .await
+        .map_err(|_| IdentityError::internal("failed to create staff session"))?;
+        session_id
+    };
+
     let claims = JwtClaims {
         sub: staff_id.clone(),
         actor_type: role.clone(),
@@ -1711,33 +1772,22 @@ async fn sign_in_core(
     )
     .map_err(|_| IdentityError::internal("failed to sign token"))?;
 
-    let ctx = crate::rpc::request_context::current();
-    let ip_address = ctx.as_ref().and_then(|c| c.ip_address.clone());
-    let user_agent = ctx.as_ref().and_then(|c| c.user_agent.clone());
     let refresh_expires_at = now + chrono::Duration::days(REFRESH_TOKEN_TTL_DAYS);
     let refresh_token = uuid::Uuid::new_v4().to_string();
     let refresh_token_id = uuid::Uuid::new_v4();
     let refresh_hash = hash_refresh_token(&refresh_token);
 
-    sqlx::query(
+    let _ = sqlx::query(
         r#"
-        INSERT INTO store_staff_sessions
-            (id, store_id, staff_id, ip_address, user_agent, last_seen_at, expires_at)
-        VALUES ($1,$2,$3,$4,$5,now(),$6)
+        UPDATE store_staff_refresh_tokens
+        SET revoked_at = now()
+        WHERE session_id = $1 AND store_id = $2 AND revoked_at IS NULL
         "#,
     )
     .bind(session_id)
     .bind(store_uuid.as_uuid())
-    .bind(
-        parse_uuid(&staff_id, "staff_id")
-            .map_err(|_| IdentityError::internal("invalid staff_id"))?,
-    )
-    .bind(ip_address)
-    .bind(user_agent)
-    .bind(exp)
     .execute(&state.db)
-    .await
-    .map_err(|_| IdentityError::internal("failed to create staff session"))?;
+    .await;
 
     sqlx::query(
         r#"
@@ -1748,10 +1798,7 @@ async fn sign_in_core(
     )
     .bind(refresh_token_id)
     .bind(store_uuid.as_uuid())
-    .bind(
-        parse_uuid(&staff_id, "staff_id")
-            .map_err(|_| IdentityError::internal("invalid staff_id"))?,
-    )
+    .bind(staff_uuid)
     .bind(session_id)
     .bind(refresh_hash)
     .bind(refresh_expires_at)
