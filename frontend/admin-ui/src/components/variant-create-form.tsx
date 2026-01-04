@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { createVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function VariantCreateForm() {
   const [productId, setProductId] = useState("");
@@ -28,6 +28,7 @@ export default function VariantCreateForm() {
   const statusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -65,12 +66,7 @@ export default function VariantCreateForm() {
       setCompareAtAmount("");
       setStatus("active");
     } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Create failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

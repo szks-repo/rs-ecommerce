@@ -16,7 +16,7 @@ import { listTaxRules, upsertTaxRule } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function TaxRulesForm() {
   const [rules, setRules] = useState<TaxRule[]>([]);
@@ -26,6 +26,7 @@ export default function TaxRulesForm() {
   const [appliesTo, setAppliesTo] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function loadRules() {
     if (!getActiveAccessToken()) {
@@ -35,12 +36,7 @@ export default function TaxRulesForm() {
       const data = await listTaxRules();
       setRules(data.rules ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load tax rules");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load tax rules");
     }
   }
 
@@ -86,12 +82,7 @@ export default function TaxRulesForm() {
       setAppliesTo("all");
       await loadRules();
     } catch (err) {
-      const uiError = formatConnectError(err, "Save failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Save failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

@@ -16,8 +16,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
-import { useToast } from "@/components/ui/toast";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 type StoreSettingsSection =
   | "basic"
@@ -68,15 +67,19 @@ export default function StoreSettingsForm({
   const [faviconUrl, setFaviconUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   useEffect(() => {
     if (!getActiveAccessToken()) {
       return;
     }
     setIsLoading(true);
-    getStoreSettings()
+    call(() => getStoreSettings(), {
+      errorTitle: "Load failed",
+      errorDescription: "Failed to load store settings",
+    })
       .then((data) => {
+        if (!data) return;
         const settings = data.settings;
         if (!settings) {
           return;
@@ -114,32 +117,39 @@ export default function StoreSettingsForm({
         setLogoUrl(settings.logoUrl || "");
         setFaviconUrl(settings.faviconUrl || "");
       })
-      .catch((err) => {
-        const uiError = formatConnectError(err, "Load failed", "Failed to load store settings");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-      })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [push]);
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSaving(true);
-    try {
-      if (!getActiveAccessToken()) {
-        throw new Error("access_token is missing. Please sign in first.");
-      }
-      const needsCodValidation = visible.includes("payment") || visible.includes("payment-cod");
-      const feeAmount = codFeeAmount.trim().length > 0 ? codFeeAmount.trim() : "0";
-      if (needsCodValidation && !/^-?\\d+$/.test(feeAmount)) {
-        throw new Error("COD fee amount must be an integer.");
-      }
-      await updateStoreSettings({
+    if (!getActiveAccessToken()) {
+      await call(
+        async () => {
+          throw new Error("access_token is missing. Please sign in first.");
+        },
+        { errorTitle: "Update failed", errorDescription: "Sign in is required." }
+      );
+      setIsSaving(false);
+      return;
+    }
+    const needsCodValidation = visible.includes("payment") || visible.includes("payment-cod");
+    const feeAmount = codFeeAmount.trim().length > 0 ? codFeeAmount.trim() : "0";
+    if (needsCodValidation && !/^-?\\d+$/.test(feeAmount)) {
+      await call(
+        async () => {
+          throw new Error("COD fee amount must be an integer.");
+        },
+        { errorTitle: "Update failed", errorDescription: "COD fee amount must be an integer." }
+      );
+      setIsSaving(false);
+      return;
+    }
+    const resp = await call(
+      () =>
+        updateStoreSettings({
         settings: {
           storeName,
           legalName,
@@ -173,23 +183,21 @@ export default function StoreSettingsForm({
           logoUrl,
           faviconUrl,
         },
-      });
-      push({
-        variant: "success",
-        title: "Settings updated",
-        description: "Store settings have been updated.",
-      });
+        },
+      }),
+      {
+        success: {
+          title: "Settings updated",
+          description: "Store settings have been updated.",
+        },
+        errorTitle: "Update failed",
+        errorDescription: "Unknown error",
+      }
+    );
+    if (resp) {
       window.sessionStorage.setItem("store_time_zone", timeZone || "Asia/Tokyo");
-    } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   }
 
   return (

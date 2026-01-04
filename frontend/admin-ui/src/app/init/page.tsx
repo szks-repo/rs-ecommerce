@@ -6,9 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
 import { initializeStore, validateStoreCode } from "@/lib/setup";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function InitPage() {
   const router = useRouter();
@@ -19,7 +18,7 @@ export default function InitPage() {
   const [codeStatus, setCodeStatus] = useState<"idle" | "checking" | "available" | "unavailable">("idle");
   const [codeMessage, setCodeMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     if (!storeCode.trim()) {
@@ -40,9 +39,9 @@ export default function InitPage() {
           }
         })
         .catch((err) => {
-          const uiError = formatConnectError(err, "Validation failed", "Failed to validate store_code");
+          notifyError(err, "Validation failed", "Failed to validate store_code");
           setCodeStatus("unavailable");
-          setCodeMessage(uiError.description);
+          setCodeMessage("Failed to validate store_code");
         });
     }, 400);
     return () => clearTimeout(handle);
@@ -76,12 +75,7 @@ export default function InitPage() {
       sessionStorage.setItem("store_code", data.storeCode);
       router.push("/login");
     } catch (err) {
-      const uiError = formatConnectError(err, "Init failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Init failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

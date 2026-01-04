@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { createCustomer } from "@/lib/customer";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 const COUNTRY_OPTIONS = [
   { code: "JP", label: "Japan (JP)" },
@@ -32,6 +32,7 @@ export default function CustomerCreateForm() {
   const [countryCode, setCountryCode] = useState("JP");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -62,12 +63,7 @@ export default function CustomerCreateForm() {
       setStatus("active");
       setCountryCode("JP");
     } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Failed to create customer");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Create failed", "Failed to create customer");
     } finally {
       setIsSubmitting(false);
     }

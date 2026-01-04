@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { approveAuction, closeAuction, getAuction, listAutoBids, listBids } from "@/lib/auction";
-import { formatConnectError } from "@/lib/handle-error";
 import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { Auction, AuctionAutoBid, AuctionBid } from "@/gen/ecommerce/v1/auction_pb";
@@ -17,6 +17,7 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const { push } = useToast();
+  const { call } = useApiCall();
   const isValidId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
     auctionId
   );
@@ -34,25 +35,27 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
       return;
     }
     setIsLoading(true);
-    try {
-      const [auctionRes, bidsRes, autoRes] = await Promise.all([
-        getAuction({ auctionId }),
-        listBids({ auctionId }),
-        listAutoBids({ auctionId }),
-      ]);
-      setAuction(auctionRes.auction ?? null);
-      setBids(bidsRes.bids ?? []);
-      setAutoBids(autoRes.autoBids ?? []);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load auction");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
+    const result = await call(
+      async () => {
+        const [auctionRes, bidsRes, autoRes] = await Promise.all([
+          getAuction({ auctionId }),
+          listBids({ auctionId }),
+          listAutoBids({ auctionId }),
+        ]);
+        return {
+          auction: auctionRes.auction ?? null,
+          bids: bidsRes.bids ?? [],
+          autoBids: autoRes.autoBids ?? [],
+        };
+      },
+      { errorTitle: "Load failed", errorDescription: "Failed to load auction" }
+    );
+    if (result) {
+      setAuction(result.auction);
+      setBids(result.bids);
+      setAutoBids(result.autoBids);
     }
+    setIsLoading(false);
   }
 
   useEffect(() => {
@@ -62,48 +65,42 @@ export default function AuctionDetail({ auctionId }: { auctionId: string }) {
 
   async function handleClose() {
     setIsActionLoading(true);
-    try {
-      const res = await closeAuction({ auctionId });
+    const res = await call(
+      () => closeAuction({ auctionId }),
+      {
+        success: {
+          title: "Auction closed",
+          description: "Auction has been closed and waiting for approval if eligible.",
+        },
+        errorTitle: "Close failed",
+        errorDescription: "Failed to close auction",
+      }
+    );
+    if (res?.auction) {
       setAuction(res.auction ?? null);
-      push({
-        variant: "success",
-        title: "Auction closed",
-        description: "Auction has been closed and waiting for approval if eligible.",
-      });
       await loadAuction();
-    } catch (err) {
-      const uiError = formatConnectError(err, "Close failed", "Failed to close auction");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsActionLoading(false);
     }
+    setIsActionLoading(false);
   }
 
   async function handleApprove() {
     setIsActionLoading(true);
-    try {
-      const res = await approveAuction({ auctionId });
+    const res = await call(
+      () => approveAuction({ auctionId }),
+      {
+        success: {
+          title: "Auction approved",
+          description: "Winning bid has been approved.",
+        },
+        errorTitle: "Approve failed",
+        errorDescription: "Failed to approve auction",
+      }
+    );
+    if (res?.auction) {
       setAuction(res.auction ?? null);
-      push({
-        variant: "success",
-        title: "Auction approved",
-        description: "Winning bid has been approved.",
-      });
       await loadAuction();
-    } catch (err) {
-      const uiError = formatConnectError(err, "Approve failed", "Failed to approve auction");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsActionLoading(false);
     }
+    setIsActionLoading(false);
   }
 
   const canApprove = auction?.status === "awaiting_approval";

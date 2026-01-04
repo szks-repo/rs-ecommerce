@@ -14,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function RoleAssignForm() {
   const [staffId, setStaffId] = useState("");
@@ -23,6 +23,7 @@ export default function RoleAssignForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     let cancelled = false;
@@ -35,12 +36,7 @@ export default function RoleAssignForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+          notifyError(err, "Load failed", "Failed to load roles");
         }
       })
       .finally(() => {
@@ -68,12 +64,7 @@ export default function RoleAssignForm() {
       });
       setStaffId("");
     } catch (err) {
-      const uiError = formatConnectError(err, "Assign failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Assign failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

@@ -5,9 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { identityInviteStaff, identityListRoles } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
 import { formatDateWithStoreTz } from "@/lib/time";
 import {
   Select,
@@ -26,28 +25,21 @@ export default function StaffInviteForm() {
   const [expiresAt, setExpiresAt] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingRoles(true);
-    identityListRoles()
+    call(() => identityListRoles(), {
+      errorTitle: "Load failed",
+      errorDescription: "Failed to load roles",
+    })
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled || !data) return;
         const list = data.roles ?? [];
         setRoles(list);
         if (!roleId && list.length > 0) {
           setRoleId(list[0].id || "");
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
-          push({
-            variant: "error",
-            title: uiError.title,
-            description: uiError.description,
-          });
         }
       })
       .finally(() => {
@@ -63,39 +55,44 @@ export default function StaffInviteForm() {
   async function handleInvite(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
-    try {
-      if (!roleId) {
-        throw new Error("role is required");
+    if (!roleId) {
+      await call(
+        async () => {
+          throw new Error("role is required");
+        },
+        { errorTitle: "Invite failed", errorDescription: "Role is required" }
+      );
+      setIsSubmitting(false);
+      return;
+    }
+    const resp = await call(
+      () =>
+        identityInviteStaff({
+          email,
+          roleId,
+          displayName,
+        }),
+      {
+        success: {
+          title: "Invite created",
+          description: `Invite for ${email}`,
+        },
+        errorTitle: "Invite failed",
+        errorDescription: "Failed to invite staff",
       }
-      const resp = await identityInviteStaff({
-        email,
-        roleId,
-        displayName,
-      });
+    );
+    if (resp) {
       setInviteToken(resp.inviteToken || "");
       setExpiresAt(
         resp.expiresAt?.seconds
           ? formatDateWithStoreTz(new Date(Number(resp.expiresAt.seconds) * 1000))
           : ""
       );
-      push({
-        variant: "success",
-        title: "Invite created",
-        description: `Invite for ${resp.email}`,
-      });
       setEmail("");
       setDisplayName("");
       setRoleId(roles[0]?.id ?? "");
-    } catch (err) {
-      const uiError = formatConnectError(err, "Invite failed", "Failed to invite staff");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }
 
   return (

@@ -16,7 +16,7 @@ import {
 import { updateVariant } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 type VariantUpdateFormProps = {
   variant?: VariantAdmin | null;
@@ -38,6 +38,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
   const fulfillmentOptions = ["physical", "digital"] as const;
   const canSubmit = variantId.trim().length > 0;
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     if (!variant) {
@@ -80,12 +81,7 @@ export default function VariantUpdateForm({ variant, onUpdated }: VariantUpdateF
       });
       onUpdated?.();
     } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Update failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

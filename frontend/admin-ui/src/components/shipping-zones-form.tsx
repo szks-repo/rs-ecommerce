@@ -17,7 +17,7 @@ import { listShippingZones, upsertShippingZone } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import type { ShippingZone } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 function parsePrefectures(input: string) {
   return input
@@ -41,6 +41,7 @@ export default function ShippingZonesForm() {
   const [prefectures, setPrefectures] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function loadZones() {
     if (!getActiveAccessToken()) {
@@ -50,12 +51,7 @@ export default function ShippingZonesForm() {
       const data = await listShippingZones();
       setZones(data.zones ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load shipping zones");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load shipping zones");
     }
   }
 
@@ -102,12 +98,7 @@ export default function ShippingZonesForm() {
       setPrefectures("");
       await loadZones();
     } catch (err) {
-      const uiError = formatConnectError(err, "Save failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Save failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

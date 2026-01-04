@@ -6,20 +6,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { identityCreateRole } from "@/lib/identity";
-import { DEFAULT_PERMISSION_KEYS, PERMISSION_GROUPS } from "@/lib/permissions";
-import { formatConnectError } from "@/lib/handle-error";
+import {
+  DEFAULT_PERMISSION_KEYS,
+  PERMISSION_GROUPS,
+  type PermissionKeyLiteral,
+} from "@/lib/permissions";
 
 export default function RoleCreateForm() {
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [permissionKeys, setPermissionKeys] = useState<Set<string>>(
+  const [permissionKeys, setPermissionKeys] = useState<Set<PermissionKeyLiteral>>(
     () => new Set(DEFAULT_PERMISSION_KEYS)
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   function handleSelectAll() {
     setPermissionKeys(new Set(DEFAULT_PERMISSION_KEYS));
@@ -29,7 +32,7 @@ export default function RoleCreateForm() {
     setPermissionKeys(new Set());
   }
 
-  function togglePermission(permissionKey: string) {
+  function togglePermission(permissionKey: PermissionKeyLiteral) {
     setPermissionKeys((prev) => {
       const next = new Set(prev);
       if (next.has(permissionKey)) {
@@ -44,33 +47,31 @@ export default function RoleCreateForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
-    try {
-      const keys = Array.from(permissionKeys);
-      const data = await identityCreateRole({
-        key,
-        name,
-        description,
-        permissionKeys: keys,
-      });
-      push({
-        variant: "success",
-        title: "Role created",
-        description: `Created role: ${data.role?.id ?? ""}`,
-      });
+    const keys = Array.from(permissionKeys);
+    const data = await call(
+      () =>
+        identityCreateRole({
+          key,
+          name,
+          description,
+          permissionKeys: keys,
+        }),
+      {
+        success: {
+          title: "Role created",
+          description: `Created role: ${key || ""}`,
+        },
+        errorTitle: "Create failed",
+        errorDescription: "Failed to create role",
+      }
+    );
+    if (data) {
       setKey("");
       setName("");
       setDescription("");
       setPermissionKeys(new Set(DEFAULT_PERMISSION_KEYS));
-    } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Failed to create role");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }
 
   return (

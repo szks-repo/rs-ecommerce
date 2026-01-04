@@ -13,12 +13,48 @@ import {
   ListTaxRulesRequestSchema,
   UpsertTaxRuleRequestSchema,
   StoreSettingsSchema,
+  type StoreSettings,
 } from "@/gen/ecommerce/v1/store_settings_pb";
 import { MoneySchema } from "@/gen/ecommerce/v1/common_pb";
 
 const client = createServiceClient(StoreSettingsService);
 
-function flattenStoreSettings(settings: any) {
+export type StoreSettingsFormValues = {
+  storeName: string;
+  legalName: string;
+  legalNotice: string;
+  contactEmail: string;
+  contactPhone: string;
+  addressPrefecture: string;
+  addressCity: string;
+  addressLine1: string;
+  addressLine2?: string;
+  defaultLanguage: string;
+  primaryDomain?: string;
+  subdomain?: string;
+  httpsEnabled: boolean;
+  timeZone: string;
+  currency: string;
+  taxMode: string;
+  taxRounding: string;
+  orderInitialStatus: string;
+  codEnabled: boolean;
+  codFee?: { amount?: string; currency?: string };
+  codFeeAmount?: string;
+  codFeeCurrency?: string;
+  bankTransferEnabled: boolean;
+  bankName: string;
+  bankBranch: string;
+  bankAccountType: string;
+  bankAccountNumber: string;
+  bankAccountName: string;
+  theme: string;
+  brandColor: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+};
+
+export function toStoreSettingsForm(settings: StoreSettings): StoreSettingsFormValues {
   const profile = settings.profile ?? {};
   const contact = settings.contact ?? {};
   const address = settings.address ?? {};
@@ -50,6 +86,8 @@ function flattenStoreSettings(settings: any) {
     orderInitialStatus: order.orderInitialStatus || "pending_payment",
     codEnabled: Boolean(payment.codEnabled),
     codFee: payment.codFee,
+    codFeeAmount: payment.codFee?.amount?.toString() || "",
+    codFeeCurrency: payment.codFee?.currency || "",
     bankTransferEnabled: Boolean(payment.bankTransferEnabled),
     bankName: bank.bankName || "",
     bankBranch: bank.bankBranch || "",
@@ -70,44 +108,12 @@ export async function getStoreSettings() {
     return { settings: undefined };
   }
   return {
-    settings: flattenStoreSettings(settings),
+    settings: toStoreSettingsForm(settings),
   };
 }
 
 export async function updateStoreSettings(params: {
-  settings: {
-    storeName: string;
-    legalName: string;
-    contactEmail: string;
-    contactPhone: string;
-    addressPrefecture: string;
-    addressCity: string;
-    addressLine1: string;
-    addressLine2?: string;
-    legalNotice: string;
-    defaultLanguage: string;
-    primaryDomain?: string;
-    subdomain?: string;
-    httpsEnabled: boolean;
-    timeZone: string;
-    currency: string;
-    taxMode: string;
-    taxRounding: string;
-    orderInitialStatus: string;
-    codEnabled: boolean;
-    codFeeAmount: string;
-    codFeeCurrency: string;
-    bankTransferEnabled: boolean;
-    bankName: string;
-    bankBranch: string;
-    bankAccountType: string;
-    bankAccountNumber: string;
-    bankAccountName: string;
-    theme: string;
-    brandColor: string;
-    logoUrl?: string;
-    faviconUrl?: string;
-  };
+  settings: StoreSettingsFormValues;
 }) {
   const settings = create(StoreSettingsSchema, {
     profile: {
@@ -165,7 +171,7 @@ export async function updateStoreSettings(params: {
     },
   });
   const resp = await client.updateStoreSettings(create(UpdateStoreSettingsRequestSchema, { settings }));
-  return { settings: resp.settings ? flattenStoreSettings(resp.settings) : undefined };
+  return { settings: resp.settings ? toStoreSettingsForm(resp.settings) : undefined };
 }
 
 export async function listStoreLocations() {

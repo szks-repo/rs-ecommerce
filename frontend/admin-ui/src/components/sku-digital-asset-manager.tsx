@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
-import { formatConnectError } from "@/lib/handle-error";
 import {
   createDigitalAsset,
   createDigitalDownloadUrl,
@@ -14,6 +13,7 @@ import {
   listDigitalAssets,
 } from "@/lib/product";
 import type { DigitalAsset } from "@/gen/ecommerce/v1/backoffice_pb";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function SkuDigitalAssetManager({ skuId }: { skuId: string }) {
   const [assets, setAssets] = useState<DigitalAsset[]>([]);
@@ -21,6 +21,7 @@ export default function SkuDigitalAssetManager({ skuId }: { skuId: string }) {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   const hasAssets = useMemo(() => assets.length > 0, [assets.length]);
 
@@ -30,12 +31,7 @@ export default function SkuDigitalAssetManager({ skuId }: { skuId: string }) {
       const res = await listDigitalAssets({ skuId });
       setAssets(res.assets ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load digital assets");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load digital assets");
     } finally {
       setIsLoading(false);
     }
@@ -91,12 +87,7 @@ export default function SkuDigitalAssetManager({ skuId }: { skuId: string }) {
         description: "Digital asset uploaded.",
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Upload failed", "Failed to upload digital asset");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Upload failed", "Failed to upload digital asset");
     } finally {
       setIsUploading(false);
     }
@@ -109,12 +100,7 @@ export default function SkuDigitalAssetManager({ skuId }: { skuId: string }) {
         window.open(resp.downloadUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err) {
-      const uiError = formatConnectError(err, "Download failed", "Failed to create download URL");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Download failed", "Failed to create download URL");
     }
   }
 

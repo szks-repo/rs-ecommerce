@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function InventorySetForm() {
   const [variantId, setVariantId] = useState("");
@@ -28,6 +28,7 @@ export default function InventorySetForm() {
   const [reserved, setReserved] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     if (!getActiveAccessToken()) {
@@ -43,12 +44,7 @@ export default function InventorySetForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          const uiError = formatConnectError(err, "Load failed", "Failed to load locations");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+          notifyError(err, "Load failed", "Failed to load locations");
         }
       })
       .finally(() => {
@@ -92,12 +88,7 @@ export default function InventorySetForm() {
       setStock("0");
       setReserved("0");
     } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Update failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

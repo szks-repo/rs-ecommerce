@@ -16,7 +16,7 @@ import {
 import { listStoreLocations, upsertStoreLocation } from "@/lib/store_settings";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function StoreLocationForm() {
   const [locations, setLocations] = useState<StoreLocation[]>([]);
@@ -26,6 +26,7 @@ export default function StoreLocationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const statusOptions = ["active", "inactive"] as const;
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function loadLocations() {
     if (!getActiveAccessToken()) {
@@ -57,12 +58,7 @@ export default function StoreLocationForm() {
       setStatus("active");
       await loadLocations();
     } catch (err) {
-      const uiError = formatConnectError(err, "Save failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Save failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

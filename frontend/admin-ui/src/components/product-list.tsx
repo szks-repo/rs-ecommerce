@@ -3,49 +3,36 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
-import { formatConnectError } from "@/lib/handle-error";
 
 export default function ProductList() {
-  const [products, setProducts] = useState<ProductAdmin[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [query, setQuery] = useState("");
-  const { push } = useToast();
-
-  async function loadProducts() {
-    if (!getActiveAccessToken()) {
-      push({
-        variant: "error",
-        title: "Load failed",
-        description: "access_token is missing. Please sign in first.",
-      });
-      return;
-    }
-    setIsLoading(true);
-    try {
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<ProductAdmin[]>(
+    async () => {
+      if (!getActiveAccessToken()) {
+        throw new Error("access_token is missing. Please sign in first.");
+      }
       const data = await listProductsAdmin();
-      setProducts(data.products ?? []);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load products");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+      return data.products ?? [];
+    },
+    []
+  );
 
   useEffect(() => {
-    void loadProducts();
-  }, []);
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load products");
+    }
+  }, [error, notifyError]);
+
+  const products = data ?? [];
 
   const filtered = query.trim()
     ? products.filter((product) => {
@@ -75,8 +62,8 @@ export default function ProductList() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by title, id, description"
           />
-          <Button variant="outline" onClick={loadProducts} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Refresh"}
+          <Button variant="outline" onClick={reload} disabled={loading}>
+            {loading ? "Loading..." : "Refresh"}
           </Button>
         </div>
       </CardHeader>

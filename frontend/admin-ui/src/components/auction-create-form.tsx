@@ -15,9 +15,9 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { createAuction } from "@/lib/auction";
 import { listSkusAdmin } from "@/lib/product";
-import { formatConnectError } from "@/lib/handle-error";
 import type { SkuAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import { Textarea } from "@/components/ui/textarea";
+import { useApiCall } from "@/lib/use-api-call";
 
 const auctionTypes = ["open", "sealed"] as const;
 const statusOptions = ["draft", "scheduled"] as const;
@@ -51,6 +51,7 @@ export default function AuctionCreateForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function handleSkuSearch() {
     setIsSearching(true);
@@ -58,12 +59,7 @@ export default function AuctionCreateForm() {
       const res = await listSkusAdmin({ query: skuQuery });
       setSkuResults(res.skus ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Search failed", "Failed to search SKUs");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Search failed", "Failed to search SKUs");
     } finally {
       setIsSearching(false);
     }
@@ -115,12 +111,7 @@ export default function AuctionCreateForm() {
       setBuyoutPriceAmount("");
       setBidIncrementAmount("");
     } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Failed to create auction");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Create failed", "Failed to create auction");
     } finally {
       setIsSubmitting(false);
     }

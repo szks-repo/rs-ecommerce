@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identityAcceptInvite } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function AcceptInvitePage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,12 +37,7 @@ export default function AcceptInvitePage() {
       router.push("/login");
       return resp;
     } catch (err) {
-      const uiError = formatConnectError(err, "Accept failed", "Failed to accept invite");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Accept failed", "Failed to accept invite");
     } finally {
       setIsSubmitting(false);
     }

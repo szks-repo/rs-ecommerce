@@ -6,13 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store_settings";
 import { useToast } from "@/components/ui/toast";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function SettingsPaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<Awaited<ReturnType<typeof getStoreSettings>>["settings"] | null>(null);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     setIsLoading(true);
@@ -21,12 +22,7 @@ export default function SettingsPaymentPage() {
         setSettings(data.settings ?? null);
       })
       .catch((err) => {
-        const uiError = formatConnectError(err, "Load failed", "Failed to load payment settings");
-        push({
-          variant: "error",
-          title: uiError.title,
-          description: uiError.description,
-        });
+        notifyError(err, "Load failed", "Failed to load payment settings");
       })
       .finally(() => {
         setIsLoading(false);
@@ -83,12 +79,7 @@ export default function SettingsPaymentPage() {
         description: "Available payment methods have been updated.",
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Failed to update payment settings");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Update failed", "Failed to update payment settings");
     } finally {
       setIsSaving(false);
     }

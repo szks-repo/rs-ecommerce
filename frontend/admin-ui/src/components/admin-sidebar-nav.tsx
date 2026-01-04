@@ -1,14 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { getActiveActorInfo } from "@/lib/auth";
-import { identityListMyPermissions } from "@/lib/identity";
+import { usePermissions } from "@/lib/use-permissions";
+import type { PermissionKeyLiteral } from "@/lib/permissions";
 
 type NavItem = {
   label: string;
   href: string;
-  permission?: string;
+  permission?: PermissionKeyLiteral;
   indent?: boolean;
 };
 
@@ -27,41 +26,9 @@ const NAV_ITEMS: NavItem[] = [
 
 export default function AdminSidebarNav() {
   const pathname = usePathname();
-  const [permissionKeys, setPermissionKeys] = useState<string[] | null>(null);
+  const permissions = usePermissions();
 
-  useEffect(() => {
-    const actor = getActiveActorInfo();
-    if (!actor) {
-      setPermissionKeys([]);
-      return;
-    }
-    if (actor.role === "owner") {
-      setPermissionKeys(["*"]);
-      return;
-    }
-    identityListMyPermissions()
-      .then((resp) => {
-        setPermissionKeys(resp.permissionKeys || []);
-      })
-      .catch(() => {
-        setPermissionKeys([]);
-      });
-  }, []);
-
-  const allowed = useMemo(() => {
-    const keys = permissionKeys ?? [];
-    return (permission?: string) => {
-      if (!permission) {
-        return true;
-      }
-      if (keys.includes("*")) {
-        return true;
-      }
-      return keys.includes(permission);
-    };
-  }, [permissionKeys]);
-
-  if (permissionKeys === null) {
+  if (permissions.status === "loading") {
     return (
       <nav className="mt-6 space-y-2 text-sm text-neutral-600">
         <div className="text-xs text-neutral-400">Loading menu…</div>
@@ -71,7 +38,7 @@ export default function AdminSidebarNav() {
 
   return (
     <nav className="mt-6 space-y-2 text-sm text-neutral-600">
-      {NAV_ITEMS.filter((item) => allowed(item.permission)).map((item) => {
+      {NAV_ITEMS.filter((item) => permissions.has(item.permission)).map((item) => {
         const isActive =
           item.href === "/admin"
             ? pathname === "/admin"

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 import { identityListRolesWithPermissions } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
 
 type RoleRow = {
   id: string;
@@ -16,37 +16,28 @@ type RoleRow = {
 };
 
 export default function RoleList() {
-  const [roles, setRoles] = useState<RoleRow[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { push } = useToast();
-
-  async function loadRoles() {
-    setIsLoading(true);
-    try {
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<RoleRow[]>(
+    async () => {
       const data = await identityListRolesWithPermissions();
-      const list = (data.roles ?? []).map((role) => ({
+      return (data.roles ?? []).map((role) => ({
         id: role.id,
         key: role.key,
         name: role.name,
         description: role.description ?? "",
         permissionKeys: role.permissionKeys ?? [],
       }));
-      setRoles(list);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+    },
+    []
+  );
 
   useEffect(() => {
-    void loadRoles();
-  }, []);
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load roles");
+    }
+  }, [error, notifyError]);
+
+  const roles = data ?? [];
 
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
@@ -59,7 +50,7 @@ export default function RoleList() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2 text-sm text-neutral-500">
           <div>{roles.length} roles</div>
-          <Button type="button" variant="outline" size="sm" onClick={loadRoles} disabled={isLoading}>
+          <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
             Refresh
           </Button>
         </div>

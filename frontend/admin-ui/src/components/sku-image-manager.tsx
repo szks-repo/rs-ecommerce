@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
-import { formatConnectError } from "@/lib/handle-error";
 import { createMediaAsset, createMediaUploadUrl, listMediaAssets, listSkuImages, setSkuImages } from "@/lib/product";
 import type { MediaAsset } from "@/gen/ecommerce/v1/backoffice_pb";
+import { useApiCall } from "@/lib/use-api-call";
 
 type SelectedImage = {
   asset: MediaAsset;
@@ -26,6 +26,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   const selectedAssetIds = useMemo(
     () => new Set(selectedImages.map((img) => img.asset.id)),
@@ -38,12 +39,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
       const res = await listMediaAssets({ query: currentQuery ?? query });
       setAssets(res.assets ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load assets");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load assets");
     } finally {
       setIsLoading(false);
     }
@@ -59,12 +55,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
         }));
       setSelectedImages(images);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load SKU images");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load SKU images");
     }
   }
 
@@ -117,12 +108,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
       });
       await loadSkuImages();
     } catch (err) {
-      const uiError = formatConnectError(err, "Save failed", "Failed to update images");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Save failed", "Failed to update images");
     } finally {
       setIsSaving(false);
     }
@@ -154,12 +140,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
         description: "The image has been copied into your storage and added to the library.",
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Failed to add asset");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Create failed", "Failed to add asset");
     } finally {
       setIsCreatingAsset(false);
     }
@@ -210,12 +191,7 @@ export default function SkuImageManager({ skuId }: { skuId: string }) {
         description: "The image has been uploaded and added to the library.",
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Upload failed", "Failed to upload image");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Upload failed", "Failed to upload image");
     } finally {
       setIsUploading(false);
     }

@@ -7,13 +7,27 @@ import { Button } from "@/components/ui/button";
 import { listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import type { VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 
 export default function VariantList() {
   const [productId, setProductId] = useState("");
-  const [variants, setVariants] = useState<VariantAdmin[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchProductId, setSearchProductId] = useState("");
   const { push } = useToast();
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<VariantAdmin[]>(
+    async () => {
+      if (!getActiveAccessToken()) {
+        throw new Error("access_token is missing. Please sign in first.");
+      }
+      if (!searchProductId) {
+        return [];
+      }
+      const data = await listVariantsAdmin({ productId: searchProductId });
+      return data.variants ?? [];
+    },
+    [searchProductId]
+  );
 
   useEffect(() => {
     const saved = sessionStorage.getItem("last_product_id");
@@ -21,6 +35,14 @@ export default function VariantList() {
       setProductId(saved);
     }
   }, []);
+
+  useEffect(() => {
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load variants");
+    }
+  }, [error, notifyError]);
+
+  const variants = data ?? [];
 
   async function loadVariants() {
     if (!getActiveAccessToken()) {
@@ -39,20 +61,15 @@ export default function VariantList() {
       });
       return;
     }
-    setIsLoading(true);
     try {
-      const data = await listVariantsAdmin({ productId });
-      setVariants(data.variants ?? []);
+      const shouldReload = productId === searchProductId;
+      setSearchProductId(productId);
+      if (shouldReload) {
+        await reload();
+      }
       sessionStorage.setItem("last_product_id", productId);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load variants");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
+      notifyError(err, "Load failed", "Failed to load variants");
     }
   }
 
@@ -65,8 +82,8 @@ export default function VariantList() {
             List variants by product.
           </CardDescription>
         </div>
-        <Button variant="outline" onClick={loadVariants} disabled={isLoading}>
-          {isLoading ? "Loading..." : "Refresh"}
+        <Button variant="outline" onClick={loadVariants} disabled={loading}>
+          {loading ? "Loading..." : "Refresh"}
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">

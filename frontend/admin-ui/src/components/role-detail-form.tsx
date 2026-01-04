@@ -6,60 +6,54 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { identityDeleteRole, identityListRolesWithPermissions, identityUpdateRole } from "@/lib/identity";
-import { PERMISSION_GROUPS } from "@/lib/permissions";
-import { formatConnectError } from "@/lib/handle-error";
+import { PERMISSION_GROUPS, type PermissionKeyLiteral } from "@/lib/permissions";
 
 type RoleRow = {
   id: string;
   key: string;
   name: string;
   description: string;
-  permissionKeys: string[];
+  permissionKeys: PermissionKeyLiteral[];
 };
 
 export default function RoleDetailForm({ roleId }: { roleId: string }) {
   const [role, setRole] = useState<RoleRow | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   const rolePermissions = useMemo(() => new Set(role?.permissionKeys ?? []), [role]);
 
   async function loadRole() {
     setIsLoading(true);
-    try {
-      const data = await identityListRolesWithPermissions();
+    const data = await call(
+      () => identityListRolesWithPermissions(),
+      { errorTitle: "Load failed", errorDescription: "Failed to load role" }
+    );
+    if (data) {
       const found = (data.roles ?? []).find((item) => item.id === roleId);
       if (!found) {
         setRole(null);
-        return;
+      } else {
+        setRole({
+          id: found.id,
+          key: found.key,
+          name: found.name,
+          description: found.description ?? "",
+          permissionKeys: (found.permissionKeys ?? []) as PermissionKeyLiteral[],
+        });
       }
-      setRole({
-        id: found.id,
-        key: found.key,
-        name: found.name,
-        description: found.description ?? "",
-        permissionKeys: found.permissionKeys ?? [],
-      });
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load role");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }
 
   useEffect(() => {
     void loadRole();
   }, [roleId]);
 
-  function togglePermission(permissionKey: string) {
+  function togglePermission(permissionKey: PermissionKeyLiteral) {
     if (!role) return;
     const next = new Set(role.permissionKeys);
     if (next.has(permissionKey)) {
@@ -73,31 +67,32 @@ export default function RoleDetailForm({ roleId }: { roleId: string }) {
   async function handleSave() {
     if (!role) return;
     setIsSaving(true);
-    try {
-      const resp = await identityUpdateRole({
-        roleId: role.id,
-        name: role.name,
-        description: role.description,
-        permissionKeys: role.permissionKeys,
-      });
-      if (!resp.updated) {
-        throw new Error("Update failed");
+    const resp = await call(
+      () =>
+        identityUpdateRole({
+          roleId: role.id,
+          name: role.name,
+          description: role.description,
+          permissionKeys: role.permissionKeys,
+        }),
+      {
+        success: {
+          title: "Role updated",
+          description: `Updated ${role.name}`,
+        },
+        errorTitle: "Update failed",
+        errorDescription: "Failed to update role",
       }
-      push({
-        variant: "success",
-        title: "Role updated",
-        description: `Updated ${role.name}`,
-      });
-    } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Failed to update role");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSaving(false);
+    );
+    if (resp && !resp.updated) {
+      await call(
+        async () => {
+          throw new Error("Update failed");
+        },
+        { errorTitle: "Update failed", errorDescription: "Failed to update role" }
+      );
     }
+    setIsSaving(false);
   }
 
   async function handleDelete() {
@@ -105,27 +100,21 @@ export default function RoleDetailForm({ roleId }: { roleId: string }) {
     const confirmed = window.confirm(`Delete role "${role.name}"?`);
     if (!confirmed) return;
     setIsSaving(true);
-    try {
-      const resp = await identityDeleteRole({ roleId: role.id });
-      if (!resp.deleted) {
-        throw new Error("Delete failed");
+    const resp = await call(
+      () => identityDeleteRole({ roleId: role.id }),
+      {
+        success: {
+          title: "Role deleted",
+          description: `Deleted ${role.name}`,
+        },
+        errorTitle: "Delete failed",
+        errorDescription: "Failed to delete role",
       }
-      push({
-        variant: "success",
-        title: "Role deleted",
-        description: `Deleted ${role.name}`,
-      });
+    );
+    if (resp?.deleted) {
       window.location.href = "/admin/identity/roles";
-    } catch (err) {
-      const uiError = formatConnectError(err, "Delete failed", "Failed to delete role");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   }
 
   if (isLoading) {

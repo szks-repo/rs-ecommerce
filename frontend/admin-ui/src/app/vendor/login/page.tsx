@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { consumeAuthFlashMessage } from "@/lib/auth";
 import { identitySignIn } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function VendorLoginPage() {
   const router = useRouter();
@@ -18,6 +18,7 @@ export default function VendorLoginPage() {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     const saved = sessionStorage.getItem("store_code");
@@ -42,12 +43,7 @@ export default function VendorLoginPage() {
       sessionStorage.setItem("store_code", storeCode);
       router.push("/vendor");
     } catch (err) {
-      const uiError = formatConnectError(err, "Sign in failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Sign in failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

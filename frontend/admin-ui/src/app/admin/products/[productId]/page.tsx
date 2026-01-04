@@ -14,7 +14,7 @@ import { listProductsAdmin, listVariantsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin, VariantAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function ProductDetailPage() {
   const params = useParams();
@@ -30,6 +30,7 @@ export default function ProductDetailPage() {
   const [selectedVariant, setSelectedVariant] = useState<VariantAdmin | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function loadData() {
     if (!getActiveAccessToken()) {
@@ -64,12 +65,7 @@ export default function ProductDetailPage() {
         setSelectedVariant(null);
       }
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load product");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load product");
     } finally {
       setIsLoading(false);
     }

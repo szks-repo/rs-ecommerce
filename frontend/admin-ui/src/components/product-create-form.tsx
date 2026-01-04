@@ -18,7 +18,7 @@ import { createProduct } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function ProductCreateForm() {
   const [title, setTitle] = useState("");
@@ -35,6 +35,7 @@ export default function ProductCreateForm() {
   const [taxRules, setTaxRules] = useState<TaxRule[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
   const statusOptions = ["active", "inactive", "draft"] as const;
   const variantStatusOptions = ["active", "inactive"] as const;
   const fulfillmentOptions = ["physical", "digital"] as const;
@@ -128,12 +129,7 @@ export default function ProductCreateForm() {
       setCompareAtAmount("");
       setVariantStatus("active");
     } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Create failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

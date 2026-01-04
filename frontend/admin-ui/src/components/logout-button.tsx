@@ -6,11 +6,12 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identitySignOut } from "@/lib/identity";
 import { clearActiveStoreSession, getActiveStoreId, getActiveTenantId } from "@/lib/auth";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function LogoutButton() {
   const router = useRouter();
   const { push } = useToast();
+  const { notifyError } = useApiCall();
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   async function handleSignOut() {
@@ -24,12 +25,7 @@ export default function LogoutButton() {
         tenantId: getActiveTenantId() || undefined,
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Sign out failed", "Failed to sign out");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Sign out failed", "Failed to sign out");
     } finally {
       clearActiveStoreSession();
       router.push("/login");

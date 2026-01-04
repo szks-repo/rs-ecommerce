@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { identityListRoles, identityListStaff, identityUpdateStaff } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 import {
   Select,
   SelectContent,
@@ -38,9 +39,35 @@ export default function StaffListForm() {
   const [roles, setRoles] = useState<RoleRow[]>([]);
   const [pending, setPending] = useState<Record<string, string>>({});
   const [pendingName, setPendingName] = useState<Record<string, string>>({});
-  const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState<string | null>(null);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<{
+    roles: RoleRow[];
+    staff: StaffRow[];
+  }>(async () => {
+    const [roleResp, staffResp] = await Promise.all([identityListRoles(), identityListStaff()]);
+    const roleRows = roleResp.roles ?? [];
+    const list = (staffResp.staff ?? []).map((item) => ({
+      staffId: item.staffId,
+      email: item.email ?? "",
+      loginId: item.loginId ?? "",
+      phone: item.phone ?? "",
+      roleId: item.roleId ?? "",
+      roleKey: item.roleKey ?? "",
+      status: item.status ?? "",
+      displayName: item.displayName ?? "",
+    }));
+    list.sort((a, b) => {
+      const aOwner = a.roleKey === "owner" ? 1 : 0;
+      const bOwner = b.roleKey === "owner" ? 1 : 0;
+      if (aOwner !== bOwner) {
+        return bOwner - aOwner;
+      }
+      return a.staffId.localeCompare(b.staffId);
+    });
+    return { roles: roleRows, staff: list };
+  }, []);
 
   const roleLabelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -50,56 +77,25 @@ export default function StaffListForm() {
     return map;
   }, [roles]);
 
-  async function loadAll() {
-    setIsLoading(true);
-    try {
-      const [roleResp, staffResp] = await Promise.all([
-        identityListRoles(),
-        identityListStaff(),
-      ]);
-      setRoles(roleResp.roles ?? []);
-      const list = (staffResp.staff ?? []).map((item) => ({
-        staffId: item.staffId,
-        email: item.email ?? "",
-        loginId: item.loginId ?? "",
-        phone: item.phone ?? "",
-        roleId: item.roleId ?? "",
-        roleKey: item.roleKey ?? "",
-        status: item.status ?? "",
-        displayName: item.displayName ?? "",
-      }));
-      list.sort((a, b) => {
-        const aOwner = a.roleKey === "owner" ? 1 : 0;
-        const bOwner = b.roleKey === "owner" ? 1 : 0;
-        if (aOwner !== bOwner) {
-          return bOwner - aOwner;
-        }
-        return a.staffId.localeCompare(b.staffId);
-      });
-      setStaff(list);
-      const initial: Record<string, string> = {};
-      const initialNames: Record<string, string> = {};
-      list.forEach((row) => {
-        initial[row.staffId] = row.roleId;
-        initialNames[row.staffId] = row.displayName;
-      });
-      setPending(initial);
-      setPendingName(initialNames);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load staff");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
-
   useEffect(() => {
-    void loadAll();
-  }, []);
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load staff");
+      return;
+    }
+    if (!data) {
+      return;
+    }
+    setRoles(data.roles);
+    setStaff(data.staff);
+    const initial: Record<string, string> = {};
+    const initialNames: Record<string, string> = {};
+    data.staff.forEach((row) => {
+      initial[row.staffId] = row.roleId;
+      initialNames[row.staffId] = row.displayName;
+    });
+    setPending(initial);
+    setPendingName(initialNames);
+  }, [data, error, notifyError]);
 
   function formatStaffLabel(row: StaffRow) {
     const primary = row.displayName || row.email || row.loginId || row.phone || row.staffId;
@@ -134,12 +130,7 @@ export default function StaffListForm() {
         description: "Staff updated.",
       });
     } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Failed to update staff");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Update failed", "Failed to update staff");
     } finally {
       setIsSaving(null);
     }
@@ -156,8 +147,8 @@ export default function StaffListForm() {
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2 text-sm text-neutral-500">
           <div>{staff.length} staff members</div>
-          <Button type="button" variant="outline" size="sm" onClick={loadAll} disabled={isLoading}>
-            Refresh
+          <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
+            {loading ? "Loading..." : "Refresh"}
           </Button>
         </div>
         <div className="space-y-3">

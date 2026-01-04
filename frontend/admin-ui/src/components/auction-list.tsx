@@ -11,9 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { listAuctions, listAutoBids } from "@/lib/auction";
-import { formatConnectError } from "@/lib/handle-error";
 import { formatMoney } from "@/lib/money";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { Auction } from "@/gen/ecommerce/v1/auction_pb";
@@ -33,18 +32,17 @@ export default function AuctionList() {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [autoBidCounts, setAutoBidCounts] = useState<Record<string, number>>({});
   const [isLoading, setIsLoading] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   async function loadAuctions(nextStatus?: string) {
     setIsLoading(true);
-    try {
+    const result = await call(async () => {
       const selected = (nextStatus ?? status) === "all" ? "" : nextStatus ?? status;
       const data = await listAuctions({ status: selected });
       const nextAuctions = data.auctions ?? [];
-      setAuctions(nextAuctions);
       const ids = nextAuctions.map((auction) => auction.id).filter((id) => id);
       if (ids.length === 0) {
-        setAutoBidCounts({});
+        return { auctions: nextAuctions, autoBidCounts: {} };
       } else {
         const results = await Promise.all(
           ids.map(async (auctionId) => {
@@ -56,18 +54,17 @@ export default function AuctionList() {
             }
           })
         );
-        setAutoBidCounts(Object.fromEntries(results));
+        return { auctions: nextAuctions, autoBidCounts: Object.fromEntries(results) };
       }
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load auctions");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
+    }, {
+      errorTitle: "Load failed",
+      errorDescription: "Failed to load auctions",
+    });
+    if (result) {
+      setAuctions(result.auctions);
+      setAutoBidCounts(result.autoBidCounts);
     }
+    setIsLoading(false);
   }
 
   useEffect(() => {

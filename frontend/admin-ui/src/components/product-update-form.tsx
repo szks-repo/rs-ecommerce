@@ -19,7 +19,7 @@ import { getActiveAccessToken } from "@/lib/auth";
 import { listTaxRules } from "@/lib/store_settings";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import type { TaxRule } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 type ProductUpdateFormProps = {
   product?: ProductAdmin | null;
@@ -37,6 +37,7 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
   const statusOptions = ["active", "inactive", "draft"] as const;
   const canSubmit = productId.trim().length > 0;
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   useEffect(() => {
     if (!product) {
@@ -83,12 +84,7 @@ export default function ProductUpdateForm({ product, onUpdated }: ProductUpdateF
       });
       onUpdated?.();
     } catch (err) {
-      const uiError = formatConnectError(err, "Update failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Update failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

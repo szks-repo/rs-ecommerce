@@ -15,10 +15,10 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { listAuditActions, listAuditLogs } from "@/lib/audit";
 import { identityListStaff } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
 import { getActiveAccessToken } from "@/lib/auth";
 import { formatTimestampWithStoreTz, getStoreTimeZone, toUtcDateFromStoreDateInput } from "@/lib/time";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
+import { useApiCall } from "@/lib/use-api-call";
 
 type AuditActionItem = {
   key: string;
@@ -64,6 +64,7 @@ export default function AuditLogsPage() {
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   const hasFilter = useMemo(
     () =>
@@ -110,12 +111,7 @@ export default function AuditLogsPage() {
       setNextPageToken(data.page?.nextPageToken ?? "");
       setPageToken(nextToken);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load audit logs");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load audit logs");
     } finally {
       setIsLoading(false);
     }

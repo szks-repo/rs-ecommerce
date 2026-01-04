@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { identityListStaff, identityTransferOwner } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 import {
   Select,
   SelectContent,
@@ -30,6 +30,7 @@ export default function OwnerTransferForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   const owner = useMemo(() => staff.find((item) => item.roleKey === "owner"), [staff]);
   const candidates = useMemo(() => staff.filter((item) => item.roleKey !== "owner"), [staff]);
@@ -56,12 +57,7 @@ export default function OwnerTransferForm() {
       })
       .catch((err) => {
         if (!cancelled) {
-          const uiError = formatConnectError(err, "Load failed", "Failed to load staff");
-          push({
-            variant: "error",
-            title: uiError.title,
-            description: uiError.description,
-          });
+          notifyError(err, "Load failed", "Failed to load staff");
         }
       })
       .finally(() => {
@@ -114,12 +110,7 @@ export default function OwnerTransferForm() {
       const nextCandidate = list.find((item) => item.roleKey !== "owner");
       setSelected(nextCandidate?.staffId ?? "");
     } catch (err) {
-      const uiError = formatConnectError(err, "Transfer failed", "Failed to transfer owner");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Transfer failed", "Failed to transfer owner");
     } finally {
       setIsSubmitting(false);
     }

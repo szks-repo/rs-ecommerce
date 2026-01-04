@@ -5,32 +5,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { identityForceSignOutStaff, identityListStaffSessions } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 import type { IdentityStaffSession } from "@/gen/ecommerce/v1/identity_pb";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 
 export default function StaffSessionList() {
-  const [sessions, setSessions] = useState<IdentityStaffSession[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState<string | null>(null);
   const { push } = useToast();
-
-  async function loadSessions() {
-    setIsLoading(true);
-    try {
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<IdentityStaffSession[]>(
+    async () => {
       const res = await identityListStaffSessions();
-      setSessions(res.sessions ?? []);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load staff sessions");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
+      return res.sessions ?? [];
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load staff sessions");
     }
-  }
+  }, [error, notifyError]);
 
   async function handleForceSignOut(staffId: string) {
     setIsSubmitting(staffId);
@@ -41,22 +37,15 @@ export default function StaffSessionList() {
         title: "Signed out",
         description: "All active sessions were revoked.",
       });
-      await loadSessions();
+      await reload();
     } catch (err) {
-      const uiError = formatConnectError(err, "Action failed", "Failed to revoke sessions");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Action failed", "Failed to revoke sessions");
     } finally {
       setIsSubmitting(null);
     }
   }
 
-  useEffect(() => {
-    void loadSessions();
-  }, []);
+  const sessions = data ?? [];
 
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
@@ -67,7 +56,7 @@ export default function StaffSessionList() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {loading ? (
           <div className="text-sm text-neutral-600">Loading...</div>
         ) : sessions.length === 0 ? (
           <div className="text-sm text-neutral-600">No active sessions.</div>

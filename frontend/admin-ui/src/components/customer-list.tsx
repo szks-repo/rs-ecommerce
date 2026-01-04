@@ -5,47 +5,36 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
 import { getActiveAccessToken } from "@/lib/auth";
 import { listCustomers } from "@/lib/customer";
 import type { CustomerSummary } from "@/gen/ecommerce/v1/customer_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
+import { useAsyncResource } from "@/lib/use-async-resource";
 
 export default function CustomerList() {
-  const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [query, setQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const { push } = useToast();
-
-  async function loadCustomers(nextQuery?: string) {
-    if (!getActiveAccessToken()) {
-      push({
-        variant: "error",
-        title: "Load failed",
-        description: "access_token is missing. Please sign in first.",
-      });
-      return;
-    }
-    setIsLoading(true);
-    try {
-      const data = await listCustomers({ query: nextQuery ?? query });
-      setCustomers(data.customers ?? []);
-    } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load customers");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  const [searchQuery, setSearchQuery] = useState("");
+  const { notifyError } = useApiCall();
+  const { data, loading, error, reload } = useAsyncResource<CustomerSummary[]>(
+    async () => {
+      if (!getActiveAccessToken()) {
+        throw new Error("access_token is missing. Please sign in first.");
+      }
+      const data = await listCustomers({ query: searchQuery });
+      return data.customers ?? [];
+    },
+    [searchQuery]
+  );
 
   useEffect(() => {
-    void loadCustomers();
+    if (error) {
+      notifyError(error, "Load failed", "Failed to load customers");
+      return;
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [data, error, notifyError]);
+
+  const customers = data ?? [];
 
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
@@ -62,8 +51,18 @@ export default function CustomerList() {
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search customers"
           />
-          <Button variant="outline" onClick={() => loadCustomers()} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Search"}
+          <Button
+            variant="outline"
+            onClick={() => {
+              const shouldReload = query === searchQuery;
+              setSearchQuery(query);
+              if (shouldReload) {
+                reload();
+              }
+            }}
+            disabled={loading}
+          >
+            {loading ? "Loading..." : "Search"}
           </Button>
         </div>
       </CardHeader>

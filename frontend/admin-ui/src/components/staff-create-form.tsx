@@ -5,9 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/toast";
+import { useApiCall } from "@/lib/use-api-call";
 import { identityCreateStaff, identityListRoles } from "@/lib/identity";
-import { formatConnectError } from "@/lib/handle-error";
 import {
   Select,
   SelectContent,
@@ -26,28 +25,21 @@ export default function StaffCreateForm() {
   const [roleId, setRoleId] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoadingRoles, setIsLoadingRoles] = useState(false);
-  const { push } = useToast();
+  const { call } = useApiCall();
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingRoles(true);
-    identityListRoles()
+    call(() => identityListRoles(), {
+      errorTitle: "Load failed",
+      errorDescription: "Failed to load roles",
+    })
       .then((data) => {
-        if (cancelled) return;
+        if (cancelled || !data) return;
         const list = data.roles ?? [];
         setRoles(list);
         if (!roleId && list.length > 0) {
           setRoleId(list[0].id || "");
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          const uiError = formatConnectError(err, "Load failed", "Failed to load roles");
-          push({
-            variant: "error",
-            title: uiError.title,
-            description: uiError.description,
-          });
         }
       })
       .finally(() => {
@@ -63,39 +55,47 @@ export default function StaffCreateForm() {
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsSubmitting(true);
-    try {
-      if (!roleId) {
-        throw new Error("role is required");
+    if (!roleId) {
+      await call(
+        async () => {
+          throw new Error("role is required");
+        },
+        {
+          errorTitle: "Create failed",
+          errorDescription: "Role is required",
+        }
+      );
+      setIsSubmitting(false);
+      return;
+    }
+    const data = await call(
+      () =>
+        identityCreateStaff({
+          email,
+          loginId,
+          phone,
+          password,
+          roleId,
+          displayName,
+        }),
+      {
+        success: {
+          title: "Staff created",
+          description: "Created staff successfully.",
+        },
+        errorTitle: "Create failed",
+        errorDescription: "Failed to create staff",
       }
-      const data = await identityCreateStaff({
-        email,
-        loginId,
-        phone,
-        password,
-        roleId,
-        displayName,
-      });
-      push({
-        variant: "success",
-        title: "Staff created",
-        description: `Created staff: ${data.staffId}`,
-      });
+    );
+    if (data) {
       setEmail("");
       setLoginId("");
       setPhone("");
       setPassword("");
       setRoleId(roles[0]?.id ?? "");
       setDisplayName("");
-    } catch (err) {
-      const uiError = formatConnectError(err, "Create failed", "Failed to create staff");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
-    } finally {
-      setIsSubmitting(false);
     }
+    setIsSubmitting(false);
   }
 
   return (

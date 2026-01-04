@@ -16,7 +16,7 @@ import { listShippingZones, listShippingRates, upsertShippingRate } from "@/lib/
 import { getActiveAccessToken } from "@/lib/auth";
 import { useToast } from "@/components/ui/toast";
 import type { ShippingRate, ShippingZone } from "@/gen/ecommerce/v1/store_settings_pb";
-import { formatConnectError } from "@/lib/handle-error";
+import { useApiCall } from "@/lib/use-api-call";
 
 export default function ShippingRatesForm() {
   const [zones, setZones] = useState<ShippingZone[]>([]);
@@ -30,6 +30,7 @@ export default function ShippingRatesForm() {
   const [currency, setCurrency] = useState("JPY");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
+  const { notifyError } = useApiCall();
 
   async function loadZones() {
     if (!getActiveAccessToken()) {
@@ -39,12 +40,7 @@ export default function ShippingRatesForm() {
       const data = await listShippingZones();
       setZones(data.zones ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load zones");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load zones");
     }
   }
 
@@ -60,12 +56,7 @@ export default function ShippingRatesForm() {
       const data = await listShippingRates({ zoneId: targetZoneId });
       setRates(data.rates ?? []);
     } catch (err) {
-      const uiError = formatConnectError(err, "Load failed", "Failed to load shipping rates");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Load failed", "Failed to load shipping rates");
     }
   }
 
@@ -129,12 +120,7 @@ export default function ShippingRatesForm() {
       setFeeAmount("");
       await loadRates(zoneId);
     } catch (err) {
-      const uiError = formatConnectError(err, "Save failed", "Unknown error");
-      push({
-        variant: "error",
-        title: uiError.title,
-        description: uiError.description,
-      });
+      notifyError(err, "Save failed", "Unknown error");
     } finally {
       setIsSubmitting(false);
     }

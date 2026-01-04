@@ -1,10 +1,6 @@
-export type PermissionGroup = {
-  label: string;
-  description: string;
-  permissions: Array<{ key: string; label: string }>;
-};
+import { brand, type Brand } from "@/lib/types";
 
-export const PERMISSION_GROUPS: PermissionGroup[] = [
+const PERMISSION_GROUPS_CONST = [
   {
     label: "Catalog",
     description: "Products, variants, inventory",
@@ -55,8 +51,35 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     description: "Audit log access",
     permissions: [{ key: "audit.read", label: "View audit logs" }],
   },
-];
+ ] as const;
+
+export type PermissionKeyLiteral =
+  (typeof PERMISSION_GROUPS_CONST)[number]["permissions"][number]["key"];
+export type PermissionKey = Brand<PermissionKeyLiteral, "PermissionKey">;
+
+export type PermissionGroup = {
+  label: string;
+  description: string;
+  permissions: Array<{ key: PermissionKeyLiteral; label: string }>;
+};
+
+export const PERMISSION_GROUPS: PermissionGroup[] =
+  PERMISSION_GROUPS_CONST as PermissionGroup[];
 
 export const DEFAULT_PERMISSION_KEYS = PERMISSION_GROUPS.flatMap((group) =>
   group.permissions.map((permission) => permission.key)
 );
+
+export function isPermissionKey(value: string): value is PermissionKeyLiteral {
+  return DEFAULT_PERMISSION_KEYS.includes(value as PermissionKeyLiteral);
+}
+
+export function toPermissionKey(value: string): PermissionKey | null {
+  return isPermissionKey(value) ? brand(value) : null;
+}
+
+export function normalizePermissionKeys(values: string[]): PermissionKey[] {
+  return values
+    .map((value) => toPermissionKey(value))
+    .filter((value): value is PermissionKey => Boolean(value));
+}

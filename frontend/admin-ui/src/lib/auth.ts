@@ -1,6 +1,15 @@
+import {
+  asStaffId,
+  asStoreId,
+  asTenantId,
+  type StaffId,
+  type StoreId,
+  type TenantId,
+} from "@/lib/ids";
+
 type StoreSession = {
-  storeId: string;
-  tenantId: string;
+  storeId: StoreId;
+  tenantId: TenantId;
   accessToken: string;
 };
 
@@ -42,7 +51,7 @@ export function saveStoreSession(session: StoreSession) {
   writeStoreTokens(tokens);
 }
 
-export function setActiveStore(storeId: string, tenantId: string, accessToken: string) {
+export function setActiveStore(storeId: StoreId, tenantId: TenantId, accessToken: string) {
   if (typeof window === "undefined") {
     return;
   }
@@ -68,11 +77,13 @@ export function clearActiveStoreSession() {
   window.localStorage.removeItem(ACTIVE_STORE_KEY);
 }
 
-export function getActiveStoreId(): string | null {
+export function getActiveStoreId(): StoreId | null {
   if (typeof window === "undefined") {
     return null;
   }
-  return window.sessionStorage.getItem("store_id") || window.localStorage.getItem(ACTIVE_STORE_KEY);
+  const raw =
+    window.sessionStorage.getItem("store_id") || window.localStorage.getItem(ACTIVE_STORE_KEY);
+  return raw ? asStoreId(raw) : null;
 }
 
 export function getActiveAccessToken(): string | null {
@@ -88,7 +99,7 @@ export function getActiveAccessToken(): string | null {
 }
 
 export function getActiveActorInfo():
-  | { staffId: string; role: string; storeId: string }
+  | { staffId: StaffId; role: string; storeId: StoreId }
   | null {
   if (typeof window === "undefined") {
     return null;
@@ -118,20 +129,21 @@ export function getActiveActorInfo():
       return null;
     }
     return {
-      staffId: payload.sub,
+      staffId: asStaffId(payload.sub),
       role: payload.actor_type,
-      storeId: payload.store_id,
+      storeId: asStoreId(payload.store_id),
     };
   } catch {
     return null;
   }
 }
 
-export function getActiveTenantId(): string | null {
+export function getActiveTenantId(): TenantId | null {
   if (typeof window === "undefined") {
     return null;
   }
-  return window.sessionStorage.getItem("tenant_id");
+  const raw = window.sessionStorage.getItem("tenant_id");
+  return raw ? asTenantId(raw) : null;
 }
 
 export function setAuthFlashMessage(message: AuthFlashMessage) {
