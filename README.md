@@ -16,7 +16,12 @@ Specs, data models, and APIs are still shifting; breaking changes and incomplete
 - Auctions (draft → publish, bidding)
 - Metafield definitions and values
 
-## Search reindex (Meilisearch)
+## CLI commands
+Operational commands live in `rs-ecommerce-cli`.
+
+Available subcommands:
+- `search reindex` — Reindex products into the configured search backend
+
 Reindex command:
 ```bash
 cargo run -p rs-ecommerce-cli -- search reindex

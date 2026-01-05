@@ -14,6 +14,7 @@ struct Cli {
 
 #[derive(Subcommand, Debug)]
 enum Commands {
+    /// Search related commands
     Search {
         #[command(subcommand)]
         command: SearchCommands,
@@ -22,33 +23,46 @@ enum Commands {
 
 #[derive(Subcommand, Debug)]
 enum SearchCommands {
+    /// Reindex products into the configured search backend
     Reindex(ReindexArgs),
 }
 
 #[derive(Parser, Debug)]
 struct ReindexArgs {
+    /// PostgreSQL connection string
     #[arg(long, env = "DATABASE_URL")]
     db_url: String,
+    /// Meilisearch base URL
     #[arg(long, env = "MEILI_URL")]
     meili_url: String,
+    /// Meilisearch API key
     #[arg(long, env = "MEILI_MASTER_KEY")]
     meili_key: Option<String>,
+    /// Meilisearch index name
     #[arg(long, env = "MEILI_INDEX", default_value = "products")]
     index_name: String,
+    /// Batch size per reindex iteration
     #[arg(long, env = "REINDEX_BATCH_SIZE", default_value_t = 500)]
     batch_size: usize,
+    /// Do not write to Meilisearch
     #[arg(long, env = "REINDEX_DRY_RUN", default_value_t = false)]
     dry_run: bool,
+    /// Only count rows and exit
     #[arg(long, env = "REINDEX_COUNT_ONLY", default_value_t = false)]
     count_only: bool,
+    /// Filter by tenant_id
     #[arg(long, env = "REINDEX_TENANT_ID")]
     tenant_id: Option<String>,
+    /// Filter by store_id
     #[arg(long, env = "REINDEX_STORE_ID")]
     store_id: Option<String>,
+    /// Filter by vendor_id
     #[arg(long, env = "REINDEX_VENDOR_ID")]
     vendor_id: Option<String>,
+    /// Filter by status
     #[arg(long, env = "REINDEX_STATUS")]
     status: Option<String>,
+    /// Filter by product_id
     #[arg(long, env = "REINDEX_PRODUCT_ID")]
     product_id: Option<String>,
 }
@@ -112,7 +126,7 @@ struct CountRow {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    rs_common::telemetry::init_tracing("rs-ecommerce-cli");
+    rs_common::cli::init("rs-ecommerce-cli");
 
     let cli = Cli::parse();
 
