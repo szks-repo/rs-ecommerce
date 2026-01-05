@@ -310,8 +310,8 @@ pub async fn delete_shipping_rate(
 pub fn validate_shipping_rate(
     rate: &pb::ShippingRate,
 ) -> Result<(), (StatusCode, Json<ConnectError>)> {
-    if let (Some(min), Some(max)) = (&rate.min_subtotal, &rate.max_subtotal) {
-        if min.amount > max.amount {
+    if let (Some(min), Some(max)) = (&rate.min_subtotal, &rate.max_subtotal)
+        && min.amount > max.amount {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -320,9 +320,8 @@ pub fn validate_shipping_rate(
                 }),
             ));
         }
-    }
-    if let Some(fee) = &rate.fee {
-        if fee.amount < 0 {
+    if let Some(fee) = &rate.fee
+        && fee.amount < 0 {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -331,7 +330,6 @@ pub fn validate_shipping_rate(
                 }),
             ));
         }
-    }
     Ok(())
 }
 

@@ -68,11 +68,10 @@ pub async fn require_active_staff_session(
     if revoked_at.is_some() {
         return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
     }
-    if let Some(expires_at) = expires_at {
-        if expires_at <= chrono::Utc::now() {
+    if let Some(expires_at) = expires_at
+        && expires_at <= chrono::Utc::now() {
             return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
         }
-    }
 
     let _ = sqlx::query(
         r#"

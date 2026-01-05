@@ -16,15 +16,15 @@ pub async fn resolve_store_context(
     tenant: Option<pb::TenantContext>,
 ) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
     if let Some(ctx) = request_context::current() {
-        if let Some(auth_store) = ctx.store_id.as_deref() {
-            if let Some(store_id) = store.as_ref().and_then(|s| {
+        if let Some(auth_store) = ctx.store_id.as_deref()
+            && let Some(store_id) = store.as_ref().and_then(|s| {
                 if s.store_id.is_empty() {
                     None
                 } else {
                     Some(s.store_id.as_str())
                 }
-            }) {
-                if store_id != auth_store {
+            })
+                && store_id != auth_store {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -33,17 +33,15 @@ pub async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
-        if let Some(auth_tenant) = ctx.tenant_id.as_deref() {
-            if let Some(tenant_id) = tenant.as_ref().and_then(|t| {
+        if let Some(auth_tenant) = ctx.tenant_id.as_deref()
+            && let Some(tenant_id) = tenant.as_ref().and_then(|t| {
                 if t.tenant_id.is_empty() {
                     None
                 } else {
                     Some(t.tenant_id.as_str())
                 }
-            }) {
-                if tenant_id != auth_tenant {
+            })
+                && tenant_id != auth_tenant {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -52,8 +50,6 @@ pub async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| {
@@ -106,9 +102,9 @@ pub async fn resolve_store_context(
         };
         let store_id: String = row.get("id");
         let tenant_id: String = row.get("tenant_id");
-        if let Some(ctx) = request_context::current() {
-            if let Some(auth_store) = ctx.store_id {
-                if auth_store != store_id {
+        if let Some(ctx) = request_context::current()
+            && let Some(auth_store) = ctx.store_id
+                && auth_store != store_id {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -117,15 +113,12 @@ pub async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
         return Ok((store_id, tenant_id));
     }
-    if let Some(ctx) = request_context::current() {
-        if let (Some(store_id), Some(tenant_id)) = (ctx.store_id, ctx.tenant_id) {
+    if let Some(ctx) = request_context::current()
+        && let (Some(store_id), Some(tenant_id)) = (ctx.store_id, ctx.tenant_id) {
             return Ok((store_id, tenant_id));
         }
-    }
     if let Some(tenant_id) = tenant.and_then(|t| {
         if t.tenant_id.is_empty() {
             None

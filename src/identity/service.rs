@@ -198,7 +198,7 @@ pub async fn sign_in_with_refresh(
         })
     });
 
-    let _ = audit::record(
+    audit::record(
         state,
         audit::AuditInput {
             store_id: Some(resp.store_id.clone()),
@@ -393,7 +393,7 @@ pub async fn force_sign_out_staff(
             .filter(|v| !v.is_empty())
             .unwrap_or_else(|| "staff".to_string());
 
-        let _ = audit::record(
+        audit::record(
             state,
             audit::AuditInput {
                 store_id: Some(store_id),
@@ -437,13 +437,12 @@ pub async fn update_staff(
     let current_role = repo
         .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
         .await?;
-    if let Some(current_role) = current_role {
-        if current_role == "owner" && !req.role_id.is_empty() {
+    if let Some(current_role) = current_role
+        && current_role == "owner" && !req.role_id.is_empty() {
             return Err(IdentityError::permission_denied(
                 "owner role cannot be changed",
             ));
         }
-    }
 
     if !req.role_id.is_empty() {
         let role_uuid = parse_uuid(&req.role_id, "role_id")?;
@@ -531,7 +530,7 @@ pub async fn update_staff(
         })
         .unwrap_or_else(|| "staff".to_string());
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.clone()),
@@ -646,7 +645,7 @@ pub async fn invite_staff(
         .unwrap_or_else(|| "Store".to_string());
 
     let email_config = email::EmailConfig::from_env();
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.clone()),
@@ -763,7 +762,7 @@ pub async fn accept_invite(
     .await
     .map_err(IdentityError::from)?;
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(invite.store_id.clone()),
@@ -836,13 +835,12 @@ pub async fn transfer_owner(
         ));
     }
 
-    if let Some(actor_id) = actor_id.as_ref() {
-        if actor_id != &current_owner_id {
+    if let Some(actor_id) = actor_id.as_ref()
+        && actor_id != &current_owner_id {
             return Err(IdentityError::permission_denied(
                 "only owner can transfer ownership",
             ));
         }
-    }
 
     let target_status = repo
         .staff_status(&store_uuid.as_uuid(), &new_owner_uuid)
@@ -880,7 +878,7 @@ pub async fn transfer_owner(
     )
     .await?;
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.clone()),
@@ -930,9 +928,9 @@ pub async fn sign_out(
     session_id: Option<String>,
 ) -> IdentityResult<pb::IdentitySignOutResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
-    if let Some(session_id) = session_id {
-        if let Ok(session_uuid) = uuid::Uuid::parse_str(&session_id) {
-            if let Ok(store_uuid) = StoreId::parse(&store_id) {
+    if let Some(session_id) = session_id
+        && let Ok(session_uuid) = uuid::Uuid::parse_str(&session_id)
+            && let Ok(store_uuid) = StoreId::parse(&store_id) {
                 let _ = sqlx::query(
                     r#"
                     UPDATE store_staff_sessions
@@ -957,8 +955,6 @@ pub async fn sign_out(
                 .execute(&state.db)
                 .await;
             }
-        }
-    }
     let actor_id = actor.as_ref().and_then(|a| {
         if a.actor_id.is_empty() {
             None
@@ -977,7 +973,7 @@ pub async fn sign_out(
         })
         .unwrap_or_else(|| "staff".to_string());
 
-    let _ = audit::record(
+    audit::record(
         state,
         audit::AuditInput {
             store_id: Some(store_id),
@@ -1205,7 +1201,7 @@ pub async fn create_staff(
         })
         .unwrap_or_else(|| "staff".to_string());
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(resp.store_id.clone()),
@@ -1293,7 +1289,7 @@ pub async fn create_role(
             .await
             .map(|(_, tenant_id)| tenant_id)?;
 
-        let _ = audit::record_tx(
+        audit::record_tx(
             &mut tx,
             audit::AuditInput {
                 store_id: Some(store_id.clone()),
@@ -1355,13 +1351,12 @@ pub async fn assign_role_to_staff(
     let current_role = repo
         .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
         .await?;
-    if let Some(current_role) = current_role {
-        if current_role == "owner" {
+    if let Some(current_role) = current_role
+        && current_role == "owner" {
             return Err(IdentityError::permission_denied(
                 "owner role cannot be assigned",
             ));
         }
-    }
 
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
@@ -1387,7 +1382,7 @@ pub async fn assign_role_to_staff(
         })
         .unwrap_or_else(|| "staff".to_string());
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.clone()),
@@ -1578,7 +1573,7 @@ pub async fn update_role(
         })
         .unwrap_or_else(|| "staff".to_string());
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.clone()),
@@ -1654,7 +1649,7 @@ pub async fn delete_role(
             })
             .unwrap_or_else(|| "staff".to_string());
 
-        let _ = audit::record_tx(
+        audit::record_tx(
             &mut tx,
             audit::AuditInput {
                 store_id: Some(store_id.clone()),

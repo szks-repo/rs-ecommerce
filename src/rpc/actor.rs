@@ -131,11 +131,10 @@ async fn verify_jwt_rs256(token: &str) -> Option<AuthContext> {
     if key.kty != "RSA" {
         return None;
     }
-    if let Some(alg) = &key.alg {
-        if alg != "RS256" {
+    if let Some(alg) = &key.alg
+        && alg != "RS256" {
             return None;
         }
-    }
     let decoding_key = DecodingKey::from_rsa_components(&key.n, &key.e).ok()?;
     let mut validation = Validation::new(Algorithm::RS256);
     if let Ok(issuer) = std::env::var("AUTH_JWT_ISSUER") {
@@ -182,14 +181,12 @@ async fn get_jwk_key(jwks_url: &str, kid: Option<&str>) -> Option<JwkKey> {
     let now = Instant::now();
     {
         let cache = JWKS_CACHE.read().await;
-        if let Some(fetched_at) = cache.fetched_at {
-            if now.duration_since(fetched_at) < JWKS_TTL {
-                if let Some(key) = select_jwk(&cache.keys, kid) {
+        if let Some(fetched_at) = cache.fetched_at
+            && now.duration_since(fetched_at) < JWKS_TTL
+                && let Some(key) = select_jwk(&cache.keys, kid) {
                     return Some(key.clone());
                 }
                 // If kid is specified but not found, fall through to refresh.
-            }
-        }
     }
 
     let jwks = fetch_jwks(jwks_url).await?;

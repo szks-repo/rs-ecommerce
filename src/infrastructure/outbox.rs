@@ -114,13 +114,12 @@ pub async fn enqueue_tx(
 }
 
 fn build_idempotency_key(input: &OutboxEventInput) -> String {
-    if let Some(ctx) = request_context::current() {
-        if let Some(request_id) = ctx.request_id {
+    if let Some(ctx) = request_context::current()
+        && let Some(request_id) = ctx.request_id {
             return format!(
                 "{}:{}:{}",
                 input.event_type, input.aggregate_type, request_id
             );
         }
-    }
     uuid::Uuid::new_v4().to_string()
 }

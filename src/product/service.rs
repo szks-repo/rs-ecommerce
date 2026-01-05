@@ -238,14 +238,11 @@ pub async fn list_variants_admin(
                 row.get::<i64, _>("price_amount"),
                 row.get::<String, _>("price_currency"),
             )),
-            compare_at: match row.get::<Option<i64>, _>("compare_at_amount") {
-                Some(amount) => Some(money_from_parts(
+            compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| money_from_parts(
                     amount,
                     row.get::<Option<String>, _>("compare_at_currency")
                         .unwrap_or_default(),
                 )),
-                None => None,
-            },
             status: row.get("status"),
             tax_rule_id: row
                 .get::<Option<uuid::Uuid>, _>("tax_rule_id")
@@ -287,11 +284,10 @@ pub async fn list_variants_admin(
                 });
         }
         for variant in variants.iter_mut() {
-            if let Ok(variant_uuid) = uuid::Uuid::parse_str(&variant.id) {
-                if let Some(values) = axis_map.remove(&variant_uuid) {
+            if let Ok(variant_uuid) = uuid::Uuid::parse_str(&variant.id)
+                && let Some(values) = axis_map.remove(&variant_uuid) {
                     variant.axis_values = values;
                 }
-            }
         }
     }
 
@@ -371,8 +367,8 @@ pub async fn create_product(
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
     let (primary_category_id, category_ids) =
         normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
-    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
-        if start > end {
+    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at)
+        && start > end {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -381,7 +377,6 @@ pub async fn create_product(
                 }),
             ));
         }
-    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
@@ -400,9 +395,9 @@ pub async fn create_product(
     .bind(&req.title)
     .bind(&req.description)
     .bind(&status)
-    .bind(tax_rule_id.clone())
-    .bind(sale_start_at.clone())
-    .bind(sale_end_at.clone())
+    .bind(tax_rule_id)
+    .bind(sale_start_at)
+    .bind(sale_end_at)
     .execute(&mut *tx)
     .await
     .map_err(db::error)?;
@@ -643,8 +638,8 @@ pub async fn update_product(
     let status = ProductStatus::parse(&req.status)?.as_str().to_string();
     let (primary_category_id, category_ids) =
         normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
-    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at) {
-        if start > end {
+    if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at)
+        && start > end {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -653,7 +648,6 @@ pub async fn update_product(
                 }),
             ));
         }
-    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
@@ -672,9 +666,9 @@ pub async fn update_product(
     .bind(&req.title)
     .bind(&req.description)
     .bind(&status)
-    .bind(tax_rule_id.clone())
-    .bind(sale_start_at.clone())
-    .bind(sale_end_at.clone())
+    .bind(tax_rule_id)
+    .bind(sale_start_at)
+    .bind(sale_end_at)
     .bind(product_uuid.as_uuid())
     .bind(tenant_uuid.as_uuid())
     .bind(store_uuid.as_uuid())
@@ -929,7 +923,7 @@ pub async fn create_category(
         }
     }
     let position = if category.position > 0 {
-        category.position as i32
+        category.position
     } else {
         let row = sqlx::query(
             "SELECT COALESCE(MAX(position), 0) + 1 as next_pos FROM product_categories WHERE store_id = $1 AND parent_id IS NOT DISTINCT FROM $2",
@@ -1043,7 +1037,7 @@ pub async fn update_category(
         }
     }
     let position = if category.position > 0 {
-        Some(category.position as i32)
+        Some(category.position)
     } else {
         None
     };
@@ -1706,8 +1700,8 @@ pub async fn create_variant(
         } else {
             Some(t.tenant_id.as_str())
         }
-    }) {
-        if tenant != tenant_id {
+    })
+        && tenant != tenant_id {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -1716,7 +1710,6 @@ pub async fn create_variant(
                 }),
             ));
         }
-    }
     let variant_id = uuid::Uuid::new_v4();
     let (price_amount, price_currency) = money_to_parts(req.price.clone())?;
     let (compare_amount, compare_currency) = money_to_parts_opt(req.compare_at.clone())?;
@@ -1899,8 +1892,8 @@ pub async fn update_variant(
         } else {
             Some(t.tenant_id.as_str())
         }
-    }) {
-        if tenant != tenant_id {
+    })
+        && tenant != tenant_id {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -1909,7 +1902,6 @@ pub async fn update_variant(
                 }),
             ));
         }
-    }
     let (price_amount, price_currency) = money_to_parts(req.price.clone())?;
     let (compare_amount, compare_currency) = money_to_parts_opt(req.compare_at.clone())?;
     let fulfillment_type = if req.fulfillment_type.is_empty() {
@@ -2093,14 +2085,11 @@ pub async fn update_variant(
             row.get::<i64, _>("price_amount"),
             row.get::<String, _>("price_currency"),
         )),
-        compare_at: match row.get::<Option<i64>, _>("compare_at_amount") {
-            Some(amount) => Some(money_from_parts(
+        compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| money_from_parts(
                 amount,
                 row.get::<Option<String>, _>("compare_at_currency")
                     .unwrap_or_default(),
             )),
-            None => None,
-        },
         status: row.get("status"),
         tax_rule_id: row
             .get::<Option<String>, _>("tax_rule_id")
@@ -2345,15 +2334,15 @@ async fn resolve_store_context(
     tenant: Option<pb::TenantContext>,
 ) -> Result<(String, String), (StatusCode, Json<ConnectError>)> {
     if let Some(ctx) = request_context::current() {
-        if let Some(auth_store) = ctx.store_id.as_deref() {
-            if let Some(store_id) = store.as_ref().and_then(|s| {
+        if let Some(auth_store) = ctx.store_id.as_deref()
+            && let Some(store_id) = store.as_ref().and_then(|s| {
                 if s.store_id.is_empty() {
                     None
                 } else {
                     Some(s.store_id.as_str())
                 }
-            }) {
-                if store_id != auth_store {
+            })
+                && store_id != auth_store {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -2362,17 +2351,15 @@ async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
-        if let Some(auth_tenant) = ctx.tenant_id.as_deref() {
-            if let Some(tenant_id) = tenant.as_ref().and_then(|t| {
+        if let Some(auth_tenant) = ctx.tenant_id.as_deref()
+            && let Some(tenant_id) = tenant.as_ref().and_then(|t| {
                 if t.tenant_id.is_empty() {
                     None
                 } else {
                     Some(t.tenant_id.as_str())
                 }
-            }) {
-                if tenant_id != auth_tenant {
+            })
+                && tenant_id != auth_tenant {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -2381,8 +2368,6 @@ async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| {
@@ -2426,9 +2411,9 @@ async fn resolve_store_context(
         };
         let store_id: String = row.get("id");
         let tenant_id: String = row.get("tenant_id");
-        if let Some(ctx) = request_context::current() {
-            if let Some(auth_store) = ctx.store_id {
-                if auth_store != store_id {
+        if let Some(ctx) = request_context::current()
+            && let Some(auth_store) = ctx.store_id
+                && auth_store != store_id {
                     return Err((
                         StatusCode::FORBIDDEN,
                         Json(ConnectError {
@@ -2437,8 +2422,6 @@ async fn resolve_store_context(
                         }),
                     ));
                 }
-            }
-        }
         return Ok((store_id, tenant_id));
     }
     if let Some(tenant_id) = tenant.and_then(|t| {

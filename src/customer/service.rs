@@ -82,7 +82,7 @@ pub async fn list_customers(
         .map_err(CustomerError::from)?
     };
 
-    let customers = rows
+    let customers: Vec<pb::CustomerSummary> = rows
         .into_iter()
         .map(|row| pb::CustomerSummary {
             customer_id: row.get("customer_id"),
@@ -477,7 +477,7 @@ pub async fn create_customer(
         )),
     };
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit_input(
             Some(store_id.clone()),
@@ -491,7 +491,7 @@ pub async fn create_customer(
     )
     .await?;
 
-    let _ = outbox::enqueue_tx(
+    outbox::enqueue_tx(
         &mut tx,
         outbox::OutboxEventInput {
             tenant_id: customer.tenant_id.clone(),
@@ -517,7 +517,7 @@ pub async fn create_customer(
     .await?;
 
     for identity in identity_inputs {
-        let _ = outbox::enqueue_tx(
+        outbox::enqueue_tx(
             &mut tx,
             outbox::OutboxEventInput {
                 tenant_id: customer.tenant_id.clone(),
@@ -685,7 +685,7 @@ pub async fn update_customer(
         )),
     };
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit_input(
             Some(store_id.clone()),
@@ -699,7 +699,7 @@ pub async fn update_customer(
     )
     .await?;
 
-    let _ = outbox::enqueue_tx(
+    outbox::enqueue_tx(
         &mut tx,
         outbox::OutboxEventInput {
             tenant_id: customer.tenant_id.clone(),
@@ -797,7 +797,7 @@ pub async fn upsert_customer_identity(
             )),
         };
 
-        let _ = audit::record_tx(
+        audit::record_tx(
             &mut tx,
             audit_input(
                 None,
@@ -811,7 +811,7 @@ pub async fn upsert_customer_identity(
         )
         .await?;
 
-        let _ = outbox::enqueue_tx(
+        outbox::enqueue_tx(
             &mut tx,
             outbox::OutboxEventInput {
                 tenant_id: updated.tenant_id.clone(),
@@ -881,7 +881,7 @@ pub async fn upsert_customer_identity(
         created_at: chrono_to_timestamp(Some(Utc::now())),
     };
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit_input(
             None,
@@ -895,7 +895,7 @@ pub async fn upsert_customer_identity(
     )
     .await?;
 
-    let _ = outbox::enqueue_tx(
+    outbox::enqueue_tx(
         &mut tx,
         outbox::OutboxEventInput {
             tenant_id: created.tenant_id.clone(),
@@ -1055,7 +1055,7 @@ pub async fn upsert_customer_address(
     .map_err(CustomerError::from)?;
     let tenant_id: String = tenant_row.get("tenant_id");
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit_input(
             None,
@@ -1069,7 +1069,7 @@ pub async fn upsert_customer_address(
     )
     .await?;
 
-    let _ = outbox::enqueue_tx(
+    outbox::enqueue_tx(
         &mut tx,
         outbox::OutboxEventInput {
             tenant_id,

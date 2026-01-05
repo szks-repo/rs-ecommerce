@@ -244,7 +244,7 @@ pub async fn remove_cart_item(
         let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id
             .as_deref()
-            .map(|value| LocationId::parse(value))
+            .map(LocationId::parse)
             .transpose()?;
         if let Some(location_uuid) = location_uuid {
             sqlx::query(
@@ -352,7 +352,7 @@ pub async fn update_cart_item(
         let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id
             .as_deref()
-            .map(|value| LocationId::parse(value))
+            .map(LocationId::parse)
             .transpose()?;
         if delta > 0 {
             if let Some(location_uuid) = location_uuid {

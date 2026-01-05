@@ -224,7 +224,7 @@ pub async fn initialize_store(
         })
         .unwrap_or_else(|| "system".to_string());
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.to_string()),
@@ -247,7 +247,7 @@ pub async fn initialize_store(
     )
     .await?;
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.to_string()),
@@ -268,7 +268,7 @@ pub async fn initialize_store(
     )
     .await?;
 
-    let _ = audit::record_tx(
+    audit::record_tx(
         &mut tx,
         audit::AuditInput {
             store_id: Some(store_id.to_string()),

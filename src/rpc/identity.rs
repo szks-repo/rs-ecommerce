@@ -55,7 +55,7 @@ pub async fn sign_out(
                 Some(s.store_id.clone())
             }
         })
-        .or_else(|| store_id_from_auth);
+        .or(store_id_from_auth);
     let resp = identity::service::sign_out(&state, req, actor_ctx, session_id)
         .await
         .map_err(|err| err.into_connect())?;
@@ -328,11 +328,10 @@ fn extract_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
     let raw = headers.get(axum::http::header::COOKIE)?.to_str().ok()?;
     for part in raw.split(';') {
         let part = part.trim();
-        if let Some(value) = part.strip_prefix(&format!("{name}=")) {
-            if !value.is_empty() {
+        if let Some(value) = part.strip_prefix(&format!("{name}="))
+            && !value.is_empty() {
                 return Some(value.to_string());
             }
-        }
     }
     None
 }

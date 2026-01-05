@@ -93,8 +93,8 @@ fn validate_external_url(input: &str) -> Result<Url, (StatusCode, Json<ConnectEr
             }),
         ));
     }
-    if let Some(ip) = url.host_str().and_then(|h| h.parse::<IpAddr>().ok()) {
-        if is_private_ip(&ip) {
+    if let Some(ip) = url.host_str().and_then(|h| h.parse::<IpAddr>().ok())
+        && is_private_ip(&ip) {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -103,7 +103,6 @@ fn validate_external_url(input: &str) -> Result<Url, (StatusCode, Json<ConnectEr
                 }),
             ));
         }
-    }
     Ok(url)
 }
 
@@ -158,8 +157,8 @@ async fn download_external_image(
             }),
         ));
     }
-    if let Some(length) = resp.content_length() {
-        if length as usize > MAX_BYTES {
+    if let Some(length) = resp.content_length()
+        && length as usize > MAX_BYTES {
             return Err((
                 StatusCode::BAD_REQUEST,
                 Json(ConnectError {
@@ -168,7 +167,6 @@ async fn download_external_image(
                 }),
             ));
         }
-    }
     let content_type = resp
         .headers()
         .get(header::CONTENT_TYPE)

@@ -644,18 +644,15 @@ pub async fn place_bid(
         current_price_amount = Some(bid_amount);
         winning_bid_id = Some(bid_id);
         winning_amount = Some(bid_amount);
-    } else {
-        if winning_amount.map(|amt| bid_amount > amt).unwrap_or(true) {
-            winning_amount = Some(bid_amount);
-            winning_bid_id = Some(bid_id);
-        }
+    } else if winning_amount.map(|amt| bid_amount > amt).unwrap_or(true) {
+        winning_amount = Some(bid_amount);
+        winning_bid_id = Some(bid_id);
     }
 
-    if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone()) {
-        if cur == bid_currency && bid_amount >= buyout {
+    if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone())
+        && cur == bid_currency && bid_amount >= buyout {
             next_status = STATUS_AWAITING_APPROVAL.to_string();
         }
-    }
 
     if status == STATUS_SCHEDULED && now >= start_at {
         next_status = STATUS_RUNNING.to_string();
@@ -1063,11 +1060,10 @@ async fn apply_auto_bids_tx(
     .map_err(db_error)?;
 
     let mut next_status = status.clone();
-    if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone()) {
-        if cur == start_price_currency && target_amount >= buyout {
+    if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone())
+        && cur == start_price_currency && target_amount >= buyout {
             next_status = STATUS_AWAITING_APPROVAL.to_string();
         }
-    }
 
     sqlx::query(
         r#"
@@ -1182,14 +1178,13 @@ pub async fn close_auction(
     };
 
     let mut next_status = STATUS_ENDED.to_string();
-    if let (Some(win_amount), Some(win_currency)) = (winning_amount, winning_currency.clone()) {
-        if reserve_amount.is_none()
+    if let (Some(win_amount), Some(win_currency)) = (winning_amount, winning_currency.clone())
+        && (reserve_amount.is_none()
             || (reserve_currency.as_deref() == Some(win_currency.as_str())
-                && reserve_amount.unwrap_or(0) <= win_amount)
+                && reserve_amount.unwrap_or(0) <= win_amount))
         {
             next_status = STATUS_AWAITING_APPROVAL.to_string();
         }
-    }
 
     sqlx::query(
         r#"
