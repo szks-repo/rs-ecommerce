@@ -75,26 +75,29 @@ pub fn current() -> Option<RequestContext> {
 fn extract_request_id(headers: &HeaderMap) -> Option<String> {
     if let Some(value) = headers.get("x-request-id")
         && let Ok(value) = value.to_str()
-            && !value.is_empty() {
-                return Some(value.to_string());
-            }
+        && !value.is_empty()
+    {
+        return Some(value.to_string());
+    }
     Some(uuid::Uuid::new_v4().to_string())
 }
 
 fn extract_ip_address(headers: &HeaderMap) -> Option<String> {
     if let Some(value) = headers.get("x-forwarded-for")
         && let Ok(value) = value.to_str()
-            && let Some(first) = value.split(',').next() {
-                let first = first.trim();
-                if !first.is_empty() {
-                    return Some(first.to_string());
-                }
-            }
+        && let Some(first) = value.split(',').next()
+    {
+        let first = first.trim();
+        if !first.is_empty() {
+            return Some(first.to_string());
+        }
+    }
     if let Some(value) = headers.get("x-real-ip")
         && let Ok(value) = value.to_str()
-            && !value.is_empty() {
-                return Some(value.to_string());
-            }
+        && !value.is_empty()
+    {
+        return Some(value.to_string());
+    }
     None
 }
 

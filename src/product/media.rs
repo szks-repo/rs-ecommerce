@@ -13,9 +13,7 @@ use crate::{
     shared::{ids::parse_uuid, time::chrono_to_timestamp},
 };
 
-fn validate_store_asset_input(
-    asset: &pb::MediaAsset,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+fn validate_store_asset_input(asset: &pb::MediaAsset) -> Result<(), (StatusCode, Json<ConnectError>)> {
     if asset.public_url.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -94,15 +92,16 @@ fn validate_external_url(input: &str) -> Result<Url, (StatusCode, Json<ConnectEr
         ));
     }
     if let Some(ip) = url.host_str().and_then(|h| h.parse::<IpAddr>().ok())
-        && is_private_ip(&ip) {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "public_url host is not allowed".to_string(),
-                }),
-            ));
-        }
+        && is_private_ip(&ip)
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "public_url host is not allowed".to_string(),
+            }),
+        ));
+    }
     Ok(url)
 }
 
@@ -117,9 +116,7 @@ fn extension_from_content_type(content_type: &str) -> Option<&'static str> {
     }
 }
 
-async fn download_external_image(
-    url: &Url,
-) -> Result<(bytes::Bytes, String), (StatusCode, Json<ConnectError>)> {
+async fn download_external_image(url: &Url) -> Result<(bytes::Bytes, String), (StatusCode, Json<ConnectError>)> {
     const MAX_BYTES: usize = 10 * 1024 * 1024;
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(15))
@@ -158,15 +155,16 @@ async fn download_external_image(
         ));
     }
     if let Some(length) = resp.content_length()
-        && length as usize > MAX_BYTES {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "image is too large".to_string(),
-                }),
-            ));
-        }
+        && length as usize > MAX_BYTES
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "image is too large".to_string(),
+            }),
+        ));
+    }
     let content_type = resp
         .headers()
         .get(header::CONTENT_TYPE)
@@ -232,8 +230,7 @@ async fn import_external_asset(
     } else {
         object_key_hint.trim().to_string()
     };
-    let object_key =
-        storage::build_object_key(&storage_config.base_path, tenant_id, store_id, &filename);
+    let object_key = storage::build_object_key(&storage_config.base_path, tenant_id, store_id, &filename);
 
     match storage_config.provider.as_str() {
         "s3" => {
@@ -287,10 +284,7 @@ async fn import_external_asset(
             _ => "".to_string(),
         }
     } else {
-        storage_config
-            .cdn_base_url
-            .trim_end_matches('/')
-            .to_string()
+        storage_config.cdn_base_url.trim_end_matches('/').to_string()
     };
     let public_url = format!("{}/{}", public_base, object_key);
     Ok(pb::MediaAsset {
@@ -341,26 +335,22 @@ pub async fn create_media_upload_url(
             }
             let config = loader.load().await;
             let client = aws_sdk_s3::Client::new(&config);
-            let mut put_req = client
-                .put_object()
-                .bucket(&storage_config.bucket)
-                .key(&object_key);
+            let mut put_req = client.put_object().bucket(&storage_config.bucket).key(&object_key);
             if !content_type.is_empty() {
                 put_req = put_req.content_type(content_type.clone());
             }
             if size_bytes > 0 {
                 put_req = put_req.content_length(size_bytes);
             }
-            let presign_config =
-                PresigningConfig::expires_in(Duration::from_secs(900)).map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::Internal,
-                            message: "failed to create presign config".to_string(),
-                        }),
-                    )
-                })?;
+            let presign_config = PresigningConfig::expires_in(Duration::from_secs(900)).map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::Internal,
+                        message: "failed to create presign config".to_string(),
+                    }),
+                )
+            })?;
             let presigned = put_req.presigned(presign_config).await.map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -377,10 +367,7 @@ pub async fn create_media_upload_url(
             let public_base = if storage_config.cdn_base_url.is_empty() {
                 format!("https://{}.s3.amazonaws.com", storage_config.bucket)
             } else {
-                storage_config
-                    .cdn_base_url
-                    .trim_end_matches('/')
-                    .to_string()
+                storage_config.cdn_base_url.trim_end_matches('/').to_string()
             };
             let public_url = format!("{}/{}", public_base, object_key);
             Ok(pb::CreateMediaUploadUrlResponse {
@@ -462,8 +449,7 @@ pub async fn list_media_assets(
     tenant: Option<pb::TenantContext>,
     query: String,
 ) -> Result<Vec<pb::MediaAsset>, (StatusCode, Json<ConnectError>)> {
-    let (store_id, _tenant_id) =
-        resolve_store_context(state, store.clone(), tenant.clone()).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, store.clone(), tenant.clone()).await?;
     let store_uuid = parse_uuid(&store_id, "store_id")?;
     let like_query = format!("%{}%", query.trim());
     let rows = if query.trim().is_empty() {
@@ -506,13 +492,9 @@ pub async fn list_media_assets(
             provider: row.get("provider"),
             bucket: row.get("bucket"),
             object_key: row.get("object_key"),
-            content_type: row
-                .get::<Option<String>, _>("content_type")
-                .unwrap_or_default(),
+            content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
             size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
 
@@ -528,14 +510,8 @@ pub async fn create_media_asset(
     let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
     let mut asset = asset;
     if asset.provider.is_empty() && !asset.public_url.is_empty() {
-        let imported = import_external_asset(
-            state,
-            &store_id,
-            &tenant_id,
-            &asset.public_url,
-            &asset.object_key,
-        )
-        .await?;
+        let imported =
+            import_external_asset(state, &store_id, &tenant_id, &asset.public_url, &asset.object_key).await?;
         asset = imported;
     }
     validate_store_asset_input(&asset)?;
@@ -562,7 +538,11 @@ pub async fn create_media_asset(
     } else {
         Some(asset.content_type)
     })
-    .bind(if asset.size_bytes <= 0 { None } else { Some(asset.size_bytes) })
+    .bind(if asset.size_bytes <= 0 {
+        None
+    } else {
+        Some(asset.size_bytes)
+    })
     .bind(now)
     .fetch_one(&state.db)
     .await
@@ -574,9 +554,7 @@ pub async fn create_media_asset(
         provider: row.get("provider"),
         bucket: row.get("bucket"),
         object_key: row.get("object_key"),
-        content_type: row
-            .get::<Option<String>, _>("content_type")
-            .unwrap_or_default(),
+        content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
         size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
     })
@@ -588,8 +566,7 @@ pub async fn list_sku_images(
     tenant: Option<pb::TenantContext>,
     sku_id: String,
 ) -> Result<Vec<pb::SkuImage>, (StatusCode, Json<ConnectError>)> {
-    let (store_id, _tenant_id) =
-        resolve_store_context(state, store.clone(), tenant.clone()).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, store.clone(), tenant.clone()).await?;
     ensure_sku_belongs_to_store(state, &sku_id, &store_id).await?;
     let store_uuid = parse_uuid(&store_id, "store_id")?;
     let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
@@ -620,13 +597,9 @@ pub async fn list_sku_images(
                 provider: row.get("provider"),
                 bucket: row.get("bucket"),
                 object_key: row.get("object_key"),
-                content_type: row
-                    .get::<Option<String>, _>("content_type")
-                    .unwrap_or_default(),
+                content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
                 size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
-                created_at: chrono_to_timestamp(Some(
-                    row.get::<chrono::DateTime<Utc>, _>("created_at"),
-                )),
+                created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
             };
             pb::SkuImage {
                 asset_id: row.get("asset_id"),
@@ -647,8 +620,7 @@ pub async fn set_sku_images(
     sku_id: String,
     images: Vec<pb::SkuImageInput>,
 ) -> Result<Vec<pb::SkuImage>, (StatusCode, Json<ConnectError>)> {
-    let (store_id, _tenant_id) =
-        resolve_store_context(state, store.clone(), tenant.clone()).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, store.clone(), tenant.clone()).await?;
     ensure_sku_belongs_to_store(state, &sku_id, &store_id).await?;
     let store_uuid = parse_uuid(&store_id, "store_id")?;
     let sku_uuid = parse_uuid(&sku_id, "sku_id")?;
@@ -663,13 +635,12 @@ pub async fn set_sku_images(
 
     for image in images.iter() {
         let asset_uuid = parse_uuid(&image.asset_id, "asset_id")?;
-        let exists =
-            sqlx::query("SELECT 1 FROM store_media_assets WHERE id = $1 AND store_id = $2")
-                .bind(asset_uuid)
-                .bind(store_uuid)
-                .fetch_optional(tx.as_mut())
-                .await
-                .map_err(db::error)?;
+        let exists = sqlx::query("SELECT 1 FROM store_media_assets WHERE id = $1 AND store_id = $2")
+            .bind(asset_uuid)
+            .bind(store_uuid)
+            .fetch_optional(tx.as_mut())
+            .await
+            .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,

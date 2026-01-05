@@ -78,9 +78,7 @@ pub async fn update_promotion(
     req: pb::UpdatePromotionRequest,
     _actor: Option<pb::ActorContext>,
 ) -> Result<pb::PromotionAdmin, (StatusCode, Json<ConnectError>)> {
-    let before = fetch_promotion(state, &tenant_id, &req.promotion_id)
-        .await
-        .ok();
+    let before = fetch_promotion(state, &tenant_id, &req.promotion_id).await.ok();
     let (value_amount, value_currency) = money_to_parts(req.value.clone())?;
     let mut tx = state.db.begin().await.map_err(db::error)?;
     sqlx::query(
@@ -98,10 +96,7 @@ pub async fn update_promotion(
     .bind(&req.status)
     .bind(timestamp_to_chrono(req.starts_at.clone()))
     .bind(timestamp_to_chrono(req.ends_at.clone()))
-    .bind(crate::shared::ids::parse_uuid(
-        &req.promotion_id,
-        "promotion_id",
-    )?)
+    .bind(crate::shared::ids::parse_uuid(&req.promotion_id, "promotion_id")?)
     .bind(&tenant_id)
     .execute(tx.as_mut())
     .await
@@ -149,10 +144,7 @@ async fn fetch_promotion(
         "#,
     )
     .bind(tenant_id)
-    .bind(crate::shared::ids::parse_uuid(
-        promotion_id,
-        "promotion_id",
-    )?)
+    .bind(crate::shared::ids::parse_uuid(promotion_id, "promotion_id")?)
     .fetch_one(&state.db)
     .await
     .map_err(db::error)?;

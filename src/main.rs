@@ -23,29 +23,20 @@ async fn main() -> Result<(), anyhow::Error> {
     telemetry::init_tracing("rs-ecommerce");
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let db = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let db = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
     sqlx::migrate!().run(&db).await?;
 
-    let search_backend =
-        std::env::var("SEARCH_BACKEND").unwrap_or_else(|_| "meili".to_string());
+    let search_backend = std::env::var("SEARCH_BACKEND").unwrap_or_else(|_| "meili".to_string());
     let search = match search_backend.as_str() {
         "none" => infrastructure::search::SearchService::none(),
         "meili" | "meilisearch" => {
             let meili_url = std::env::var("MEILI_URL").expect("MEILI_URL is required");
             let meili_key = std::env::var("MEILI_MASTER_KEY").ok();
-            infrastructure::search::SearchService::meilisearch(
-                &meili_url,
-                meili_key.as_deref(),
-                "products",
-            )
+            infrastructure::search::SearchService::meilisearch(&meili_url, meili_key.as_deref(), "products")
         }
         "opensearch" => {
             let os_url = std::env::var("OPENSEARCH_URL").expect("OPENSEARCH_URL is required");
-            let os_index =
-                std::env::var("OPENSEARCH_INDEX").unwrap_or_else(|_| "products".to_string());
+            let os_index = std::env::var("OPENSEARCH_INDEX").unwrap_or_else(|_| "products".to_string());
             infrastructure::search::SearchService::opensearch(&os_url, &os_index)
         }
         other => {
@@ -86,10 +77,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
         .await
         .expect("bind 0.0.0.0:8080");
-    tracing::info!(
-        "listening on {}",
-        listener.local_addr().expect("local addr")
-    );
+    tracing::info!("listening on {}", listener.local_addr().expect("local addr"));
     axum::serve(listener, app).await?;
     Ok(())
 }
@@ -100,9 +88,7 @@ pub struct AppState {
     pub search: infrastructure::search::SearchService,
 }
 
-async fn health(
-    State(state): State<AppState>,
-) -> Result<&'static str, (StatusCode, Json<rpc::json::ConnectError>)> {
+async fn health(State(state): State<AppState>) -> Result<&'static str, (StatusCode, Json<rpc::json::ConnectError>)> {
     infrastructure::db::ping(&state).await?;
     Ok("ok")
 }

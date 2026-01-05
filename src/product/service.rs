@@ -46,17 +46,13 @@ pub async fn list_products(
         .into_iter()
         .map(|row| pb::Product {
             id: row.get::<String, _>("id"),
-            vendor_id: row
-                .get::<Option<String>, _>("vendor_id")
-                .unwrap_or_default(),
+            vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),
             variants: Vec::new(),
             updated_at: None,
-            tax_rule_id: row
-                .get::<Option<String>, _>("tax_rule_id")
-                .unwrap_or_default(),
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
         })
         .collect())
 }
@@ -86,17 +82,13 @@ pub async fn get_product(
 
     Ok(row.map(|row| pb::Product {
         id: row.get::<String, _>("id"),
-        vendor_id: row
-            .get::<Option<String>, _>("vendor_id")
-            .unwrap_or_default(),
+        vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
         title: row.get("title"),
         description: row.get("description"),
         status: row.get("status"),
         variants: Vec::new(),
         updated_at: None,
-        tax_rule_id: row
-            .get::<Option<String>, _>("tax_rule_id")
-            .unwrap_or_default(),
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
     }))
 }
 
@@ -142,29 +134,17 @@ pub async fn list_products_admin(
         .into_iter()
         .map(|row| pb::ProductAdmin {
             id: row.get::<String, _>("id"),
-            vendor_id: row
-                .get::<Option<String>, _>("vendor_id")
-                .unwrap_or_default(),
+            vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
-            tax_rule_id: row
-                .get::<Option<String>, _>("tax_rule_id")
-                .unwrap_or_default(),
-            sale_start_at: chrono_to_timestamp(
-                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
-            ),
-            sale_end_at: chrono_to_timestamp(
-                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
-            ),
-            primary_category_id: row
-                .get::<Option<String>, _>("primary_category_id")
-                .unwrap_or_default(),
-            category_ids: row
-                .get::<Option<Vec<String>>, _>("category_ids")
-                .unwrap_or_default(),
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+            sale_start_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at")),
+            sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at")),
+            primary_category_id: row.get::<Option<String>, _>("primary_category_id").unwrap_or_default(),
+            category_ids: row.get::<Option<Vec<String>>, _>("category_ids").unwrap_or_default(),
         })
         .collect())
 }
@@ -238,11 +218,12 @@ pub async fn list_variants_admin(
                 row.get::<i64, _>("price_amount"),
                 row.get::<String, _>("price_currency"),
             )),
-            compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| money_from_parts(
+            compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| {
+                money_from_parts(
                     amount,
-                    row.get::<Option<String>, _>("compare_at_currency")
-                        .unwrap_or_default(),
-                )),
+                    row.get::<Option<String>, _>("compare_at_currency").unwrap_or_default(),
+                )
+            }),
             status: row.get("status"),
             tax_rule_id: row
                 .get::<Option<uuid::Uuid>, _>("tax_rule_id")
@@ -275,19 +256,17 @@ pub async fn list_variants_admin(
             std::collections::HashMap::new();
         for row in axis_rows {
             let variant_id: uuid::Uuid = row.get("variant_id");
-            axis_map
-                .entry(variant_id)
-                .or_default()
-                .push(pb::VariantAxisValue {
-                    name: row.get::<String, _>("axis_name"),
-                    value: row.get::<String, _>("axis_value"),
-                });
+            axis_map.entry(variant_id).or_default().push(pb::VariantAxisValue {
+                name: row.get::<String, _>("axis_name"),
+                value: row.get::<String, _>("axis_value"),
+            });
         }
         for variant in variants.iter_mut() {
             if let Ok(variant_uuid) = uuid::Uuid::parse_str(&variant.id)
-                && let Some(values) = axis_map.remove(&variant_uuid) {
-                    variant.axis_values = values;
-                }
+                && let Some(values) = axis_map.remove(&variant_uuid)
+            {
+                variant.axis_values = values;
+            }
         }
     }
 
@@ -356,8 +335,7 @@ pub async fn create_product(
     req: pb::CreateProductRequest,
     _actor: Option<pb::ActorContext>,
 ) -> Result<pb::ProductAdmin, (StatusCode, Json<ConnectError>)> {
-    let (store_id, tenant_id) =
-        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let product_id = uuid::Uuid::new_v4();
@@ -368,15 +346,16 @@ pub async fn create_product(
     let (primary_category_id, category_ids) =
         normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at)
-        && start > end {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "sale_end_at must be later than sale_start_at".to_string(),
-                }),
-            ));
-        }
+        && start > end
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sale_end_at must be later than sale_start_at".to_string(),
+            }),
+        ));
+    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
@@ -482,14 +461,11 @@ pub async fn create_product(
             ));
         }
         let (price_amount, price_currency) = money_to_parts(default_variant.price.clone())?;
-        let (compare_amount, compare_currency) =
-            money_to_parts_opt(default_variant.compare_at.clone())?;
+        let (compare_amount, compare_currency) = money_to_parts_opt(default_variant.compare_at.clone())?;
         let fulfillment_type = FulfillmentType::parse(&default_variant.fulfillment_type)?
             .as_str()
             .to_string();
-        let variant_status = VariantStatus::parse(&default_variant.status)?
-            .as_str()
-            .to_string();
+        let variant_status = VariantStatus::parse(&default_variant.status)?.as_str().to_string();
         sqlx::query(
             r#"
             INSERT INTO product_skus (
@@ -572,8 +548,7 @@ fn normalize_category_ids(
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
                 code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "primary_category_id is required when category_ids are provided"
-                    .to_string(),
+                message: "primary_category_id is required when category_ids are provided".to_string(),
             }),
         ));
     }
@@ -600,13 +575,12 @@ async fn ensure_category_ids_exist(
     if parsed.is_empty() {
         return Ok(());
     }
-    let rows =
-        sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = ANY($2)")
-            .bind(store_id)
-            .bind(&parsed)
-            .fetch_all(tx.as_mut())
-            .await
-            .map_err(db::error)?;
+    let rows = sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = ANY($2)")
+        .bind(store_id)
+        .bind(&parsed)
+        .fetch_all(tx.as_mut())
+        .await
+        .map_err(db::error)?;
     if rows.len() != parsed.len() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -624,8 +598,7 @@ pub async fn update_product(
     req: pb::UpdateProductRequest,
     _actor: Option<pb::ActorContext>,
 ) -> Result<pb::ProductAdmin, (StatusCode, Json<ConnectError>)> {
-    let (store_id, tenant_id) =
-        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let product_uuid = ProductId::parse(&req.product_id)?;
@@ -639,15 +612,16 @@ pub async fn update_product(
     let (primary_category_id, category_ids) =
         normalize_category_ids(&req.primary_category_id, req.category_ids.clone())?;
     if let (Some(start), Some(end)) = (&sale_start_at, &sale_end_at)
-        && start > end {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "sale_end_at must be later than sale_start_at".to_string(),
-                }),
-            ));
-        }
+        && start > end
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sale_end_at must be later than sale_start_at".to_string(),
+            }),
+        ));
+    }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     ensure_category_ids_exist(&mut tx, &store_uuid.as_uuid(), &category_ids).await?;
     sqlx::query(
@@ -762,29 +736,17 @@ pub async fn update_product(
     {
         after = pb::ProductAdmin {
             id: row.get::<String, _>("id"),
-            vendor_id: row
-                .get::<Option<String>, _>("vendor_id")
-                .unwrap_or_default(),
+            vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),
             updated_at: None,
             store_id: row.get::<String, _>("store_id"),
-            tax_rule_id: row
-                .get::<Option<String>, _>("tax_rule_id")
-                .unwrap_or_default(),
-            sale_start_at: chrono_to_timestamp(
-                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
-            ),
-            sale_end_at: chrono_to_timestamp(
-                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
-            ),
-            primary_category_id: row
-                .get::<Option<String>, _>("primary_category_id")
-                .unwrap_or_default(),
-            category_ids: row
-                .get::<Option<Vec<String>>, _>("category_ids")
-                .unwrap_or_default(),
+            tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+            sale_start_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at")),
+            sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at")),
+            primary_category_id: row.get::<Option<String>, _>("primary_category_id").unwrap_or_default(),
+            category_ids: row.get::<Option<Vec<String>>, _>("category_ids").unwrap_or_default(),
         };
     }
 
@@ -905,13 +867,12 @@ pub async fn create_category(
         Some(parse_uuid(&category.parent_id, "parent_id")?)
     };
     if let Some(parent_id) = parent_id {
-        let exists =
-            sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
-                .bind(store_uuid.as_uuid())
-                .bind(parent_id)
-                .fetch_optional(&state.db)
-                .await
-                .map_err(db::error)?;
+        let exists = sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
+            .bind(store_uuid.as_uuid())
+            .bind(parent_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -1019,13 +980,12 @@ pub async fn update_category(
                 }),
             ));
         }
-        let exists =
-            sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
-                .bind(store_uuid.as_uuid())
-                .bind(parent_id)
-                .fetch_optional(&state.db)
-                .await
-                .map_err(db::error)?;
+        let exists = sqlx::query("SELECT id FROM product_categories WHERE store_id = $1 AND id = $2")
+            .bind(store_uuid.as_uuid())
+            .bind(parent_id)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(db::error)?;
         if exists.is_none() {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -1090,14 +1050,12 @@ pub async fn delete_category(
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, None).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let category_uuid = parse_uuid(&req.category_id, "category_id")?;
-    let children = sqlx::query(
-        "SELECT 1 FROM product_categories WHERE store_id = $1 AND parent_id = $2 LIMIT 1",
-    )
-    .bind(store_uuid.as_uuid())
-    .bind(category_uuid)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+    let children = sqlx::query("SELECT 1 FROM product_categories WHERE store_id = $1 AND parent_id = $2 LIMIT 1")
+        .bind(store_uuid.as_uuid())
+        .bind(category_uuid)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
     if children.is_some() {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -1170,15 +1128,13 @@ pub async fn reorder_categories(
     }
     let mut tx = state.db.begin().await.map_err(db::error)?;
     for (idx, category_id) in ordered_ids.iter().enumerate() {
-        sqlx::query(
-            "UPDATE product_categories SET position = $1, updated_at = now() WHERE id = $2 AND store_id = $3",
-        )
-        .bind((idx + 1) as i32)
-        .bind(category_id)
-        .bind(store_uuid.as_uuid())
-        .execute(tx.as_mut())
-        .await
-        .map_err(db::error)?;
+        sqlx::query("UPDATE product_categories SET position = $1, updated_at = now() WHERE id = $2 AND store_id = $3")
+            .bind((idx + 1) as i32)
+            .bind(category_id)
+            .bind(store_uuid.as_uuid())
+            .execute(tx.as_mut())
+            .await
+            .map_err(db::error)?;
     }
     tx.commit().await.map_err(db::error)?;
     let rows = sqlx::query(
@@ -1214,14 +1170,12 @@ pub async fn list_category_products_admin(
     let (store_id, _tenant_id) = resolve_store_context(state, store, None).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let category_uuid = parse_uuid(&category_id, "category_id")?;
-    let exists = sqlx::query(
-        "SELECT 1 FROM product_categories WHERE id = $1 AND store_id = $2 LIMIT 1",
-    )
-    .bind(category_uuid)
-    .bind(store_uuid.as_uuid())
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+    let exists = sqlx::query("SELECT 1 FROM product_categories WHERE id = $1 AND store_id = $2 LIMIT 1")
+        .bind(category_uuid)
+        .bind(store_uuid.as_uuid())
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
     if exists.is_none() {
         return Err((
             StatusCode::NOT_FOUND,
@@ -1350,20 +1304,12 @@ fn category_from_row(row: sqlx::postgres::PgRow) -> pb::Category {
         store_id: row.get::<String, _>("store_id"),
         name: row.get("name"),
         slug: row.get("slug"),
-        description: row
-            .get::<Option<String>, _>("description")
-            .unwrap_or_default(),
+        description: row.get::<Option<String>, _>("description").unwrap_or_default(),
         status: row.get("status"),
-        parent_id: row
-            .get::<Option<String>, _>("parent_id")
-            .unwrap_or_default(),
+        parent_id: row.get::<Option<String>, _>("parent_id").unwrap_or_default(),
         position: row.get::<i32, _>("position"),
-        created_at: chrono_to_timestamp(
-            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
-        ),
-        updated_at: chrono_to_timestamp(
-            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at"),
-        ),
+        created_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at")),
+        updated_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at")),
     }
 }
 
@@ -1376,9 +1322,7 @@ fn category_product_from_row(row: sqlx::postgres::PgRow) -> pb::CategoryProductA
     }
 }
 
-fn metafield_definition_from_record(
-    record: &metafields::MetafieldDefinitionRecord,
-) -> pb::ProductMetafieldDefinition {
+fn metafield_definition_from_record(record: &metafields::MetafieldDefinitionRecord) -> pb::ProductMetafieldDefinition {
     pb::ProductMetafieldDefinition {
         id: record.id.clone(),
         owner_type: record.owner_type.clone(),
@@ -1409,11 +1353,7 @@ pub async fn create_product_metafield_definition(
     state: &AppState,
     input: pb::ProductMetafieldDefinitionInput,
 ) -> Result<pb::ProductMetafieldDefinition, (StatusCode, Json<ConnectError>)> {
-    if input.namespace.is_empty()
-        || input.key.is_empty()
-        || input.name.is_empty()
-        || input.value_type.is_empty()
-    {
+    if input.namespace.is_empty() || input.key.is_empty() || input.name.is_empty() || input.value_type.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
@@ -1463,11 +1403,7 @@ pub async fn update_product_metafield_definition(
             }),
         ));
     }
-    if input.namespace.is_empty()
-        || input.key.is_empty()
-        || input.name.is_empty()
-        || input.value_type.is_empty()
-    {
+    if input.namespace.is_empty() || input.key.is_empty() || input.name.is_empty() || input.value_type.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,
             Json(ConnectError {
@@ -1547,12 +1483,7 @@ pub async fn list_product_metafield_values(
         ));
     }
 
-    let records = metafields::list_values(
-        &state.db,
-        METAFIELD_OWNER_TYPE_PRODUCT,
-        &product_uuid,
-    )
-    .await?;
+    let records = metafields::list_values(&state.db, METAFIELD_OWNER_TYPE_PRODUCT, &product_uuid).await?;
 
     let values = records
         .into_iter()
@@ -1626,12 +1557,7 @@ pub async fn upsert_product_metafield_value(
         ));
     }
 
-    let definition = metafields::fetch_definition(
-        &state.db,
-        METAFIELD_OWNER_TYPE_PRODUCT,
-        &definition_uuid,
-    )
-    .await?;
+    let definition = metafields::fetch_definition(&state.db, METAFIELD_OWNER_TYPE_PRODUCT, &definition_uuid).await?;
 
     let Some(definition) = definition else {
         return Err((
@@ -1676,13 +1602,7 @@ pub async fn upsert_product_metafield_value(
 
     let _definition = metafield_definition_from_record(&definition);
 
-    metafields::upsert_value(
-        &state.db,
-        &definition_uuid,
-        &product_uuid,
-        &value_json,
-    )
-    .await?;
+    metafields::upsert_value(&state.db, &definition_uuid, &product_uuid, &value_json).await?;
 
     Ok(())
 }
@@ -1700,22 +1620,20 @@ pub async fn create_variant(
         } else {
             Some(t.tenant_id.as_str())
         }
-    })
-        && tenant != tenant_id {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "tenant does not match product".to_string(),
-                }),
-            ));
-        }
+    }) && tenant != tenant_id
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "tenant does not match product".to_string(),
+            }),
+        ));
+    }
     let variant_id = uuid::Uuid::new_v4();
     let (price_amount, price_currency) = money_to_parts(req.price.clone())?;
     let (compare_amount, compare_currency) = money_to_parts_opt(req.compare_at.clone())?;
-    let fulfillment_type = FulfillmentType::parse(&req.fulfillment_type)?
-        .as_str()
-        .to_string();
+    let fulfillment_type = FulfillmentType::parse(&req.fulfillment_type)?.as_str().to_string();
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
     let sku = SkuCode::parse(&req.sku)?;
     let mut tx = state.db.begin().await.map_err(db::error)?;
@@ -1731,8 +1649,7 @@ pub async fn create_variant(
     .fetch_all(tx.as_mut())
     .await
     .map_err(db::error)?;
-    let mut axis_value_map: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
+    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for axis_value in req.axis_values.iter() {
         let name = axis_value.name.trim().to_lowercase();
         let value = axis_value.value.trim();
@@ -1847,9 +1764,7 @@ pub async fn create_variant(
         price: req.price,
         compare_at: req.compare_at,
         status,
-        tax_rule_id: product_tax_rule_id
-            .map(|id| id.to_string())
-            .unwrap_or_default(),
+        tax_rule_id: product_tax_rule_id.map(|id| id.to_string()).unwrap_or_default(),
         axis_values: axis_values_for_response,
         jan_code: if req.jan_code.is_empty() {
             String::new()
@@ -1892,26 +1807,22 @@ pub async fn update_variant(
         } else {
             Some(t.tenant_id.as_str())
         }
-    })
-        && tenant != tenant_id {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "tenant does not match variant".to_string(),
-                }),
-            ));
-        }
+    }) && tenant != tenant_id
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "tenant does not match variant".to_string(),
+            }),
+        ));
+    }
     let (price_amount, price_currency) = money_to_parts(req.price.clone())?;
     let (compare_amount, compare_currency) = money_to_parts_opt(req.compare_at.clone())?;
     let fulfillment_type = if req.fulfillment_type.is_empty() {
         None
     } else {
-        Some(
-            FulfillmentType::parse(&req.fulfillment_type)?
-                .as_str()
-                .to_string(),
-        )
+        Some(FulfillmentType::parse(&req.fulfillment_type)?.as_str().to_string())
     };
     let status = VariantStatus::parse(&req.status)?.as_str().to_string();
     let axes_rows = sqlx::query(
@@ -1927,8 +1838,7 @@ pub async fn update_variant(
     .fetch_all(&state.db)
     .await
     .map_err(db::error)?;
-    let mut axis_value_map: std::collections::HashMap<String, String> =
-        std::collections::HashMap::new();
+    let mut axis_value_map: std::collections::HashMap<String, String> = std::collections::HashMap::new();
     for axis_value in req.axis_values.iter() {
         let name = axis_value.name.trim().to_lowercase();
         let value = axis_value.value.trim();
@@ -2085,15 +1995,14 @@ pub async fn update_variant(
             row.get::<i64, _>("price_amount"),
             row.get::<String, _>("price_currency"),
         )),
-        compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| money_from_parts(
+        compare_at: row.get::<Option<i64>, _>("compare_at_amount").map(|amount| {
+            money_from_parts(
                 amount,
-                row.get::<Option<String>, _>("compare_at_currency")
-                    .unwrap_or_default(),
-            )),
+                row.get::<Option<String>, _>("compare_at_currency").unwrap_or_default(),
+            )
+        }),
         status: row.get("status"),
-        tax_rule_id: row
-            .get::<Option<String>, _>("tax_rule_id")
-            .unwrap_or_default(),
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
         axis_values: axis_values_for_response,
     };
 
@@ -2113,11 +2022,10 @@ pub async fn update_variant(
 
     tx.commit().await.map_err(db::error)?;
 
-    if let Ok(row) =
-        sqlx::query("SELECT product_id::text as product_id FROM product_skus WHERE id = $1")
-            .bind(parse_uuid(&variant.id, "variant_id")?)
-            .fetch_one(&state.db)
-            .await
+    if let Ok(row) = sqlx::query("SELECT product_id::text as product_id FROM product_skus WHERE id = $1")
+        .bind(parse_uuid(&variant.id, "variant_id")?)
+        .fetch_one(&state.db)
+        .await
     {
         let product_id: String = row.get("product_id");
         let _ = reindex_product_by_id(state, &product_id).await;
@@ -2140,8 +2048,7 @@ pub async fn set_inventory(
             }),
         ));
     }
-    let (store_id, tenant_id) =
-        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     ensure_variant_belongs_to_store(state, &req.variant_id, &store_id).await?;
@@ -2248,36 +2155,21 @@ async fn fetch_product_admin(
 
     Ok(pb::ProductAdmin {
         id: row.get("id"),
-        vendor_id: row
-            .get::<Option<String>, _>("vendor_id")
-            .unwrap_or_default(),
+        vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
         title: row.get("title"),
         description: row.get("description"),
         status: row.get("status"),
         updated_at: None,
         store_id: row.get("store_id"),
-        tax_rule_id: row
-            .get::<Option<String>, _>("tax_rule_id")
-            .unwrap_or_default(),
-        sale_start_at: chrono_to_timestamp(
-            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at"),
-        ),
-        sale_end_at: chrono_to_timestamp(
-            row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at"),
-        ),
-        primary_category_id: row
-            .get::<Option<String>, _>("primary_category_id")
-            .unwrap_or_default(),
-        category_ids: row
-            .get::<Option<Vec<String>>, _>("category_ids")
-            .unwrap_or_default(),
+        tax_rule_id: row.get::<Option<String>, _>("tax_rule_id").unwrap_or_default(),
+        sale_start_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_start_at")),
+        sale_end_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("sale_end_at")),
+        primary_category_id: row.get::<Option<String>, _>("primary_category_id").unwrap_or_default(),
+        category_ids: row.get::<Option<Vec<String>>, _>("category_ids").unwrap_or_default(),
     })
 }
 
-async fn tenant_id_for_product(
-    state: &AppState,
-    product_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+async fn tenant_id_for_product(state: &AppState, product_id: &str) -> Result<String, (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query("SELECT tenant_id::text as tenant_id FROM products WHERE id = $1")
         .bind(parse_uuid(product_id, "product_id")?)
         .fetch_one(&state.db)
@@ -2286,10 +2178,7 @@ async fn tenant_id_for_product(
     Ok(row.get("tenant_id"))
 }
 
-async fn tenant_id_for_variant(
-    state: &AppState,
-    variant_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+async fn tenant_id_for_variant(state: &AppState, variant_id: &str) -> Result<String, (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
         SELECT p.tenant_id::text as tenant_id
@@ -2305,17 +2194,12 @@ async fn tenant_id_for_variant(
     Ok(row.get("tenant_id"))
 }
 
-async fn store_id_for_tenant(
-    state: &AppState,
-    tenant_id: &str,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
-    let row = sqlx::query(
-        "SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1",
-    )
-    .bind(parse_uuid(tenant_id, "tenant_id")?)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(db::error)?;
+async fn store_id_for_tenant(state: &AppState, tenant_id: &str) -> Result<String, (StatusCode, Json<ConnectError>)> {
+    let row = sqlx::query("SELECT id::text as id FROM stores WHERE tenant_id = $1 ORDER BY created_at ASC LIMIT 1")
+        .bind(parse_uuid(tenant_id, "tenant_id")?)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(db::error)?;
     let Some(row) = row else {
         return Err((
             StatusCode::BAD_REQUEST,
@@ -2342,15 +2226,16 @@ async fn resolve_store_context(
                     Some(s.store_id.as_str())
                 }
             })
-                && store_id != auth_store {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && store_id != auth_store
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_id does not match token".to_string(),
+                }),
+            ));
+        }
         if let Some(auth_tenant) = ctx.tenant_id.as_deref()
             && let Some(tenant_id) = tenant.as_ref().and_then(|t| {
                 if t.tenant_id.is_empty() {
@@ -2359,15 +2244,16 @@ async fn resolve_store_context(
                     Some(t.tenant_id.as_str())
                 }
             })
-                && tenant_id != auth_tenant {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "tenant_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && tenant_id != auth_tenant
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "tenant_id does not match token".to_string(),
+                }),
+            ));
+        }
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| {
@@ -2393,13 +2279,11 @@ async fn resolve_store_context(
             Some(s.store_code.as_str())
         }
     }) {
-        let row = sqlx::query(
-            "SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1",
-        )
-        .bind(store_code)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?;
+        let row = sqlx::query("SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1")
+            .bind(store_code)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(db::error)?;
         let Some(row) = row else {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -2413,15 +2297,16 @@ async fn resolve_store_context(
         let tenant_id: String = row.get("tenant_id");
         if let Some(ctx) = request_context::current()
             && let Some(auth_store) = ctx.store_id
-                && auth_store != store_id {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_code does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && auth_store != store_id
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_code does not match token".to_string(),
+                }),
+            ));
+        }
         return Ok((store_id, tenant_id));
     }
     if let Some(tenant_id) = tenant.and_then(|t| {
@@ -2514,10 +2399,7 @@ async fn ensure_location_belongs_to_store(
     Ok(())
 }
 
-async fn reindex_product_by_id(
-    state: &AppState,
-    product_id: &str,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+async fn reindex_product_by_id(state: &AppState, product_id: &str) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
         SELECT id::text as id, tenant_id::text as tenant_id, store_id::text as store_id,
@@ -2577,9 +2459,7 @@ async fn reindex_product_by_id(
             id: row.get::<String, _>("id"),
             tenant_id: row.get::<String, _>("tenant_id"),
             store_id: row.get::<String, _>("store_id"),
-            vendor_id: row
-                .get::<Option<String>, _>("vendor_id")
-                .unwrap_or_default(),
+            vendor_id: row.get::<Option<String>, _>("vendor_id").unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),

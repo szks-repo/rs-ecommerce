@@ -21,8 +21,7 @@ impl EmailConfig {
             .and_then(|v| v.parse().ok())
             .unwrap_or(1025);
         let from = std::env::var("SMTP_FROM").unwrap_or_else(|_| "no-reply@local.test".to_string());
-        let base_url =
-            std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
+        let base_url = std::env::var("BASE_URL").unwrap_or_else(|_| "http://localhost:3000".to_string());
         Self {
             smtp_host,
             smtp_port,

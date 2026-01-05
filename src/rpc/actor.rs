@@ -132,9 +132,10 @@ async fn verify_jwt_rs256(token: &str) -> Option<AuthContext> {
         return None;
     }
     if let Some(alg) = &key.alg
-        && alg != "RS256" {
-            return None;
-        }
+        && alg != "RS256"
+    {
+        return None;
+    }
     let decoding_key = DecodingKey::from_rsa_components(&key.n, &key.e).ok()?;
     let mut validation = Validation::new(Algorithm::RS256);
     if let Ok(issuer) = std::env::var("AUTH_JWT_ISSUER") {
@@ -162,12 +163,7 @@ fn verify_jwt_hs256(token: &str) -> Option<AuthContext> {
     if let Ok(aud) = std::env::var("AUTH_JWT_AUDIENCE") {
         validation.set_audience(&[aud]);
     }
-    let data = decode::<JwtClaims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &validation,
-    )
-    .ok()?;
+    let data = decode::<JwtClaims>(token, &DecodingKey::from_secret(secret.as_bytes()), &validation).ok()?;
     Some(AuthContext {
         actor_id: data.claims.sub,
         actor_type: data.claims.actor_type.unwrap_or_else(|| "api".to_string()),
@@ -183,10 +179,11 @@ async fn get_jwk_key(jwks_url: &str, kid: Option<&str>) -> Option<JwkKey> {
         let cache = JWKS_CACHE.read().await;
         if let Some(fetched_at) = cache.fetched_at
             && now.duration_since(fetched_at) < JWKS_TTL
-                && let Some(key) = select_jwk(&cache.keys, kid) {
-                    return Some(key.clone());
-                }
-                // If kid is specified but not found, fall through to refresh.
+            && let Some(key) = select_jwk(&cache.keys, kid)
+        {
+            return Some(key.clone());
+        }
+        // If kid is specified but not found, fall through to refresh.
     }
 
     let jwks = fetch_jwks(jwks_url).await?;
@@ -223,10 +220,7 @@ fn select_jwk<'a>(keys: &'a HashMap<String, JwkKey>, kid: Option<&str>) -> Optio
 }
 
 async fn fetch_jwks(jwks_url: &str) -> Option<Jwks> {
-    let client = reqwest::Client::builder()
-        .timeout(JWKS_TIMEOUT)
-        .build()
-        .ok()?;
+    let client = reqwest::Client::builder().timeout(JWKS_TIMEOUT).build().ok()?;
     let resp = client.get(jwks_url).send().await.ok()?;
     let jwks = resp.json::<Jwks>().await.ok()?;
     Some(jwks)

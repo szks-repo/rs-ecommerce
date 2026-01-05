@@ -11,9 +11,7 @@ use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
     AppState,
-    identity::context::{
-        parse_uuid, resolve_store_context, resolve_store_context_without_token_guard,
-    },
+    identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
     identity::error::{IdentityError, IdentityResult},
     identity::repository::{IdentityRepository, PgIdentityRepository},
     infrastructure::{audit, email},
@@ -38,10 +36,7 @@ impl<'a> IdentityService<'a> {
         Self { state }
     }
 
-    pub async fn sign_in(
-        &self,
-        req: pb::IdentitySignInRequest,
-    ) -> IdentityResult<pb::IdentitySignInResponse> {
+    pub async fn sign_in(&self, req: pb::IdentitySignInRequest) -> IdentityResult<pb::IdentitySignInResponse> {
         sign_in(self.state, req).await
     }
 
@@ -53,10 +48,7 @@ impl<'a> IdentityService<'a> {
         sign_out(self.state, req, actor, None).await
     }
 
-    pub async fn list_staff(
-        &self,
-        req: pb::IdentityListStaffRequest,
-    ) -> IdentityResult<pb::IdentityListStaffResponse> {
+    pub async fn list_staff(&self, req: pb::IdentityListStaffRequest) -> IdentityResult<pb::IdentityListStaffResponse> {
         list_staff(self.state, req).await
     }
 
@@ -109,10 +101,7 @@ impl<'a> IdentityService<'a> {
         assign_role_to_staff(self.state, req).await
     }
 
-    pub async fn list_roles(
-        &self,
-        req: pb::IdentityListRolesRequest,
-    ) -> IdentityResult<pb::IdentityListRolesResponse> {
+    pub async fn list_roles(&self, req: pb::IdentityListRolesRequest) -> IdentityResult<pb::IdentityListRolesResponse> {
         list_roles(self.state, req).await
     }
 
@@ -151,10 +140,7 @@ pub struct SignInWithRefresh {
     pub refresh_token: String,
 }
 
-pub async fn sign_in(
-    state: &AppState,
-    req: pb::IdentitySignInRequest,
-) -> IdentityResult<pb::IdentitySignInResponse> {
+pub async fn sign_in(state: &AppState, req: pb::IdentitySignInRequest) -> IdentityResult<pb::IdentitySignInResponse> {
     let result = sign_in_with_refresh(state, req).await?;
     Ok(result.response)
 }
@@ -237,26 +223,27 @@ pub async fn list_staff(
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let repo = PgIdentityRepository::new(&state.db);
-    let page_size = if req.page_size == 0 {
-        50
-    } else {
-        req.page_size.min(200)
-    } as i64;
+    let page_size = if req.page_size == 0 { 50 } else { req.page_size.min(200) } as i64;
     let page = if req.page == 0 { 1 } else { req.page } as i64;
     let offset = (page - 1).max(0) * page_size;
-    let query = if req.query.is_empty() { None } else { Some(req.query.as_str()) };
-    let role_id = if req.role_id.is_empty() { None } else { Some(req.role_id.as_str()) };
-    let status = if req.status.is_empty() { None } else { Some(req.status.as_str()) };
+    let query = if req.query.is_empty() {
+        None
+    } else {
+        Some(req.query.as_str())
+    };
+    let role_id = if req.role_id.is_empty() {
+        None
+    } else {
+        Some(req.role_id.as_str())
+    };
+    let status = if req.status.is_empty() {
+        None
+    } else {
+        Some(req.status.as_str())
+    };
 
     let (staff_rows, total) = repo
-        .list_staff(
-            &store_uuid.as_uuid(),
-            page_size,
-            offset,
-            query,
-            role_id,
-            status,
-        )
+        .list_staff(&store_uuid.as_uuid(), page_size, offset, query, role_id, status)
         .await?;
     let staff = staff_rows
         .into_iter()
@@ -318,24 +305,14 @@ pub async fn list_staff_sessions(
         .map(|row| pb::IdentityStaffSession {
             session_id: row.get("session_id"),
             staff_id: row.get("staff_id"),
-            display_name: row
-                .get::<Option<String>, _>("display_name")
-                .unwrap_or_default(),
+            display_name: row.get::<Option<String>, _>("display_name").unwrap_or_default(),
             email: row.get::<Option<String>, _>("email").unwrap_or_default(),
             role_key: row.get::<Option<String>, _>("role_key").unwrap_or_default(),
             status: row.get("status"),
-            ip_address: row
-                .get::<Option<String>, _>("ip_address")
-                .unwrap_or_default(),
-            user_agent: row
-                .get::<Option<String>, _>("user_agent")
-                .unwrap_or_default(),
-            last_seen_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("last_seen_at"),
-            )),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            ip_address: row.get::<Option<String>, _>("ip_address").unwrap_or_default(),
+            user_agent: row.get::<Option<String>, _>("user_agent").unwrap_or_default(),
+            last_seen_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("last_seen_at"))),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
 
@@ -346,8 +323,7 @@ pub async fn force_sign_out_staff(
     state: &AppState,
     req: pb::IdentityForceSignOutStaffRequest,
 ) -> IdentityResult<pb::IdentityForceSignOutStaffResponse> {
-    let (store_id, _tenant_id) =
-        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     if req.staff_id.is_empty() {
         return Err(IdentityError::invalid_argument("staff_id is required"));
     }
@@ -383,10 +359,7 @@ pub async fn force_sign_out_staff(
 
     if revoked {
         let actor = req.actor.clone();
-        let actor_id = actor
-            .as_ref()
-            .map(|a| a.actor_id.clone())
-            .filter(|v| !v.is_empty());
+        let actor_id = actor.as_ref().map(|a| a.actor_id.clone()).filter(|v| !v.is_empty());
         let actor_type = actor
             .as_ref()
             .map(|a| a.actor_type.clone())
@@ -434,15 +407,13 @@ pub async fn update_staff(
     let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
 
     let repo = PgIdentityRepository::new(&state.db);
-    let current_role = repo
-        .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
-        .await?;
+    let current_role = repo.staff_role_key(&store_uuid.as_uuid(), &staff_uuid).await?;
     if let Some(current_role) = current_role
-        && current_role == "owner" && !req.role_id.is_empty() {
-            return Err(IdentityError::permission_denied(
-                "owner role cannot be changed",
-            ));
-        }
+        && current_role == "owner"
+        && !req.role_id.is_empty()
+    {
+        return Err(IdentityError::permission_denied("owner role cannot be changed"));
+    }
 
     if !req.role_id.is_empty() {
         let role_uuid = parse_uuid(&req.role_id, "role_id")?;
@@ -451,9 +422,7 @@ pub async fn update_staff(
             return Err(IdentityError::invalid_argument("role_id is invalid"));
         };
         if role_row.key == "owner" {
-            return Err(IdentityError::permission_denied(
-                "owner role cannot be assigned",
-            ));
+            return Err(IdentityError::permission_denied("owner role cannot be assigned"));
         }
     }
 
@@ -584,9 +553,7 @@ pub async fn invite_staff(
     let role_key = role_row.key;
     let role_name = role_row.name;
     if role_key == "owner" {
-        return Err(IdentityError::invalid_argument(
-            "owner role cannot be invited",
-        ));
+        return Err(IdentityError::invalid_argument("owner role cannot be invited"));
     }
 
     if repo
@@ -809,9 +776,7 @@ pub async fn transfer_owner(
     require_owner(req.actor.as_ref())?;
 
     if req.new_owner_staff_id.is_empty() {
-        return Err(IdentityError::invalid_argument(
-            "new_owner_staff_id is required",
-        ));
+        return Err(IdentityError::invalid_argument("new_owner_staff_id is required"));
     }
 
     let store_uuid = StoreId::parse(&store_id)?;
@@ -830,21 +795,16 @@ pub async fn transfer_owner(
         return Err(IdentityError::not_found("owner not found"));
     };
     if current_owner_id == req.new_owner_staff_id {
-        return Err(IdentityError::invalid_argument(
-            "new owner is already the owner",
-        ));
+        return Err(IdentityError::invalid_argument("new owner is already the owner"));
     }
 
     if let Some(actor_id) = actor_id.as_ref()
-        && actor_id != &current_owner_id {
-            return Err(IdentityError::permission_denied(
-                "only owner can transfer ownership",
-            ));
-        }
+        && actor_id != &current_owner_id
+    {
+        return Err(IdentityError::permission_denied("only owner can transfer ownership"));
+    }
 
-    let target_status = repo
-        .staff_status(&store_uuid.as_uuid(), &new_owner_uuid)
-        .await?;
+    let target_status = repo.staff_status(&store_uuid.as_uuid(), &new_owner_uuid).await?;
     let Some(target_status) = target_status else {
         return Err(IdentityError::not_found("new owner staff not found"));
     };
@@ -862,21 +822,11 @@ pub async fn transfer_owner(
         .ok_or_else(|| IdentityError::not_found("staff role not found"))?;
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
-    repo.update_staff_role_tx(
-        tx.as_mut(),
-        &new_owner_uuid,
-        &store_uuid.as_uuid(),
-        &owner_role_id,
-    )
-    .await?;
+    repo.update_staff_role_tx(tx.as_mut(), &new_owner_uuid, &store_uuid.as_uuid(), &owner_role_id)
+        .await?;
     let current_owner_uuid = parse_uuid(&current_owner_id, "current_owner_id")?;
-    repo.update_staff_role_tx(
-        tx.as_mut(),
-        &current_owner_uuid,
-        &store_uuid.as_uuid(),
-        &staff_role_id,
-    )
-    .await?;
+    repo.update_staff_role_tx(tx.as_mut(), &current_owner_uuid, &store_uuid.as_uuid(), &staff_role_id)
+        .await?;
 
     audit::record_tx(
         &mut tx,
@@ -909,10 +859,8 @@ pub async fn transfer_owner(
 
     tx.commit().await.map_err(IdentityError::from)?;
 
-    let new_owner =
-        fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
-    let previous_owner =
-        fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
+    let new_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &req.new_owner_staff_id).await?;
+    let previous_owner = fetch_staff_summary(state, &store_uuid.as_uuid(), &current_owner_id).await?;
 
     Ok(pb::IdentityTransferOwnerResponse {
         transferred: true,
@@ -930,31 +878,32 @@ pub async fn sign_out(
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     if let Some(session_id) = session_id
         && let Ok(session_uuid) = uuid::Uuid::parse_str(&session_id)
-            && let Ok(store_uuid) = StoreId::parse(&store_id) {
-                let _ = sqlx::query(
-                    r#"
+        && let Ok(store_uuid) = StoreId::parse(&store_id)
+    {
+        let _ = sqlx::query(
+            r#"
                     UPDATE store_staff_sessions
                     SET revoked_at = now()
                     WHERE id = $1 AND store_id = $2 AND revoked_at IS NULL
                     "#,
-                )
-                .bind(session_uuid)
-                .bind(store_uuid.as_uuid())
-                .execute(&state.db)
-                .await;
+        )
+        .bind(session_uuid)
+        .bind(store_uuid.as_uuid())
+        .execute(&state.db)
+        .await;
 
-                let _ = sqlx::query(
-                    r#"
+        let _ = sqlx::query(
+            r#"
                     UPDATE store_staff_refresh_tokens
                     SET revoked_at = now()
                     WHERE session_id = $1 AND store_id = $2 AND revoked_at IS NULL
                     "#,
-                )
-                .bind(session_uuid)
-                .bind(store_uuid.as_uuid())
-                .execute(&state.db)
-                .await;
-            }
+        )
+        .bind(session_uuid)
+        .bind(store_uuid.as_uuid())
+        .execute(&state.db)
+        .await;
+    }
     let actor_id = actor.as_ref().and_then(|a| {
         if a.actor_id.is_empty() {
             None
@@ -1064,13 +1013,11 @@ pub async fn refresh_token(
         return Err(IdentityError::unauthenticated("staff is inactive"));
     }
 
-    let role_key: String = staff_row
-        .get::<Option<String>, _>("role_key")
-        .unwrap_or_default();
+    let role_key: String = staff_row.get::<Option<String>, _>("role_key").unwrap_or_default();
     let staff_id_str: String = staff_row.get("staff_id");
 
-    let jwt_secret = std::env::var("AUTH_JWT_SECRET")
-        .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
+    let jwt_secret =
+        std::env::var("AUTH_JWT_SECRET").map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
 
     let exp = now + Duration::minutes(ACCESS_TOKEN_TTL_MINUTES);
     let claims = JwtClaims {
@@ -1244,8 +1191,7 @@ pub async fn create_role(
     state: &AppState,
     req: pb::IdentityCreateRoleRequest,
 ) -> IdentityResult<pb::IdentityCreateRoleResponse> {
-    let (store_id, _tenant_id) =
-        resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store = req.store.clone();
     let tenant = req.tenant.clone();
     let key = req.key.clone();
@@ -1330,9 +1276,7 @@ pub async fn assign_role_to_staff(
 ) -> IdentityResult<pb::IdentityAssignRoleResponse> {
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     if req.staff_id.is_empty() || req.role_id.is_empty() {
-        return Err(IdentityError::invalid_argument(
-            "staff_id and role_id are required",
-        ));
+        return Err(IdentityError::invalid_argument("staff_id and role_id are required"));
     }
 
     let store_uuid = StoreId::parse(&store_id)?;
@@ -1342,21 +1286,16 @@ pub async fn assign_role_to_staff(
         .await?
         .ok_or_else(|| IdentityError::invalid_argument("role_id is invalid"))?;
     if role_store_id != store_id {
-        return Err(IdentityError::permission_denied(
-            "role does not belong to store",
-        ));
+        return Err(IdentityError::permission_denied("role does not belong to store"));
     }
 
     let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
-    let current_role = repo
-        .staff_role_key(&store_uuid.as_uuid(), &staff_uuid)
-        .await?;
+    let current_role = repo.staff_role_key(&store_uuid.as_uuid(), &staff_uuid).await?;
     if let Some(current_role) = current_role
-        && current_role == "owner" {
-            return Err(IdentityError::permission_denied(
-                "owner role cannot be assigned",
-            ));
-        }
+        && current_role == "owner"
+    {
+        return Err(IdentityError::permission_denied("owner role cannot be assigned"));
+    }
 
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
@@ -1513,9 +1452,7 @@ pub async fn update_role(
     let rows = repo.permissions_by_keys(&permission_keys).await?;
 
     if rows.len() != permission_keys.len() && !permission_keys.is_empty() {
-        return Err(IdentityError::invalid_argument(
-            "unknown permission key included",
-        ));
+        return Err(IdentityError::invalid_argument("unknown permission key included"));
     }
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
@@ -1537,8 +1474,7 @@ pub async fn update_role(
         });
     };
 
-    repo.delete_role_permissions_tx(tx.as_mut(), &role_uuid)
-        .await?;
+    repo.delete_role_permissions_tx(tx.as_mut(), &role_uuid).await?;
 
     for (permission_id, _key) in rows {
         let permission_uuid = parse_uuid(&permission_id, "permission_id")?;
@@ -1619,9 +1555,7 @@ pub async fn delete_role(
 
     let repo = PgIdentityRepository::new(&state.db);
     if repo.role_attached(&role_uuid).await? {
-        return Err(IdentityError::failed_precondition(
-            "role is attached to staff",
-        ));
+        return Err(IdentityError::failed_precondition("role is attached to staff"));
     }
 
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
@@ -1710,21 +1644,18 @@ async fn sign_in_core(
         .map(|value| value.as_str().to_string())
         .unwrap_or_default();
 
-    let (store_id, tenant_id) =
-        resolve_store_context_without_token_guard(state, store, tenant).await?;
+    let (store_id, tenant_id) = resolve_store_context_without_token_guard(state, store, tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
 
     let repo = PgIdentityRepository::new(&state.db);
     let row = if !email.is_empty() {
-        repo.fetch_active_staff_by_email(&store_uuid.as_uuid(), &email)
-            .await?
+        repo.fetch_active_staff_by_email(&store_uuid.as_uuid(), &email).await?
     } else if !login_id.is_empty() {
         repo.fetch_active_staff_by_login_id(&store_uuid.as_uuid(), &login_id)
             .await?
     } else if !phone.is_empty() {
-        repo.fetch_active_staff_by_phone(&store_uuid.as_uuid(), &phone)
-            .await?
+        repo.fetch_active_staff_by_phone(&store_uuid.as_uuid(), &phone).await?
     } else {
         return Err(IdentityError::invalid_argument(
             "email or login_id or phone is required",
@@ -1739,8 +1670,7 @@ async fn sign_in_core(
         .password_hash
         .ok_or_else(|| IdentityError::unauthenticated("invalid credentials"))?;
 
-    let parsed_hash = PasswordHash::new(&hash)
-        .map_err(|_| IdentityError::unauthenticated("invalid credentials"))?;
+    let parsed_hash = PasswordHash::new(&hash).map_err(|_| IdentityError::unauthenticated("invalid credentials"))?;
 
     Argon2::default()
         .verify_password(password.as_bytes(), &parsed_hash)
@@ -1748,13 +1678,12 @@ async fn sign_in_core(
 
     let staff_id: String = row.staff_id;
     let role: String = row.role_key;
-    let jwt_secret = std::env::var("AUTH_JWT_SECRET")
-        .map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
+    let jwt_secret =
+        std::env::var("AUTH_JWT_SECRET").map_err(|_| IdentityError::internal("AUTH_JWT_SECRET is required"))?;
 
     let now = chrono::Utc::now();
     let exp = now + chrono::Duration::minutes(ACCESS_TOKEN_TTL_MINUTES);
-    let staff_uuid = parse_uuid(&staff_id, "staff_id")
-        .map_err(|_| IdentityError::internal("invalid staff_id"))?;
+    let staff_uuid = parse_uuid(&staff_id, "staff_id").map_err(|_| IdentityError::internal("invalid staff_id"))?;
     let ctx = crate::rpc::request_context::current();
     let ip_address = ctx.as_ref().and_then(|c| c.ip_address.clone());
     let user_agent = ctx.as_ref().and_then(|c| c.user_agent.clone());
@@ -1932,26 +1861,16 @@ async fn create_staff_core(
         .map(|row| row.key)
         .ok_or_else(|| IdentityError::invalid_argument("role_id is invalid"))?;
     if role_key == "owner" {
-        return Err(IdentityError::invalid_argument(
-            "owner role cannot be assigned",
-        ));
+        return Err(IdentityError::invalid_argument("owner role cannot be assigned"));
     }
 
-    let email_value = if email.is_empty() {
-        None
-    } else {
-        Some(email.as_str())
-    };
+    let email_value = if email.is_empty() { None } else { Some(email.as_str()) };
     let login_id_value = if login_id.is_empty() {
         None
     } else {
         Some(login_id.as_str())
     };
-    let phone_value = if phone.is_empty() {
-        None
-    } else {
-        Some(phone.as_str())
-    };
+    let phone_value = if phone.is_empty() { None } else { Some(phone.as_str()) };
     let display_name_value = if display_name.is_empty() {
         None
     } else {
@@ -2066,15 +1985,8 @@ async fn create_role_core(
 
     let role_id = uuid::Uuid::new_v4();
     let repo = PgIdentityRepository::new(&state.db);
-    repo.insert_role_tx(
-        tx.as_mut(),
-        &store_uuid.as_uuid(),
-        &role_id,
-        &key,
-        &name,
-        &description,
-    )
-    .await?;
+    repo.insert_role_tx(tx.as_mut(), &store_uuid.as_uuid(), &role_id, &key, &name, &description)
+        .await?;
 
     if !permission_keys.is_empty() {
         let rows = repo.permissions_by_keys(&permission_keys).await?;

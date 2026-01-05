@@ -23,10 +23,7 @@ pub struct AuditInput {
     pub metadata_json: Option<Value>,
 }
 
-pub async fn record(
-    state: &AppState,
-    input: AuditInput,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub async fn record(state: &AppState, input: AuditInput) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let mut request_id = input.request_id;
     let mut ip_address = input.ip_address;
     let mut user_agent = input.user_agent;

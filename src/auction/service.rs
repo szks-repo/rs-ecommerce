@@ -69,10 +69,10 @@ pub async fn create_auction(
         return Err(invalid_arg("title is required"));
     }
 
-    let start_at = crate::shared::time::timestamp_to_chrono(req.start_at)
-        .ok_or_else(|| invalid_arg("start_at is required"))?;
-    let end_at = crate::shared::time::timestamp_to_chrono(req.end_at)
-        .ok_or_else(|| invalid_arg("end_at is required"))?;
+    let start_at =
+        crate::shared::time::timestamp_to_chrono(req.start_at).ok_or_else(|| invalid_arg("start_at is required"))?;
+    let end_at =
+        crate::shared::time::timestamp_to_chrono(req.end_at).ok_or_else(|| invalid_arg("end_at is required"))?;
     if end_at <= start_at {
         return Err(invalid_arg("end_at must be after start_at"));
     }
@@ -178,14 +178,8 @@ pub async fn create_auction(
         status,
         start_at: chrono_to_timestamp(Some(start_at)),
         end_at: chrono_to_timestamp(Some(end_at)),
-        bid_increment: Some(money_from_parts(
-            increment_amount,
-            increment_currency.clone(),
-        )),
-        start_price: Some(money_from_parts(
-            start_price_amount,
-            start_price_currency.clone(),
-        )),
+        bid_increment: Some(money_from_parts(increment_amount, increment_currency.clone())),
+        start_price: Some(money_from_parts(start_price_amount, start_price_currency.clone())),
         reserve_price: reserve_amount
             .zip(reserve_currency.clone())
             .map(|(amt, cur)| money_from_parts(amt, cur)),
@@ -243,10 +237,10 @@ pub async fn update_auction(
         return Err(invalid_arg("title is required"));
     }
 
-    let start_at = crate::shared::time::timestamp_to_chrono(req.start_at)
-        .ok_or_else(|| invalid_arg("start_at is required"))?;
-    let end_at = crate::shared::time::timestamp_to_chrono(req.end_at)
-        .ok_or_else(|| invalid_arg("end_at is required"))?;
+    let start_at =
+        crate::shared::time::timestamp_to_chrono(req.start_at).ok_or_else(|| invalid_arg("start_at is required"))?;
+    let end_at =
+        crate::shared::time::timestamp_to_chrono(req.end_at).ok_or_else(|| invalid_arg("end_at is required"))?;
     if end_at <= start_at {
         return Err(invalid_arg("end_at must be after start_at"));
     }
@@ -511,16 +505,12 @@ pub async fn list_bids(
         .map(|row| pb::AuctionBid {
             id: row.get("id"),
             auction_id: row.get("auction_id"),
-            customer_id: row
-                .get::<Option<String>, _>("customer_id")
-                .unwrap_or_default(),
+            customer_id: row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
             amount: Some(money_from_parts(
                 row.get::<i64, _>("amount"),
                 row.get::<String, _>("currency"),
             )),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect())
 }
@@ -650,9 +640,11 @@ pub async fn place_bid(
     }
 
     if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone())
-        && cur == bid_currency && bid_amount >= buyout {
-            next_status = STATUS_AWAITING_APPROVAL.to_string();
-        }
+        && cur == bid_currency
+        && bid_amount >= buyout
+    {
+        next_status = STATUS_AWAITING_APPROVAL.to_string();
+    }
 
     if status == STATUS_SCHEDULED && now >= start_at {
         next_status = STATUS_RUNNING.to_string();
@@ -738,13 +730,12 @@ pub async fn set_auto_bid(
     let customer_uuid = parse_uuid(&customer_id, "customer_id")?;
 
     let mut tx = state.db.begin().await.map_err(db_error)?;
-    let auction_row =
-        sqlx::query("SELECT * FROM auctions WHERE id = $1 AND store_id = $2 FOR UPDATE")
-            .bind(auction_uuid)
-            .bind(store_uuid.as_uuid())
-            .fetch_one(tx.as_mut())
-            .await
-            .map_err(db_error)?;
+    let auction_row = sqlx::query("SELECT * FROM auctions WHERE id = $1 AND store_id = $2 FOR UPDATE")
+        .bind(auction_uuid)
+        .bind(store_uuid.as_uuid())
+        .fetch_one(tx.as_mut())
+        .await
+        .map_err(db_error)?;
     let auction = auction_from_row(&auction_row);
     let auction_type: String = auction_row.get("auction_type");
     if auction_type != AUCTION_TYPE_OPEN {
@@ -885,12 +876,8 @@ pub async fn list_auto_bids(
                 row.get::<String, _>("currency"),
             )),
             status: row.get("status"),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
-            updated_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
         })
         .collect())
 }
@@ -1061,9 +1048,11 @@ async fn apply_auto_bids_tx(
 
     let mut next_status = status.clone();
     if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone())
-        && cur == start_price_currency && target_amount >= buyout {
-            next_status = STATUS_AWAITING_APPROVAL.to_string();
-        }
+        && cur == start_price_currency
+        && target_amount >= buyout
+    {
+        next_status = STATUS_AWAITING_APPROVAL.to_string();
+    }
 
     sqlx::query(
         r#"
@@ -1101,10 +1090,7 @@ async fn apply_auto_bids_tx(
         id: bid_id.to_string(),
         auction_id: auction.id.clone(),
         customer_id: top.customer_id.to_string(),
-        amount: Some(money_from_parts(
-            target_amount,
-            start_price_currency.clone(),
-        )),
+        amount: Some(money_from_parts(target_amount, start_price_currency.clone())),
         created_at: chrono_to_timestamp(Some(now)),
     };
 
@@ -1182,9 +1168,9 @@ pub async fn close_auction(
         && (reserve_amount.is_none()
             || (reserve_currency.as_deref() == Some(win_currency.as_str())
                 && reserve_amount.unwrap_or(0) <= win_amount))
-        {
-            next_status = STATUS_AWAITING_APPROVAL.to_string();
-        }
+    {
+        next_status = STATUS_AWAITING_APPROVAL.to_string();
+    }
 
     sqlx::query(
         r#"
@@ -1366,9 +1352,7 @@ fn auction_from_row(row: &sqlx::postgres::PgRow) -> pb::Auction {
             .get::<Option<uuid::Uuid>, _>("approved_by")
             .map(|v| v.to_string())
             .unwrap_or_default(),
-        approved_at: chrono_to_timestamp(
-            row.get::<Option<chrono::DateTime<Utc>>, _>("approved_at"),
-        ),
+        approved_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<Utc>>, _>("approved_at")),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
         title: row.get::<String, _>("title"),

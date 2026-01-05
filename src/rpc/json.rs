@@ -27,10 +27,7 @@ pub struct ConnectError {
     pub message: String,
 }
 
-pub fn parse_json_body(
-    headers: &HeaderMap,
-    body: Bytes,
-) -> Result<Value, (StatusCode, Json<ConnectError>)> {
+pub fn parse_json_body(headers: &HeaderMap, body: Bytes) -> Result<Value, (StatusCode, Json<ConnectError>)> {
     if !is_json_content_type(headers) {
         return Err((
             StatusCode::UNSUPPORTED_MEDIA_TYPE,
@@ -68,9 +65,7 @@ pub fn parse_request<T: DeserializeOwned>(
     })
 }
 
-pub fn require_tenant_id(
-    tenant: Option<pb::TenantContext>,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+pub fn require_tenant_id(tenant: Option<pb::TenantContext>) -> Result<String, (StatusCode, Json<ConnectError>)> {
     match tenant.and_then(|t| {
         if t.tenant_id.is_empty() {
             None
@@ -89,16 +84,8 @@ pub fn require_tenant_id(
     }
 }
 
-pub fn require_store_id(
-    store: Option<pb::StoreContext>,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
-    match store.and_then(|s| {
-        if s.store_id.is_empty() {
-            None
-        } else {
-            Some(s.store_id)
-        }
-    }) {
+pub fn require_store_id(store: Option<pb::StoreContext>) -> Result<String, (StatusCode, Json<ConnectError>)> {
+    match store.and_then(|s| if s.store_id.is_empty() { None } else { Some(s.store_id) }) {
         Some(id) => Ok(id),
         None => Err((
             StatusCode::BAD_REQUEST,

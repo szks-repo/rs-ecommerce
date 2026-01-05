@@ -20,10 +20,7 @@ struct ReservationRequest {
 async fn main() -> Result<()> {
     telemetry::init_tracing("inventory-worker");
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let pool = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
 
     wait_for_schema(&pool).await?;
 
@@ -33,10 +30,8 @@ async fn main() -> Result<()> {
     let oneshot = env::env_bool("INVENTORY_WORKER_ONESHOT", false);
 
     loop {
-        let (hot_done, hot_failed) =
-            process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
-        let (normal_done, normal_failed) =
-            process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
+        let (hot_done, hot_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, true).await?;
+        let (normal_done, normal_failed) = process_queue_batch(&pool, batch_size, ttl_seconds, false).await?;
         let released = release_expired_reservations(&pool, batch_size).await?;
 
         info!(
@@ -56,11 +51,9 @@ async fn main() -> Result<()> {
 async fn wait_for_schema(pool: &PgPool) -> Result<()> {
     let mut attempts = 0;
     loop {
-        let row = sqlx::query(
-            "SELECT to_regclass('public.inventory_reservation_requests')::text as req_table",
-        )
-        .fetch_one(pool)
-        .await?;
+        let row = sqlx::query("SELECT to_regclass('public.inventory_reservation_requests')::text as req_table")
+            .fetch_one(pool)
+            .await?;
         let exists: Option<String> = row.get("req_table");
         if exists.is_some() {
             return Ok(());
@@ -76,12 +69,7 @@ async fn wait_for_schema(pool: &PgPool) -> Result<()> {
     }
 }
 
-async fn process_queue_batch(
-    pool: &PgPool,
-    batch_size: i64,
-    ttl_seconds: i64,
-    is_hot: bool,
-) -> Result<(usize, usize)> {
+async fn process_queue_batch(pool: &PgPool, batch_size: i64, ttl_seconds: i64, is_hot: bool) -> Result<(usize, usize)> {
     let mut tx = pool.begin().await?;
     let mut done = 0usize;
     let mut failed = 0usize;
@@ -128,11 +116,7 @@ async fn process_queue_batch(
     Ok((done, failed))
 }
 
-async fn process_request(
-    pool: &PgPool,
-    request: ReservationRequest,
-    ttl_seconds: i64,
-) -> Result<bool> {
+async fn process_request(pool: &PgPool, request: ReservationRequest, ttl_seconds: i64) -> Result<bool> {
     let Some(location_id) = request.location_id else {
         let mut tx = pool.begin().await?;
         sqlx::query(

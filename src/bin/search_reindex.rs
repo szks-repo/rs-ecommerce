@@ -1,7 +1,7 @@
 use anyhow::Result;
 use meilisearch_sdk::client::Client;
 use serde::{Deserialize, Serialize};
-use sqlx::{postgres::PgPoolOptions, Postgres, QueryBuilder};
+use sqlx::{Postgres, QueryBuilder, postgres::PgPoolOptions};
 use std::env;
 use std::time::{Duration, Instant};
 
@@ -86,10 +86,7 @@ async fn main() -> Result<()> {
         product_id: env::var("REINDEX_PRODUCT_ID").ok().filter(|v| !v.is_empty()),
     };
 
-    let db = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let db = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
 
     tracing::info!(
         index = %index_name,
@@ -101,8 +98,7 @@ async fn main() -> Result<()> {
     );
 
     if count_only {
-        let mut builder =
-            QueryBuilder::<Postgres>::new("SELECT COUNT(*) as count FROM products p");
+        let mut builder = QueryBuilder::<Postgres>::new("SELECT COUNT(*) as count FROM products p");
         if !filters.is_empty() {
             builder.push(" WHERE ");
             apply_filters(&mut builder, &filters);

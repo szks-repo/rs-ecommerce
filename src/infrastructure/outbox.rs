@@ -13,15 +13,10 @@ pub struct OutboxEventInput {
     pub payload_json: Value,
 }
 
-pub async fn enqueue(
-    state: &AppState,
-    input: OutboxEventInput,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub async fn enqueue(state: &AppState, input: OutboxEventInput) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let event_id = uuid::Uuid::new_v4();
     let idempotency_key = build_idempotency_key(&input);
-    let store_uuid = input
-        .store_id
-        .and_then(|id| uuid::Uuid::parse_str(&id).ok());
+    let store_uuid = input.store_id.and_then(|id| uuid::Uuid::parse_str(&id).ok());
     let tenant_uuid = uuid::Uuid::parse_str(&input.tenant_id).map_err(|_| {
         (
             StatusCode::BAD_REQUEST,
@@ -69,9 +64,7 @@ pub async fn enqueue_tx(
 ) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let event_id = uuid::Uuid::new_v4();
     let idempotency_key = build_idempotency_key(&input);
-    let store_uuid = input
-        .store_id
-        .and_then(|id| uuid::Uuid::parse_str(&id).ok());
+    let store_uuid = input.store_id.and_then(|id| uuid::Uuid::parse_str(&id).ok());
     let tenant_uuid = uuid::Uuid::parse_str(&input.tenant_id).map_err(|_| {
         (
             StatusCode::BAD_REQUEST,
@@ -115,11 +108,9 @@ pub async fn enqueue_tx(
 
 fn build_idempotency_key(input: &OutboxEventInput) -> String {
     if let Some(ctx) = request_context::current()
-        && let Some(request_id) = ctx.request_id {
-            return format!(
-                "{}:{}:{}",
-                input.event_type, input.aggregate_type, request_id
-            );
-        }
+        && let Some(request_id) = ctx.request_id
+    {
+        return format!("{}:{}:{}", input.event_type, input.aggregate_type, request_id);
+    }
     uuid::Uuid::new_v4().to_string()
 }

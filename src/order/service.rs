@@ -9,18 +9,11 @@ use crate::{
         audit_action::{OrderAuditAction, ShipmentAuditAction},
         audit_helpers::{audit_input, to_json_opt},
         ids::{nullable_uuid, parse_uuid},
-        status::{
-            PaymentMethod, order_status_from_string, order_status_to_string,
-            shipment_status_to_string,
-        },
+        status::{PaymentMethod, order_status_from_string, order_status_to_string, shipment_status_to_string},
     },
 };
 
-pub async fn list_orders(
-    state: &AppState,
-    tenant_id: String,
-    status_filter: i32,
-) -> OrderResult<Vec<pb::OrderAdmin>> {
+pub async fn list_orders(state: &AppState, tenant_id: String, status_filter: i32) -> OrderResult<Vec<pb::OrderAdmin>> {
     let status = order_status_to_string(status_filter);
     let rows = if let Some(status) = status {
         sqlx::query(
@@ -59,19 +52,15 @@ pub async fn list_orders(
         .into_iter()
         .map(|row| pb::OrderAdmin {
             id: row.get::<String, _>("id"),
-            customer_id: row
-                .get::<Option<String>, _>("customer_id")
-                .unwrap_or_default(),
+            customer_id: row.get::<Option<String>, _>("customer_id").unwrap_or_default(),
             status: order_status_from_string(row.get::<String, _>("status")),
             total: Some(pb::Money {
                 amount: row.get::<i64, _>("total_amount"),
                 currency: row.get::<String, _>("currency"),
             }),
-            payment_method: PaymentMethod::from_str(
-                row.get::<String, _>("payment_method").as_str(),
-            )
-            .map(|value| value.to_pb())
-            .unwrap_or(pb::PaymentMethod::Unspecified as i32),
+            payment_method: PaymentMethod::from_str(row.get::<String, _>("payment_method").as_str())
+                .map(|value| value.to_pb())
+                .unwrap_or(pb::PaymentMethod::Unspecified as i32),
             created_at: None,
         })
         .collect())
@@ -90,8 +79,8 @@ pub async fn update_order_status(
         .await
         .map_err(OrderError::from)?
         .map(|row| row.get::<String, _>("status"));
-    let status = order_status_to_string(req.status)
-        .ok_or_else(|| OrderError::invalid_argument("status is required"))?;
+    let status =
+        order_status_to_string(req.status).ok_or_else(|| OrderError::invalid_argument("status is required"))?;
     let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     sqlx::query(
         r#"

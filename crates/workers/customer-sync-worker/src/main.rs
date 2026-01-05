@@ -52,10 +52,7 @@ struct IdentityData {
 async fn main() -> Result<()> {
     telemetry::init_tracing("customer-sync-worker");
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&db_url)
-        .await?;
+    let pool = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
 
     wait_for_schema(&pool).await?;
 
@@ -166,16 +163,10 @@ async fn handle_event(pool: &PgPool, event: &OutboxEvent) -> Result<()> {
     Ok(())
 }
 
-async fn apply_profile_sync(
-    pool: &PgPool,
-    event_id: uuid::Uuid,
-    payload: ProfilePayload,
-) -> Result<()> {
+async fn apply_profile_sync(pool: &PgPool, event_id: uuid::Uuid, payload: ProfilePayload) -> Result<()> {
     let tenant_id = uuid::Uuid::parse_str(&payload.tenant_id)?;
     let customer_id = uuid::Uuid::parse_str(&payload.customer_id)?;
-    let source_store_id = payload
-        .source_store_id
-        .and_then(|s| uuid::Uuid::parse_str(&s).ok());
+    let source_store_id = payload.source_store_id.and_then(|s| uuid::Uuid::parse_str(&s).ok());
     let name = payload.profile.name.clone();
     let email = payload.profile.email.clone();
     let phone = payload.profile.phone.clone();
@@ -244,17 +235,10 @@ async fn apply_profile_sync(
     Ok(())
 }
 
-async fn apply_identity_sync(
-    pool: &PgPool,
-    event_id: uuid::Uuid,
-    payload: IdentityPayload,
-) -> Result<()> {
+async fn apply_identity_sync(pool: &PgPool, event_id: uuid::Uuid, payload: IdentityPayload) -> Result<()> {
     let tenant_id = uuid::Uuid::parse_str(&payload.tenant_id)?;
     let customer_id = uuid::Uuid::parse_str(&payload.customer_id)?;
-    let identity_value = normalize_identity(
-        &payload.identity.identity_type,
-        &payload.identity.identity_value,
-    );
+    let identity_value = normalize_identity(&payload.identity.identity_type, &payload.identity.identity_value);
 
     sqlx::query(
         r#"
@@ -280,10 +264,7 @@ async fn apply_identity_sync(
     .execute(pool)
     .await?;
 
-    if let Some(source_store_id) = payload
-        .source_store_id
-        .and_then(|s| uuid::Uuid::parse_str(&s).ok())
-    {
+    if let Some(source_store_id) = payload.source_store_id.and_then(|s| uuid::Uuid::parse_str(&s).ok()) {
         mark_processed(pool, tenant_id, event_id, source_store_id).await?;
     }
     Ok(())
@@ -295,14 +276,12 @@ async fn already_processed(
     event_id: uuid::Uuid,
     store_id: uuid::Uuid,
 ) -> Result<bool> {
-    let row = sqlx::query(
-        "SELECT 1 FROM processed_events WHERE tenant_id = $1 AND event_id = $2 AND store_id = $3",
-    )
-    .bind(tenant_id)
-    .bind(event_id)
-    .bind(store_id)
-    .fetch_optional(pool)
-    .await?;
+    let row = sqlx::query("SELECT 1 FROM processed_events WHERE tenant_id = $1 AND event_id = $2 AND store_id = $3")
+        .bind(tenant_id)
+        .bind(event_id)
+        .bind(store_id)
+        .fetch_optional(pool)
+        .await?;
     Ok(row.is_some())
 }
 

@@ -15,10 +15,7 @@ pub async fn require_active_staff_session(
     req: axum::http::Request<Body>,
     next: Next,
 ) -> Response {
-    let auth_ctx = req
-        .extensions()
-        .get::<Option<AuthContext>>()
-        .and_then(|v| v.clone());
+    let auth_ctx = req.extensions().get::<Option<AuthContext>>().and_then(|v| v.clone());
 
     let Some(auth) = auth_ctx else {
         return next.run(req).await;
@@ -69,9 +66,10 @@ pub async fn require_active_staff_session(
         return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
     }
     if let Some(expires_at) = expires_at
-        && expires_at <= chrono::Utc::now() {
-            return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
-        }
+        && expires_at <= chrono::Utc::now()
+    {
+        return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
+    }
 
     let _ = sqlx::query(
         r#"

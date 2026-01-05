@@ -2,9 +2,7 @@ use axum::{Json, http::StatusCode};
 
 use crate::{pb::pb, rpc::json::ConnectError};
 
-pub fn money_to_parts(
-    money: Option<pb::Money>,
-) -> Result<(i64, String), (StatusCode, Json<ConnectError>)> {
+pub fn money_to_parts(money: Option<pb::Money>) -> Result<(i64, String), (StatusCode, Json<ConnectError>)> {
     let Some(money) = money else {
         return Err((
             StatusCode::BAD_REQUEST,

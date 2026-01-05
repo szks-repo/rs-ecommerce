@@ -62,10 +62,9 @@ pub async fn sign_out(
     if let Some(store_id) = store_id {
         let cookie_name = refresh_cookie_name(&store_id);
         let mut response = Json(resp).into_response();
-        response.headers_mut().insert(
-            axum::http::header::SET_COOKIE,
-            clear_refresh_cookie(&cookie_name),
-        );
+        response
+            .headers_mut()
+            .insert(axum::http::header::SET_COOKIE, clear_refresh_cookie(&cookie_name));
         return Ok(response);
     }
     Ok(Json(resp).into_response())
@@ -114,10 +113,7 @@ pub async fn list_my_permissions(
     Extension(auth_ctx): Extension<Option<AuthContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::IdentityListMyPermissionsResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::IdentityListMyPermissionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListMyPermissionsRequest>(&headers, body)?;
     let resp = identity::service::list_my_permissions(&state, auth_ctx, req)
         .await
@@ -189,13 +185,7 @@ pub async fn list_roles_with_permissions(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (
-        StatusCode,
-        Json<pb::IdentityListRolesWithPermissionsResponse>,
-    ),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::IdentityListRolesWithPermissionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListRolesWithPermissionsRequest>(&headers, body)?;
     let resp = identity::service::list_roles_with_permissions(&state, req)
         .await
@@ -251,10 +241,7 @@ pub async fn list_staff_sessions(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::IdentityListStaffSessionsResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::IdentityListStaffSessionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityListStaffSessionsRequest>(&headers, body)?;
     let resp = identity::service::list_staff_sessions(&state, req)
         .await
@@ -267,10 +254,7 @@ pub async fn force_sign_out_staff(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::IdentityForceSignOutStaffResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::IdentityForceSignOutStaffResponse>), (StatusCode, Json<ConnectError>)> {
     let mut req = parse_request::<pb::IdentityForceSignOutStaffRequest>(&headers, body)?;
     if req.actor.is_none() {
         req.actor = actor_ctx;
@@ -302,8 +286,7 @@ fn refresh_cookie_name(store_id: &str) -> String {
 }
 
 fn build_refresh_cookie(name: &str, value: &str, max_age_seconds: i64) -> HeaderValue {
-    let mut cookie =
-        format!("{name}={value}; Max-Age={max_age_seconds}; Path=/; HttpOnly; SameSite=Lax");
+    let mut cookie = format!("{name}={value}; Max-Age={max_age_seconds}; Path=/; HttpOnly; SameSite=Lax");
     if std::env::var("AUTH_COOKIE_SECURE")
         .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
         .unwrap_or(false)
@@ -329,9 +312,10 @@ fn extract_cookie(headers: &HeaderMap, name: &str) -> Option<String> {
     for part in raw.split(';') {
         let part = part.trim();
         if let Some(value) = part.strip_prefix(&format!("{name}="))
-            && !value.is_empty() {
-                return Some(value.to_string());
-            }
+            && !value.is_empty()
+        {
+            return Some(value.to_string());
+        }
     }
     None
 }
@@ -356,8 +340,7 @@ pub async fn accept_invite(
     State(state): State<AppState>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityAcceptInviteResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<(StatusCode, Json<pb::IdentityAcceptInviteResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::IdentityAcceptInviteRequest>(&headers, body)?;
     let resp = identity::service::accept_invite(&state, req)
         .await
@@ -370,8 +353,7 @@ pub async fn transfer_owner(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::IdentityTransferOwnerResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<(StatusCode, Json<pb::IdentityTransferOwnerResponse>), (StatusCode, Json<ConnectError>)> {
     let mut req = parse_request::<pb::IdentityTransferOwnerRequest>(&headers, body)?;
     if req.actor.is_none() {
         req.actor = actor_ctx;

@@ -81,11 +81,7 @@ pub trait IdentityRepository {
     ) -> IdentityResult<(Vec<StaffSummaryRow>, i64)>;
 
     /// staff_role_key
-    async fn staff_role_key(
-        &self,
-        store_uuid: &uuid::Uuid,
-        staff_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>>;
+    async fn staff_role_key(&self, store_uuid: &uuid::Uuid, staff_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
 
     async fn list_staff_permission_keys(
         &self,
@@ -96,18 +92,10 @@ pub trait IdentityRepository {
     async fn list_all_permission_keys(&self) -> IdentityResult<Vec<String>>;
 
     /// role_by_id
-    async fn role_by_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<RoleRow>>;
+    async fn role_by_id(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>>;
 
     /// role_key_by_id
-    async fn role_key_by_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_id: &str,
-    ) -> IdentityResult<Option<String>>;
+    async fn role_key_by_id(&self, store_uuid: &uuid::Uuid, role_id: &str) -> IdentityResult<Option<String>>;
 
     /// role_store_id
     async fn role_store_id(&self, role_id: &str) -> IdentityResult<Option<String>>;
@@ -144,28 +132,17 @@ pub trait IdentityRepository {
 
     async fn store_name(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
 
-    async fn role_id_by_key(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_key: &str,
-    ) -> IdentityResult<Option<uuid::Uuid>>;
+    async fn role_id_by_key(&self, store_uuid: &uuid::Uuid, role_key: &str) -> IdentityResult<Option<uuid::Uuid>>;
 
     async fn list_roles(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<RoleDetailRow>>;
 
-    async fn list_role_permissions(
-        &self,
-        role_ids: &[uuid::Uuid],
-    ) -> IdentityResult<Vec<(String, String)>>;
+    async fn list_role_permissions(&self, role_ids: &[uuid::Uuid]) -> IdentityResult<Vec<(String, String)>>;
 
     async fn permissions_by_keys(&self, keys: &[String]) -> IdentityResult<Vec<(String, String)>>;
 
     async fn role_attached(&self, role_uuid: &uuid::Uuid) -> IdentityResult<bool>;
 
-    async fn delete_role(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<RoleRow>>;
+    async fn delete_role(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>>;
 
     async fn update_staff_role(
         &self,
@@ -174,17 +151,9 @@ pub trait IdentityRepository {
         role_uuid: &uuid::Uuid,
     ) -> IdentityResult<()>;
 
-    async fn store_staff_exists_by_email(
-        &self,
-        store_uuid: &uuid::Uuid,
-        email: &str,
-    ) -> IdentityResult<bool>;
+    async fn store_staff_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool>;
 
-    async fn invite_exists_by_email(
-        &self,
-        store_uuid: &uuid::Uuid,
-        email: &str,
-    ) -> IdentityResult<bool>;
+    async fn invite_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool>;
 
     async fn fetch_invite_by_token(&self, token: &str) -> IdentityResult<Option<StaffInviteRow>>;
 
@@ -206,11 +175,7 @@ pub trait IdentityRepository {
 
     async fn current_owner_id(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
 
-    async fn staff_status(
-        &self,
-        store_uuid: &uuid::Uuid,
-        staff_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>>;
+    async fn staff_status(&self, store_uuid: &uuid::Uuid, staff_uuid: &uuid::Uuid) -> IdentityResult<Option<String>>;
 
     async fn fetch_active_staff_by_email(
         &self,
@@ -287,11 +252,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok((staff, total))
     }
 
-    async fn staff_role_key(
-        &self,
-        store_uuid: &uuid::Uuid,
-        staff_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>> {
+    async fn staff_role_key(&self, store_uuid: &uuid::Uuid, staff_uuid: &uuid::Uuid) -> IdentityResult<Option<String>> {
         let row = sqlx::query(
             r#"
             SELECT sr.key as role_key
@@ -348,11 +309,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(rows.into_iter().map(|row| row.get("key")).collect())
     }
 
-    async fn role_by_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<RoleRow>> {
+    async fn role_by_id(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>> {
         let row = sqlx::query(
             r#"
             SELECT id::text as id, key, name
@@ -446,11 +403,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(())
     }
 
-    async fn role_key_by_id(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_id: &str,
-    ) -> IdentityResult<Option<String>> {
+    async fn role_key_by_id(&self, store_uuid: &uuid::Uuid, role_id: &str) -> IdentityResult<Option<String>> {
         let row = sqlx::query(
             r#"
             SELECT key
@@ -516,11 +469,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(row.map(|row| row.get("name")))
     }
 
-    async fn role_id_by_key(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_key: &str,
-    ) -> IdentityResult<Option<uuid::Uuid>> {
+    async fn role_id_by_key(&self, store_uuid: &uuid::Uuid, role_key: &str) -> IdentityResult<Option<uuid::Uuid>> {
         let row = sqlx::query("SELECT id FROM store_roles WHERE store_id = $1 AND key = $2")
             .bind(store_uuid)
             .bind(role_key)
@@ -555,10 +504,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
             .collect())
     }
 
-    async fn list_role_permissions(
-        &self,
-        role_ids: &[uuid::Uuid],
-    ) -> IdentityResult<Vec<(String, String)>> {
+    async fn list_role_permissions(&self, role_ids: &[uuid::Uuid]) -> IdentityResult<Vec<(String, String)>> {
         let rows = sqlx::query(
             r#"
             SELECT srp.role_id::text as role_id, p.key as key
@@ -590,10 +536,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         .fetch_all(self.db)
         .await
         .map_err(IdentityError::from)?;
-        Ok(rows
-            .into_iter()
-            .map(|row| (row.get("id"), row.get("key")))
-            .collect())
+        Ok(rows.into_iter().map(|row| (row.get("id"), row.get("key"))).collect())
     }
 
     async fn role_attached(&self, role_uuid: &uuid::Uuid) -> IdentityResult<bool> {
@@ -612,11 +555,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(row.is_some())
     }
 
-    async fn delete_role(
-        &self,
-        store_uuid: &uuid::Uuid,
-        role_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<RoleRow>> {
+    async fn delete_role(&self, store_uuid: &uuid::Uuid, role_uuid: &uuid::Uuid) -> IdentityResult<Option<RoleRow>> {
         let row = sqlx::query(
             r#"
             DELETE FROM store_roles
@@ -658,11 +597,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(())
     }
 
-    async fn store_staff_exists_by_email(
-        &self,
-        store_uuid: &uuid::Uuid,
-        email: &str,
-    ) -> IdentityResult<bool> {
+    async fn store_staff_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool> {
         let row = sqlx::query(
             r#"
             SELECT 1
@@ -678,11 +613,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(row.is_some())
     }
 
-    async fn invite_exists_by_email(
-        &self,
-        store_uuid: &uuid::Uuid,
-        email: &str,
-    ) -> IdentityResult<bool> {
+    async fn invite_exists_by_email(&self, store_uuid: &uuid::Uuid, email: &str) -> IdentityResult<bool> {
         let row = sqlx::query(
             r#"
             SELECT 1
@@ -804,11 +735,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         Ok(row.map(|row| row.get("staff_id")))
     }
 
-    async fn staff_status(
-        &self,
-        store_uuid: &uuid::Uuid,
-        staff_uuid: &uuid::Uuid,
-    ) -> IdentityResult<Option<String>> {
+    async fn staff_status(&self, store_uuid: &uuid::Uuid, staff_uuid: &uuid::Uuid) -> IdentityResult<Option<String>> {
         let row = sqlx::query(
             r#"
             SELECT ss.status
@@ -1019,11 +946,7 @@ impl<'a> PgIdentityRepository<'a> {
         }))
     }
 
-    pub async fn delete_role_permissions_tx<'e, E>(
-        &self,
-        exec: E,
-        role_uuid: &uuid::Uuid,
-    ) -> IdentityResult<()>
+    pub async fn delete_role_permissions_tx<'e, E>(&self, exec: E, role_uuid: &uuid::Uuid) -> IdentityResult<()>
     where
         E: Executor<'e, Database = Postgres>,
     {

@@ -28,9 +28,7 @@ fn main() {
     ];
     let includes = &["proto"];
 
-    config
-        .compile_protos(protos, includes)
-        .expect("compile protos");
+    config.compile_protos(protos, includes).expect("compile protos");
 
     pbjson_build::Builder::new()
         .register_descriptors(&std::fs::read(descriptor_path).expect("read descriptor.bin"))

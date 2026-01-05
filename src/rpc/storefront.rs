@@ -50,10 +50,7 @@ pub async fn search_products(
 ) -> Result<(StatusCode, Json<pb::SearchProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::SearchProductsRequest>(&headers, body)?;
     let tenant_id = require_tenant_id(req.tenant)?;
-    let hits = state
-        .search
-        .search_products(&req.query, 50, &tenant_id)
-        .await?;
+    let hits = state.search.search_products(&req.query, 50, &tenant_id).await?;
     let products = hits_to_products(hits, tenant_id);
     Ok((
         StatusCode::OK,
@@ -91,10 +88,7 @@ pub async fn create_cart(
     let cart = cart::service::create_cart(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::CreateCartResponse { cart: Some(cart) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::CreateCartResponse { cart: Some(cart) })))
 }
 
 pub async fn add_cart_item(
@@ -106,10 +100,7 @@ pub async fn add_cart_item(
     let cart = cart::service::add_cart_item(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::AddCartItemResponse { cart: Some(cart) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::AddCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn update_cart_item(
@@ -121,10 +112,7 @@ pub async fn update_cart_item(
     let cart = cart::service::update_cart_item(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::UpdateCartItemResponse { cart: Some(cart) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::UpdateCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn remove_cart_item(
@@ -136,10 +124,7 @@ pub async fn remove_cart_item(
     let cart = cart::service::remove_cart_item(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::RemoveCartItemResponse { cart: Some(cart) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::RemoveCartItemResponse { cart: Some(cart) })))
 }
 
 pub async fn get_cart(
@@ -151,10 +136,7 @@ pub async fn get_cart(
     let cart = cart::service::get_cart(&state, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::GetCartResponse { cart: Some(cart) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::GetCartResponse { cart: Some(cart) })))
 }
 
 pub async fn checkout(
@@ -167,10 +149,7 @@ pub async fn checkout(
     let order = cart::service::checkout(&state, tenant_id, req)
         .await
         .map_err(|err| err.into_connect())?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::CheckoutResponse { order: Some(order) }),
-    ))
+    Ok((StatusCode::OK, Json(pb::CheckoutResponse { order: Some(order) })))
 }
 
 pub async fn get_order(

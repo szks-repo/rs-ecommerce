@@ -113,13 +113,9 @@ pub async fn list_digital_assets(
             provider: row.get("provider"),
             bucket: row.get("bucket"),
             object_key: row.get("object_key"),
-            content_type: row
-                .get::<Option<String>, _>("content_type")
-                .unwrap_or_default(),
+            content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
             size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
 
@@ -178,16 +174,15 @@ pub async fn create_digital_upload_url(
                 .bucket(&storage_config.bucket)
                 .key(&object_key)
                 .content_type(content_type.clone());
-            let presign_config =
-                PresigningConfig::expires_in(Duration::from_secs(600)).map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::Internal,
-                            message: "failed to create presign config".to_string(),
-                        }),
-                    )
-                })?;
+            let presign_config = PresigningConfig::expires_in(Duration::from_secs(600)).map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::Internal,
+                        message: "failed to create presign config".to_string(),
+                    }),
+                )
+            })?;
             let presigned = put_req.presigned(presign_config).await.map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
@@ -279,9 +274,7 @@ pub async fn create_digital_asset(
         provider: row.get("provider"),
         bucket: row.get("bucket"),
         object_key: row.get("object_key"),
-        content_type: row
-            .get::<Option<String>, _>("content_type")
-            .unwrap_or_default(),
+        content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
         size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
     })
@@ -340,16 +333,15 @@ pub async fn create_digital_download_url(
             let config = loader.load().await;
             let client = aws_sdk_s3::Client::new(&config);
             let get_req = client.get_object().bucket(&bucket).key(&object_key);
-            let presign_config =
-                PresigningConfig::expires_in(Duration::from_secs(3600)).map_err(|_| {
-                    (
-                        StatusCode::INTERNAL_SERVER_ERROR,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::Internal,
-                            message: "failed to create presign config".to_string(),
-                        }),
-                    )
-                })?;
+            let presign_config = PresigningConfig::expires_in(Duration::from_secs(3600)).map_err(|_| {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(ConnectError {
+                        code: crate::rpc::json::ErrorCode::Internal,
+                        message: "failed to create presign config".to_string(),
+                    }),
+                )
+            })?;
             let presigned = get_req.presigned(presign_config).await.map_err(|_| {
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,

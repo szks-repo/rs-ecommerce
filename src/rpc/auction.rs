@@ -24,9 +24,7 @@ pub async fn create_auction(
     let auction = auction::service::create_auction(&state, store_id, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::CreateAuctionResponse {
-            auction: Some(auction),
-        }),
+        Json(pb::CreateAuctionResponse { auction: Some(auction) }),
     ))
 }
 
@@ -42,9 +40,7 @@ pub async fn update_auction(
     let auction = auction::service::update_auction(&state, store_id, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::UpdateAuctionResponse {
-            auction: Some(auction),
-        }),
+        Json(pb::UpdateAuctionResponse { auction: Some(auction) }),
     ))
 }
 
@@ -55,8 +51,7 @@ pub async fn list_auctions(
 ) -> Result<(StatusCode, Json<pb::ListAuctionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListAuctionsRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
-    let (auctions, page) =
-        auction::service::list_auctions(&state, store_id, req.status, req.page).await?;
+    let (auctions, page) = auction::service::list_auctions(&state, store_id, req.status, req.page).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListAuctionsResponse {
@@ -74,12 +69,7 @@ pub async fn get_auction(
     let req = parse_request::<pb::GetAuctionRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let auction = auction::service::get_auction(&state, store_id, req.auction_id).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::GetAuctionResponse {
-            auction: Some(auction),
-        }),
-    ))
+    Ok((StatusCode::OK, Json(pb::GetAuctionResponse { auction: Some(auction) })))
 }
 
 pub async fn place_bid(
@@ -100,15 +90,8 @@ pub async fn place_bid(
             }),
         )
     })?;
-    let (auction, bid) = auction::service::place_bid(
-        &state,
-        store_id,
-        req.auction_id,
-        req.customer_id,
-        amount,
-        actor,
-    )
-    .await?;
+    let (auction, bid) =
+        auction::service::place_bid(&state, store_id, req.auction_id, req.customer_id, amount, actor).await?;
     Ok((
         StatusCode::OK,
         Json(pb::PlaceBidResponse {
@@ -180,9 +163,7 @@ pub async fn close_auction(
     let auction = auction::service::close_auction(&state, store_id, req.auction_id, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::CloseAuctionResponse {
-            auction: Some(auction),
-        }),
+        Json(pb::CloseAuctionResponse { auction: Some(auction) }),
     ))
 }
 
@@ -195,12 +176,9 @@ pub async fn approve_auction(
     let req = parse_request::<pb::ApproveAuctionRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
     let actor = req.actor.or(actor_ctx);
-    let auction =
-        auction::service::approve_auction(&state, store_id, req.auction_id, actor).await?;
+    let auction = auction::service::approve_auction(&state, store_id, req.auction_id, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::ApproveAuctionResponse {
-            auction: Some(auction),
-        }),
+        Json(pb::ApproveAuctionResponse { auction: Some(auction) }),
     ))
 }

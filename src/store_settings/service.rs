@@ -157,10 +157,7 @@ impl<'a> StoreSettingsService<'a> {
         delete_shipping_rate(self.state, store_id, zone_id, rate_id, actor).await
     }
 
-    pub async fn list_tax_rules(
-        &self,
-        store_id: String,
-    ) -> Result<Vec<pb::TaxRule>, (StatusCode, Json<ConnectError>)> {
+    pub async fn list_tax_rules(&self, store_id: String) -> Result<Vec<pb::TaxRule>, (StatusCode, Json<ConnectError>)> {
         list_tax_rules(self.state, store_id).await
     }
 
@@ -192,18 +189,14 @@ pub async fn get_store_settings(
 ) -> Result<pb::StoreSettings, (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let row = repo
-        .fetch_store_settings_by_store(&store_uuid.as_uuid())
-        .await?;
+    let row = repo.fetch_store_settings_by_store(&store_uuid.as_uuid()).await?;
 
     if let Some(row) = row {
         return Ok(store_settings_from_record(row));
     }
 
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    let fallback_row = repo
-        .fetch_store_settings_by_tenant(&tenant_uuid.as_uuid())
-        .await?;
+    let fallback_row = repo.fetch_store_settings_by_tenant(&tenant_uuid.as_uuid()).await?;
 
     if let Some(row) = fallback_row {
         return Ok(store_settings_from_record(row));
@@ -394,10 +387,7 @@ pub async fn update_store_settings(
     Ok(merged_settings)
 }
 
-fn merge_store_settings(
-    existing: pb::StoreSettings,
-    mut incoming: pb::StoreSettings,
-) -> pb::StoreSettings {
+fn merge_store_settings(existing: pb::StoreSettings, mut incoming: pb::StoreSettings) -> pb::StoreSettings {
     incoming.profile = Some(merge_profile(existing.profile, incoming.profile));
     incoming.contact = Some(merge_contact(existing.contact, incoming.contact));
     incoming.address = Some(merge_address(existing.address, incoming.address));
@@ -411,10 +401,7 @@ fn merge_store_settings(
     incoming
 }
 
-fn merge_profile(
-    existing: Option<pb::StoreProfile>,
-    incoming: Option<pb::StoreProfile>,
-) -> pb::StoreProfile {
+fn merge_profile(existing: Option<pb::StoreProfile>, incoming: Option<pb::StoreProfile>) -> pb::StoreProfile {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.store_name.is_empty() {
@@ -429,10 +416,7 @@ fn merge_profile(
     incoming
 }
 
-fn merge_contact(
-    existing: Option<pb::StoreContact>,
-    incoming: Option<pb::StoreContact>,
-) -> pb::StoreContact {
+fn merge_contact(existing: Option<pb::StoreContact>, incoming: Option<pb::StoreContact>) -> pb::StoreContact {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.contact_email.is_empty() {
@@ -444,10 +428,7 @@ fn merge_contact(
     incoming
 }
 
-fn merge_address(
-    existing: Option<pb::StoreAddress>,
-    incoming: Option<pb::StoreAddress>,
-) -> pb::StoreAddress {
+fn merge_address(existing: Option<pb::StoreAddress>, incoming: Option<pb::StoreAddress>) -> pb::StoreAddress {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.address_prefecture.is_empty() {
@@ -465,10 +446,7 @@ fn merge_address(
     incoming
 }
 
-fn merge_domain(
-    existing: Option<pb::StoreDomain>,
-    incoming: Option<pb::StoreDomain>,
-) -> pb::StoreDomain {
+fn merge_domain(existing: Option<pb::StoreDomain>, incoming: Option<pb::StoreDomain>) -> pb::StoreDomain {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.primary_domain.is_empty() {
@@ -480,10 +458,7 @@ fn merge_domain(
     incoming
 }
 
-fn merge_locale(
-    existing: Option<pb::StoreLocale>,
-    incoming: Option<pb::StoreLocale>,
-) -> pb::StoreLocale {
+fn merge_locale(existing: Option<pb::StoreLocale>, incoming: Option<pb::StoreLocale>) -> pb::StoreLocale {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.default_language.is_empty() {
@@ -510,10 +485,7 @@ fn merge_tax(existing: Option<pb::StoreTax>, incoming: Option<pb::StoreTax>) -> 
     incoming
 }
 
-fn merge_order(
-    existing: Option<pb::StoreOrder>,
-    incoming: Option<pb::StoreOrder>,
-) -> pb::StoreOrder {
+fn merge_order(existing: Option<pb::StoreOrder>, incoming: Option<pb::StoreOrder>) -> pb::StoreOrder {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.order_initial_status.is_empty() {
@@ -522,10 +494,7 @@ fn merge_order(
     incoming
 }
 
-fn merge_payment(
-    existing: Option<pb::StorePayment>,
-    incoming: Option<pb::StorePayment>,
-) -> pb::StorePayment {
+fn merge_payment(existing: Option<pb::StorePayment>, incoming: Option<pb::StorePayment>) -> pb::StorePayment {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.cod_fee.is_none() {
@@ -537,10 +506,7 @@ fn merge_payment(
     incoming
 }
 
-fn merge_branding(
-    existing: Option<pb::StoreBranding>,
-    incoming: Option<pb::StoreBranding>,
-) -> pb::StoreBranding {
+fn merge_branding(existing: Option<pb::StoreBranding>, incoming: Option<pb::StoreBranding>) -> pb::StoreBranding {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.theme.is_empty() {
@@ -558,10 +524,7 @@ fn merge_branding(
     incoming
 }
 
-fn merge_catalog(
-    existing: Option<pb::StoreCatalog>,
-    incoming: Option<pb::StoreCatalog>,
-) -> pb::StoreCatalog {
+fn merge_catalog(existing: Option<pb::StoreCatalog>, incoming: Option<pb::StoreCatalog>) -> pb::StoreCatalog {
     let existing = existing.unwrap_or_default();
     let mut incoming = incoming.unwrap_or_default();
     if incoming.sku_code_regex.is_empty() {
@@ -610,13 +573,8 @@ pub async fn initialize_store_settings(
     )
     .await?;
 
-    repo.upsert_mall_settings_tx(
-        &mut tx,
-        &tenant_uuid.as_uuid(),
-        &store_uuid.as_uuid(),
-        &mall,
-    )
-    .await?;
+    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
+        .await?;
 
     audit::record_tx(
         &mut tx,
@@ -643,10 +601,7 @@ pub async fn get_mall_settings(
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    if let Some(row) = repo
-        .fetch_mall_settings_by_store(&store_uuid.as_uuid())
-        .await?
-    {
+    if let Some(row) = repo.fetch_mall_settings_by_store(&store_uuid.as_uuid()).await? {
         return Ok(pb::MallSettings {
             enabled: row.enabled,
             commission_rate: row.commission_rate,
@@ -655,10 +610,7 @@ pub async fn get_mall_settings(
     }
 
     let tenant_uuid = TenantId::parse(&tenant_id)?;
-    if let Some(row) = repo
-        .fetch_mall_settings_by_tenant(&tenant_uuid.as_uuid())
-        .await?
-    {
+    if let Some(row) = repo.fetch_mall_settings_by_tenant(&tenant_uuid.as_uuid()).await? {
         return Ok(pb::MallSettings {
             enabled: row.enabled,
             commission_rate: row.commission_rate,
@@ -704,20 +656,13 @@ pub async fn update_mall_settings(
     actor: Option<pb::ActorContext>,
 ) -> Result<pb::MallSettings, (StatusCode, Json<ConnectError>)> {
     validate_mall_settings(&mall)?;
-    let before = get_mall_settings(state, store_id.clone(), tenant_id.clone())
-        .await
-        .ok();
+    let before = get_mall_settings(state, store_id.clone(), tenant_id.clone()).await.ok();
     let store_uuid = StoreId::parse(&store_id)?;
     let tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
     let mut tx = state.db.begin().await.map_err(db::error)?;
-    repo.upsert_mall_settings_tx(
-        &mut tx,
-        &tenant_uuid.as_uuid(),
-        &store_uuid.as_uuid(),
-        &mall,
-    )
-    .await?;
+    repo.upsert_mall_settings_tx(&mut tx, &tenant_uuid.as_uuid(), &store_uuid.as_uuid(), &mall)
+        .await?;
 
     audit::record_tx(
         &mut tx,
@@ -833,15 +778,16 @@ pub async fn resolve_store_context(
                     Some(s.store_id.as_str())
                 }
             })
-                && store_id != auth_store {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && store_id != auth_store
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_id does not match token".to_string(),
+                }),
+            ));
+        }
         if let Some(auth_tenant) = ctx.tenant_id.as_deref()
             && let Some(tenant_id) = tenant.as_ref().and_then(|t| {
                 if t.tenant_id.is_empty() {
@@ -850,15 +796,16 @@ pub async fn resolve_store_context(
                     Some(t.tenant_id.as_str())
                 }
             })
-                && tenant_id != auth_tenant {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "tenant_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && tenant_id != auth_tenant
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "tenant_id does not match token".to_string(),
+                }),
+            ));
+        }
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| {
@@ -904,15 +851,16 @@ pub async fn resolve_store_context(
         let tenant_id = row.tenant_id;
         if let Some(ctx) = request_context::current()
             && let Some(auth_store) = ctx.store_id
-                && auth_store != store_id {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_code does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && auth_store != store_id
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_code does not match token".to_string(),
+                }),
+            ));
+        }
         return Ok((store_id, tenant_id));
     }
     if let Some(tenant_id) = tenant.and_then(|t| {
@@ -963,9 +911,7 @@ pub async fn resolve_store_context(
     ))
 }
 
-pub fn validate_store_settings(
-    settings: &pb::StoreSettings,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub fn validate_store_settings(settings: &pb::StoreSettings) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let profile = settings.profile.as_ref();
     let contact = settings.contact.as_ref();
     let address = settings.address.as_ref();
@@ -978,18 +924,11 @@ pub fn validate_store_settings(
         || locale.is_none()
         || tax.is_none()
         || order.is_none()
-        || profile.is_some_and(|p| {
-            p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty()
-        })
+        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
         || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
-        || address.is_some_and(|a| {
-            a.address_prefecture.is_empty()
-                || a.address_city.is_empty()
-                || a.address_line1.is_empty()
-        })
-        || locale.is_some_and(|l| {
-            l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty()
-        })
+        || address
+            .is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
+        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
         || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
         || order.is_some_and(|o| o.order_initial_status.is_empty())
     {
@@ -1032,25 +971,16 @@ fn store_settings_missing_required(settings: &pb::StoreSettings) -> bool {
         || locale.is_none()
         || tax.is_none()
         || order.is_none()
-        || profile.is_some_and(|p| {
-            p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty()
-        })
+        || profile.is_some_and(|p| p.store_name.is_empty() || p.legal_name.is_empty() || p.legal_notice.is_empty())
         || contact.is_some_and(|c| c.contact_email.is_empty() || c.contact_phone.is_empty())
-        || address.is_some_and(|a| {
-            a.address_prefecture.is_empty()
-                || a.address_city.is_empty()
-                || a.address_line1.is_empty()
-        })
-        || locale.is_some_and(|l| {
-            l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty()
-        })
+        || address
+            .is_some_and(|a| a.address_prefecture.is_empty() || a.address_city.is_empty() || a.address_line1.is_empty())
+        || locale.is_some_and(|l| l.default_language.is_empty() || l.currency.is_empty() || l.time_zone.is_empty())
         || tax.is_some_and(|t| t.tax_mode.is_empty() || t.tax_rounding.is_empty())
         || order.is_some_and(|o| o.order_initial_status.is_empty())
 }
 
-pub fn validate_mall_settings(
-    mall: &pb::MallSettings,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub fn validate_mall_settings(mall: &pb::MallSettings) -> Result<(), (StatusCode, Json<ConnectError>)> {
     if !(0.0..=1.0).contains(&mall.commission_rate) {
         return Err((
             StatusCode::BAD_REQUEST,

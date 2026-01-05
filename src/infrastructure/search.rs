@@ -1,4 +1,4 @@
-use axum::{http::StatusCode, Json};
+use axum::{Json, http::StatusCode};
 
 use crate::rpc::json::ConnectError;
 
@@ -44,23 +44,17 @@ impl SearchClient {
         Ok(results.hits.into_iter().map(|hit| hit.result).collect())
     }
 
-    pub async fn upsert_products(
-        &self,
-        products: &[SearchProduct],
-    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    pub async fn upsert_products(&self, products: &[SearchProduct]) -> Result<(), (StatusCode, Json<ConnectError>)> {
         let index = self.client.index(self.index_name.as_str());
-        index
-            .add_or_replace(products, Some("id"))
-            .await
-            .map_err(|err| {
-                (
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    Json(ConnectError {
-                        code: crate::rpc::json::ErrorCode::Internal,
-                        message: format!("search upsert error: {}", err),
-                    }),
-                )
-            })?;
+        index.add_or_replace(products, Some("id")).await.map_err(|err| {
+            (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::Internal,
+                    message: format!("search upsert error: {}", err),
+                }),
+            )
+        })?;
         Ok(())
     }
 
@@ -119,9 +113,7 @@ pub struct SearchService {
 impl SearchService {
     pub fn meilisearch(base_url: &str, api_key: Option<&str>, index_name: &str) -> Self {
         Self {
-            backend: SearchBackend::Meilisearch(SearchClient::new(
-                base_url, api_key, index_name,
-            )),
+            backend: SearchBackend::Meilisearch(SearchClient::new(base_url, api_key, index_name)),
         }
     }
 
@@ -155,10 +147,7 @@ impl SearchService {
         }
     }
 
-    pub async fn upsert_products(
-        &self,
-        products: &[SearchProduct],
-    ) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    pub async fn upsert_products(&self, products: &[SearchProduct]) -> Result<(), (StatusCode, Json<ConnectError>)> {
         match &self.backend {
             SearchBackend::Meilisearch(client) => client.upsert_products(products).await,
             SearchBackend::OpenSearch(_) => Ok(()),

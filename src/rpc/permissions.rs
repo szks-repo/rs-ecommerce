@@ -14,10 +14,7 @@ pub async fn require_permission_with_state(
     next: Next,
     permission_key: &'static str,
 ) -> Response {
-    let auth_ctx = req
-        .extensions()
-        .get::<Option<AuthContext>>()
-        .and_then(|v| v.clone());
+    let auth_ctx = req.extensions().get::<Option<AuthContext>>().and_then(|v| v.clone());
     let Some(auth) = auth_ctx else {
         return error_response(StatusCode::UNAUTHORIZED, "unauthenticated");
     };

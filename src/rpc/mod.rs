@@ -89,12 +89,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_products).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -103,12 +98,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_product).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -117,12 +107,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_product).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -131,12 +116,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_categories).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -145,12 +125,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_category).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -159,12 +134,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_category).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -173,12 +143,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::delete_category).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -187,12 +152,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::reorder_categories).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -201,41 +161,25 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_category_products).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ReorderCategoryProducts",
-            post(backoffice::reorder_category_products)
-                .route_layer(middleware::from_fn_with_state(
-                    state.clone(),
-                    |State(state), req, next| {
-                        permissions::require_permission_key(
-                            state,
-                            req,
-                            next,
-                            permissions::PermissionKey::CatalogWrite,
-                        )
-                    },
-                )),
+            post(backoffice::reorder_category_products).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListVariants",
             post(backoffice::list_variants).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -244,12 +188,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_skus).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -258,12 +197,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::list_auctions).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionRead)
                 },
             )),
         )
@@ -272,12 +206,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::get_auction).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionRead)
                 },
             )),
         )
@@ -286,12 +215,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::list_bids).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionRead)
                 },
             )),
         )
@@ -300,12 +224,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::list_auto_bids).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionRead)
                 },
             )),
         )
@@ -314,12 +233,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::create_auction).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -328,12 +242,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::update_auction).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -342,12 +251,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::place_bid).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -356,12 +260,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::set_auto_bid).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -370,12 +269,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::close_auction).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -384,12 +278,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(auction::approve_auction).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuctionWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuctionWrite)
                 },
             )),
         )
@@ -398,12 +287,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_variant).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -412,12 +296,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_variant).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -426,12 +305,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_media_assets).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -440,12 +314,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_media_asset).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -454,12 +323,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_media_upload_url).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -468,12 +332,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_sku_images).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -482,12 +341,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::set_sku_images).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -496,12 +350,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_digital_assets).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
                 },
             )),
         )
@@ -510,52 +359,34 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_digital_asset).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateDigitalUploadUrl",
-            post(backoffice::create_digital_upload_url).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
-                }),
-            ),
+            post(backoffice::create_digital_upload_url).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateDigitalDownloadUrl",
-            post(backoffice::create_digital_download_url).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
-                }),
-            ),
+            post(backoffice::create_digital_download_url).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/SetInventory",
             post(backoffice::set_inventory).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
                 },
             )),
         )
@@ -564,12 +395,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::list_orders).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::OrdersRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::OrdersRead)
                 },
             )),
         )
@@ -578,12 +404,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_order_status).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::OrdersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::OrdersWrite)
                 },
             )),
         )
@@ -592,12 +413,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_shipment).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::OrdersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::OrdersWrite)
                 },
             )),
         )
@@ -606,12 +422,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_shipment_status).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::OrdersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::OrdersWrite)
                 },
             )),
         )
@@ -620,12 +431,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::create_promotion).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::PromotionsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PromotionsWrite)
                 },
             )),
         )
@@ -634,91 +440,61 @@ pub fn router(state: AppState) -> Router<()> {
             post(backoffice::update_promotion).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::PromotionsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PromotionsWrite)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListProductMetafieldDefinitions",
-            post(backoffice::list_product_metafield_definitions).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
-                }),
-            ),
+            post(backoffice::list_product_metafield_definitions).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateProductMetafieldDefinition",
-            post(backoffice::create_product_metafield_definition).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(backoffice::create_product_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpdateProductMetafieldDefinition",
-            post(backoffice::update_product_metafield_definition).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(backoffice::update_product_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/ListProductMetafieldValues",
-            post(backoffice::list_product_metafield_values).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogRead,
-                    )
-                }),
-            ),
+            post(backoffice::list_product_metafield_values).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.BackofficeService/UpsertProductMetafieldValue",
-            post(backoffice::upsert_product_metafield_value).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CatalogWrite,
-                    )
-                }),
-            ),
+            post(backoffice::upsert_product_metafield_value).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/ListCustomers",
             post(customer::list_customers).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersRead)
                 },
             )),
         )
@@ -727,12 +503,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(customer::get_customer).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersRead)
                 },
             )),
         )
@@ -741,12 +512,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(customer::create_customer).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
                 },
             )),
         )
@@ -755,12 +521,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(customer::update_customer).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
                 },
             )),
         )
@@ -769,12 +530,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(customer::upsert_customer_identity).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
                 },
             )),
         )
@@ -783,131 +539,88 @@ pub fn router(state: AppState) -> Router<()> {
             post(customer::upsert_customer_address).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/ListCustomerMetafieldDefinitions",
-            post(customer::list_customer_metafield_definitions).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersRead,
-                    )
-                }),
-            ),
+            post(customer::list_customer_metafield_definitions).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersRead)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/CreateCustomerMetafieldDefinition",
-            post(customer::create_customer_metafield_definition).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
-                }),
-            ),
+            post(customer::create_customer_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/UpdateCustomerMetafieldDefinition",
-            post(customer::update_customer_metafield_definition).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
-                }),
-            ),
+            post(customer::update_customer_metafield_definition).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/ListCustomerMetafieldValues",
-            post(customer::list_customer_metafield_values).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersRead,
-                    )
-                }),
-            ),
+            post(customer::list_customer_metafield_values).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersRead)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/UpsertCustomerMetafieldValue",
-            post(customer::upsert_customer_metafield_value).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::CustomersWrite,
-                    )
-                }),
-            ),
+            post(customer::upsert_customer_metafield_value).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CustomersWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetStoreSettings",
             post(store_settings::get_store_settings).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpdateStoreSettings",
-            post(store_settings::update_store_settings).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(store_settings::update_store_settings).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/InitializeStoreSettings",
-            post(store_settings::initialize_store_settings).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(store_settings::initialize_store_settings).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/GetMallSettings",
             post(store_settings::get_mall_settings).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
@@ -916,12 +629,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::update_mall_settings).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -930,52 +638,34 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::list_store_locations).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/UpsertStoreLocation",
-            post(store_settings::upsert_store_location).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(store_settings::upsert_store_location).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/DeleteStoreLocation",
-            post(store_settings::delete_store_location).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
-                }),
-            ),
+            post(store_settings::delete_store_location).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.StoreSettingsService/ListShippingZones",
             post(store_settings::list_shipping_zones).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
@@ -984,12 +674,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::upsert_shipping_zone).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -998,12 +683,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::delete_shipping_zone).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -1012,12 +692,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::list_shipping_rates).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
@@ -1026,12 +701,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::upsert_shipping_rate).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -1040,12 +710,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::delete_shipping_rate).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -1054,12 +719,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::list_tax_rules).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsRead)
                 },
             )),
         )
@@ -1068,12 +728,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::upsert_tax_rule).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -1082,12 +737,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(store_settings::delete_tax_rule).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::SettingsWrite,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::SettingsWrite)
                 },
             )),
         )
@@ -1100,14 +750,8 @@ pub fn router(state: AppState) -> Router<()> {
             post(setup::validate_store_code),
         )
         // IdentityService is the single entry point for staff auth/roles.
-        .route(
-            "/rpc/ecommerce.v1.IdentityService/SignIn",
-            post(identity::sign_in),
-        )
-        .route(
-            "/rpc/ecommerce.v1.IdentityService/SignOut",
-            post(identity::sign_out),
-        )
+        .route("/rpc/ecommerce.v1.IdentityService/SignIn", post(identity::sign_in))
+        .route("/rpc/ecommerce.v1.IdentityService/SignOut", post(identity::sign_out))
         .route(
             "/rpc/ecommerce.v1.IdentityService/RefreshToken",
             post(identity::refresh_token),
@@ -1121,12 +765,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::create_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1135,12 +774,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::create_role).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1149,12 +783,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::assign_role_to_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1163,39 +792,25 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::list_roles).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/ListRolesWithPermissions",
-            post(identity::list_roles_with_permissions).route_layer(
-                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
-                }),
-            ),
+            post(identity::list_roles_with_permissions).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
+                },
+            )),
         )
         .route(
             "/rpc/ecommerce.v1.IdentityService/UpdateRole",
             post(identity::update_role).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1204,12 +819,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::delete_role).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1218,12 +828,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::list_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1232,12 +837,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::list_staff_sessions).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1246,12 +846,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::force_sign_out_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1260,12 +855,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::update_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1274,12 +864,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::invite_staff).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1292,12 +877,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(identity::transfer_owner).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::StaffManage,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::StaffManage)
                 },
             )),
         )
@@ -1306,12 +886,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(audit::list_audit_logs).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuditRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuditRead)
                 },
             )),
         )
@@ -1320,12 +895,7 @@ pub fn router(state: AppState) -> Router<()> {
             post(audit::list_audit_actions).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
-                    permissions::require_permission_key(
-                        state,
-                        req,
-                        next,
-                        permissions::PermissionKey::AuditRead,
-                    )
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::AuditRead)
                 },
             )),
         )
@@ -1335,22 +905,20 @@ pub fn router(state: AppState) -> Router<()> {
             session::require_active_staff_session,
         ))
         .layer(middleware::from_fn(actor::inject_actor))
-        .layer(
-            TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
-                let request_id = req
-                    .headers()
-                    .get("x-request-id")
-                    .and_then(|value| value.to_str().ok())
-                    .unwrap_or("-");
-                info_span!(
-                    "http_request",
-                    method = %req.method(),
-                    uri = %req.uri(),
-                    request_id = %request_id,
-                    trace_id = tracing::field::Empty
-                )
-            }),
-        )
+        .layer(TraceLayer::new_for_http().make_span_with(|req: &Request<_>| {
+            let request_id = req
+                .headers()
+                .get("x-request-id")
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("-");
+            info_span!(
+                "http_request",
+                method = %req.method(),
+                uri = %req.uri(),
+                request_id = %request_id,
+                trace_id = tracing::field::Empty
+            )
+        }))
         .layer(cors)
         .with_state(state)
 }

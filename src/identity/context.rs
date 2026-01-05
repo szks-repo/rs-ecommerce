@@ -24,15 +24,16 @@ pub async fn resolve_store_context(
                     Some(s.store_id.as_str())
                 }
             })
-                && store_id != auth_store {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && store_id != auth_store
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_id does not match token".to_string(),
+                }),
+            ));
+        }
         if let Some(auth_tenant) = ctx.tenant_id.as_deref()
             && let Some(tenant_id) = tenant.as_ref().and_then(|t| {
                 if t.tenant_id.is_empty() {
@@ -41,15 +42,16 @@ pub async fn resolve_store_context(
                     Some(t.tenant_id.as_str())
                 }
             })
-                && tenant_id != auth_tenant {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "tenant_id does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && tenant_id != auth_tenant
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "tenant_id does not match token".to_string(),
+                }),
+            ));
+        }
     }
 
     if let Some(store_id) = store.as_ref().and_then(|s| {
@@ -84,13 +86,11 @@ pub async fn resolve_store_context(
             Some(s.store_code.as_str())
         }
     }) {
-        let row = sqlx::query(
-            "SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1",
-        )
-        .bind(store_code)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?;
+        let row = sqlx::query("SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1")
+            .bind(store_code)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(db::error)?;
         let Some(row) = row else {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -104,21 +104,23 @@ pub async fn resolve_store_context(
         let tenant_id: String = row.get("tenant_id");
         if let Some(ctx) = request_context::current()
             && let Some(auth_store) = ctx.store_id
-                && auth_store != store_id {
-                    return Err((
-                        StatusCode::FORBIDDEN,
-                        Json(ConnectError {
-                            code: crate::rpc::json::ErrorCode::PermissionDenied,
-                            message: "store_code does not match token".to_string(),
-                        }),
-                    ));
-                }
+            && auth_store != store_id
+        {
+            return Err((
+                StatusCode::FORBIDDEN,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::PermissionDenied,
+                    message: "store_code does not match token".to_string(),
+                }),
+            ));
+        }
         return Ok((store_id, tenant_id));
     }
     if let Some(ctx) = request_context::current()
-        && let (Some(store_id), Some(tenant_id)) = (ctx.store_id, ctx.tenant_id) {
-            return Ok((store_id, tenant_id));
-        }
+        && let (Some(store_id), Some(tenant_id)) = (ctx.store_id, ctx.tenant_id)
+    {
+        return Ok((store_id, tenant_id));
+    }
     if let Some(tenant_id) = tenant.and_then(|t| {
         if t.tenant_id.is_empty() {
             None
@@ -190,13 +192,11 @@ pub async fn resolve_store_context_without_token_guard(
             Some(s.store_code.as_str())
         }
     }) {
-        let row = sqlx::query(
-            "SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1",
-        )
-        .bind(store_code)
-        .fetch_optional(&state.db)
-        .await
-        .map_err(db::error)?;
+        let row = sqlx::query("SELECT id::text as id, tenant_id::text as tenant_id FROM stores WHERE code = $1")
+            .bind(store_code)
+            .fetch_optional(&state.db)
+            .await
+            .map_err(db::error)?;
         let Some(row) = row else {
             return Err((
                 StatusCode::BAD_REQUEST,
@@ -244,10 +244,7 @@ pub async fn resolve_store_context_without_token_guard(
     ))
 }
 
-pub fn parse_uuid(
-    value: &str,
-    field: &str,
-) -> Result<uuid::Uuid, (StatusCode, Json<ConnectError>)> {
+pub fn parse_uuid(value: &str, field: &str) -> Result<uuid::Uuid, (StatusCode, Json<ConnectError>)> {
     uuid::Uuid::parse_str(value).map_err(|_| {
         (
             StatusCode::BAD_REQUEST,

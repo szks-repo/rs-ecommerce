@@ -49,11 +49,7 @@ pub async fn upsert_store_location(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if location.id.is_empty() {
         repo.insert_store_location_tx(
             &mut tx,
@@ -89,9 +85,7 @@ pub async fn upsert_store_location(
     )
     .await?;
 
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -105,11 +99,7 @@ pub async fn delete_store_location(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     let rows = repo
         .delete_store_location_tx(
             &mut tx,
@@ -133,15 +123,11 @@ pub async fn delete_store_location(
         )
         .await?;
     }
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 
-pub fn validate_store_location(
-    location: &pb::StoreLocation,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub fn validate_store_location(location: &pb::StoreLocation) -> Result<(), (StatusCode, Json<ConnectError>)> {
     if location.code.is_empty() || location.name.is_empty() || location.status.is_empty() {
         return Err((
             StatusCode::BAD_REQUEST,

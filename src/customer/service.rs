@@ -92,9 +92,7 @@ pub async fn list_customers(
             email: row.get::<Option<String>, _>("email").unwrap_or_default(),
             phone: row.get::<Option<String>, _>("phone").unwrap_or_default(),
             status: row.get("status"),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
 
@@ -182,12 +180,8 @@ pub async fn get_customer(
             country_code: row
                 .get::<Option<String>, _>("country_code")
                 .unwrap_or_else(|| "JP".to_string()),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
-            updated_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
         }
     } else {
         pb::CustomerProfile {
@@ -230,9 +224,7 @@ pub async fn get_customer(
             identity_value: row.get("identity_value"),
             verified: row.get("verified"),
             source: row.get("source"),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
 
@@ -267,12 +259,8 @@ pub async fn get_customer(
             country_code: row
                 .get::<Option<String>, _>("country_code")
                 .unwrap_or_else(|| "JP".to_string()),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
-            updated_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+            updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
         })
         .collect();
 
@@ -304,8 +292,7 @@ pub async fn create_customer(
 
     let mut identity_inputs = normalize_identities(&profile, identities);
     for identity in &mut identity_inputs {
-        identity.identity_value =
-            normalize_identity(&identity.identity_type, &identity.identity_value);
+        identity.identity_value = normalize_identity(&identity.identity_type, &identity.identity_value);
     }
     let mut matched_customer_id: Option<String> = None;
 
@@ -456,25 +443,15 @@ pub async fn create_customer(
         customer_id: profile_row.get("customer_id"),
         store_id: profile_row.get("store_id"),
         name: profile_row.get("name"),
-        email: profile_row
-            .get::<Option<String>, _>("email")
-            .unwrap_or_default(),
-        phone: profile_row
-            .get::<Option<String>, _>("phone")
-            .unwrap_or_default(),
+        email: profile_row.get::<Option<String>, _>("email").unwrap_or_default(),
+        phone: profile_row.get::<Option<String>, _>("phone").unwrap_or_default(),
         status: profile_row.get("status"),
-        notes: profile_row
-            .get::<Option<String>, _>("notes")
-            .unwrap_or_default(),
+        notes: profile_row.get::<Option<String>, _>("notes").unwrap_or_default(),
         country_code: profile_row
             .get::<Option<String>, _>("country_code")
             .unwrap_or_else(|| "JP".to_string()),
-        created_at: chrono_to_timestamp(Some(
-            profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
-        )),
-        updated_at: chrono_to_timestamp(Some(
-            profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-        )),
+        created_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+        updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
     };
 
     audit::record_tx(
@@ -652,37 +629,23 @@ pub async fn update_customer(
         id: customer_row.get("id"),
         tenant_id: customer_row.get("tenant_id"),
         status: customer_row.get("status"),
-        created_at: chrono_to_timestamp(Some(
-            customer_row.get::<chrono::DateTime<Utc>, _>("created_at"),
-        )),
-        updated_at: chrono_to_timestamp(Some(
-            customer_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-        )),
+        created_at: chrono_to_timestamp(Some(customer_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+        updated_at: chrono_to_timestamp(Some(customer_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
     };
     let profile = pb::CustomerProfile {
         id: profile_row.get("id"),
         customer_id: profile_row.get("customer_id"),
         store_id: profile_row.get("store_id"),
         name: profile_row.get("name"),
-        email: profile_row
-            .get::<Option<String>, _>("email")
-            .unwrap_or_default(),
-        phone: profile_row
-            .get::<Option<String>, _>("phone")
-            .unwrap_or_default(),
+        email: profile_row.get::<Option<String>, _>("email").unwrap_or_default(),
+        phone: profile_row.get::<Option<String>, _>("phone").unwrap_or_default(),
         status: profile_row.get("status"),
-        notes: profile_row
-            .get::<Option<String>, _>("notes")
-            .unwrap_or_default(),
+        notes: profile_row.get::<Option<String>, _>("notes").unwrap_or_default(),
         country_code: profile_row
             .get::<Option<String>, _>("country_code")
             .unwrap_or_else(|| "JP".to_string()),
-        created_at: chrono_to_timestamp(Some(
-            profile_row.get::<chrono::DateTime<Utc>, _>("created_at"),
-        )),
-        updated_at: chrono_to_timestamp(Some(
-            profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-        )),
+        created_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+        updated_at: chrono_to_timestamp(Some(profile_row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
     };
 
     audit::record_tx(
@@ -792,9 +755,7 @@ pub async fn upsert_customer_identity(
             identity_value: normalized_value,
             verified: identity.verified,
             source: row.get::<String, _>("source"),
-            created_at: chrono_to_timestamp(Some(
-                row.get::<chrono::DateTime<Utc>, _>("created_at"),
-            )),
+            created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         };
 
         audit::record_tx(
@@ -1089,9 +1050,7 @@ pub async fn upsert_customer_address(
     Ok(updated)
 }
 
-fn metafield_definition_from_record(
-    record: &metafields::MetafieldDefinitionRecord,
-) -> pb::MetafieldDefinition {
+fn metafield_definition_from_record(record: &metafields::MetafieldDefinitionRecord) -> pb::MetafieldDefinition {
     pb::MetafieldDefinition {
         id: record.id.clone(),
         owner_type: record.owner_type.clone(),
@@ -1108,11 +1067,8 @@ fn metafield_definition_from_record(
     }
 }
 
-pub async fn list_customer_metafield_definitions(
-    state: &AppState,
-) -> CustomerResult<Vec<pb::MetafieldDefinition>> {
-    let definitions =
-        metafields::list_definitions(&state.db, METAFIELD_OWNER_TYPE_CUSTOMER).await?;
+pub async fn list_customer_metafield_definitions(state: &AppState) -> CustomerResult<Vec<pb::MetafieldDefinition>> {
+    let definitions = metafields::list_definitions(&state.db, METAFIELD_OWNER_TYPE_CUSTOMER).await?;
     Ok(definitions
         .into_iter()
         .map(|record| metafield_definition_from_record(&record))
@@ -1123,20 +1079,14 @@ pub async fn create_customer_metafield_definition(
     state: &AppState,
     input: pb::CustomerMetafieldDefinitionInput,
 ) -> CustomerResult<pb::MetafieldDefinition> {
-    if input.namespace.is_empty()
-        || input.key.is_empty()
-        || input.name.is_empty()
-        || input.value_type.is_empty()
-    {
+    if input.namespace.is_empty() || input.key.is_empty() || input.name.is_empty() || input.value_type.is_empty() {
         return Err(CustomerError::InvalidArgument(
             "definition required fields are missing".to_string(),
         ));
     }
 
-    let validations_json =
-        metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
-    let visibility_json =
-        metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
+    let validations_json = metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
+    let visibility_json = metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
 
     let record = metafields::create_definition(
         &state.db,
@@ -1168,26 +1118,17 @@ pub async fn update_customer_metafield_definition(
     input: pb::CustomerMetafieldDefinitionInput,
 ) -> CustomerResult<pb::MetafieldDefinition> {
     if definition_id.trim().is_empty() {
-        return Err(CustomerError::InvalidArgument(
-            "definition_id is required".to_string(),
-        ));
+        return Err(CustomerError::InvalidArgument("definition_id is required".to_string()));
     }
-    if input.namespace.is_empty()
-        || input.key.is_empty()
-        || input.name.is_empty()
-        || input.value_type.is_empty()
-    {
+    if input.namespace.is_empty() || input.key.is_empty() || input.name.is_empty() || input.value_type.is_empty() {
         return Err(CustomerError::InvalidArgument(
             "definition required fields are missing".to_string(),
         ));
     }
 
-    let definition_uuid =
-        parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
-    let validations_json =
-        metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
-    let visibility_json =
-        metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
+    let definition_uuid = parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
+    let validations_json = metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
+    let visibility_json = metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
 
     let record = metafields::update_definition(
         &state.db,
@@ -1212,9 +1153,7 @@ pub async fn update_customer_metafield_definition(
     .map_err(CustomerError::from)?;
 
     let Some(record) = record else {
-        return Err(CustomerError::NotFound(
-            "metafield definition not found".to_string(),
-        ));
+        return Err(CustomerError::NotFound("metafield definition not found".to_string()));
     };
 
     Ok(metafield_definition_from_record(&record))
@@ -1245,13 +1184,9 @@ pub async fn list_customer_metafield_values(
         return Err(CustomerError::NotFound("customer not found".to_string()));
     }
 
-    let records = metafields::list_values(
-        &state.db,
-        METAFIELD_OWNER_TYPE_CUSTOMER,
-        &customer_uuid,
-    )
-    .await
-    .map_err(CustomerError::from)?;
+    let records = metafields::list_values(&state.db, METAFIELD_OWNER_TYPE_CUSTOMER, &customer_uuid)
+        .await
+        .map_err(CustomerError::from)?;
 
     let values = records
         .into_iter()
@@ -1279,13 +1214,10 @@ pub async fn upsert_customer_metafield_value(
 ) -> CustomerResult<()> {
     let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let customer_uuid = parse_uuid(&customer_id, "customer_id").map_err(CustomerError::from)?;
-    let definition_uuid =
-        parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
+    let definition_uuid = parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
 
     if value_json.trim().is_empty() {
-        return Err(CustomerError::InvalidArgument(
-            "value_json is required".to_string(),
-        ));
+        return Err(CustomerError::InvalidArgument("value_json is required".to_string()));
     }
 
     let value = serde_json::from_str::<serde_json::Value>(&value_json)
@@ -1308,18 +1240,12 @@ pub async fn upsert_customer_metafield_value(
         return Err(CustomerError::NotFound("customer not found".to_string()));
     }
 
-    let definition = metafields::fetch_definition(
-        &state.db,
-        METAFIELD_OWNER_TYPE_CUSTOMER,
-        &definition_uuid,
-    )
-    .await
-    .map_err(CustomerError::from)?;
+    let definition = metafields::fetch_definition(&state.db, METAFIELD_OWNER_TYPE_CUSTOMER, &definition_uuid)
+        .await
+        .map_err(CustomerError::from)?;
 
     let Some(definition) = definition else {
-        return Err(CustomerError::NotFound(
-            "metafield definition not found".to_string(),
-        ));
+        return Err(CustomerError::NotFound("metafield definition not found".to_string()));
     };
     let value_type = definition.value_type.clone();
     let is_list = definition.is_list;
@@ -1341,14 +1267,9 @@ pub async fn upsert_customer_metafield_value(
     }
     let _definition = metafield_definition_from_record(&definition);
 
-    metafields::upsert_value(
-        &state.db,
-        &definition_uuid,
-        &customer_uuid,
-        &value_json,
-    )
-    .await
-    .map_err(CustomerError::from)?;
+    metafields::upsert_value(&state.db, &definition_uuid, &customer_uuid, &value_json)
+        .await
+        .map_err(CustomerError::from)?;
 
     Ok(())
 }
@@ -1357,8 +1278,7 @@ fn validate_customer_profile(
     profile: &pb::CustomerProfileInput,
     identities: &Vec<pb::CustomerIdentityInput>,
 ) -> CustomerResult<()> {
-    let has_identifier =
-        !profile.email.is_empty() || !profile.phone.is_empty() || !identities.is_empty();
+    let has_identifier = !profile.email.is_empty() || !profile.phone.is_empty() || !identities.is_empty();
     if profile.name.is_empty() && !has_identifier {
         return Err(CustomerError::InvalidArgument(
             "customer name or identity is required".to_string(),
@@ -1389,9 +1309,7 @@ fn normalize_identities(
     result.extend(identities);
     result
         .into_iter()
-        .filter(|identity| {
-            !identity.identity_type.trim().is_empty() && !identity.identity_value.trim().is_empty()
-        })
+        .filter(|identity| !identity.identity_type.trim().is_empty() && !identity.identity_value.trim().is_empty())
         .collect()
 }
 

@@ -89,21 +89,11 @@ pub async fn list_audit_logs(
             actor_id: row.get::<Option<String>, _>("actor_id").unwrap_or_default(),
             actor_type: row.get("actor_type"),
             action: row.get("action"),
-            target_type: row
-                .get::<Option<String>, _>("target_type")
-                .unwrap_or_default(),
-            target_id: row
-                .get::<Option<String>, _>("target_id")
-                .unwrap_or_default(),
-            request_id: row
-                .get::<Option<String>, _>("request_id")
-                .unwrap_or_default(),
-            ip_address: row
-                .get::<Option<String>, _>("ip_address")
-                .unwrap_or_default(),
-            user_agent: row
-                .get::<Option<String>, _>("user_agent")
-                .unwrap_or_default(),
+            target_type: row.get::<Option<String>, _>("target_type").unwrap_or_default(),
+            target_id: row.get::<Option<String>, _>("target_id").unwrap_or_default(),
+            request_id: row.get::<Option<String>, _>("request_id").unwrap_or_default(),
+            ip_address: row.get::<Option<String>, _>("ip_address").unwrap_or_default(),
+            user_agent: row.get::<Option<String>, _>("user_agent").unwrap_or_default(),
             before_json: row
                 .get::<Option<serde_json::Value>, _>("before_json")
                 .map(|v| v.to_string())
@@ -116,9 +106,7 @@ pub async fn list_audit_logs(
                 .get::<Option<serde_json::Value>, _>("metadata_json")
                 .map(|v| v.to_string())
                 .unwrap_or_default(),
-            created_at: chrono_to_timestamp(
-                row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at"),
-            ),
+            created_at: chrono_to_timestamp(row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("created_at")),
         });
     }
 

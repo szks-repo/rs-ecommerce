@@ -60,20 +60,10 @@ pub async fn upsert_shipping_zone(
     };
 
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if zone.id.is_empty() {
-        repo.insert_shipping_zone_tx(
-            &mut tx,
-            &zone_id,
-            &store_uuid.as_uuid(),
-            &tenant_uuid.as_uuid(),
-            &zone,
-        )
-        .await?;
+        repo.insert_shipping_zone_tx(&mut tx, &zone_id, &store_uuid.as_uuid(), &tenant_uuid.as_uuid(), &zone)
+            .await?;
     } else {
         repo.update_shipping_zone_tx(&mut tx, &zone_id, &store_uuid.as_uuid(), &zone)
             .await?;
@@ -81,8 +71,7 @@ pub async fn upsert_shipping_zone(
     }
 
     for pref in &zone.prefectures {
-        repo.insert_zone_prefecture_tx(&mut tx, &zone_id, pref)
-            .await?;
+        repo.insert_zone_prefecture_tx(&mut tx, &zone_id, pref).await?;
     }
 
     let updated = pb::ShippingZone {
@@ -106,9 +95,7 @@ pub async fn upsert_shipping_zone(
     )
     .await?;
 
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -123,11 +110,7 @@ pub async fn delete_shipping_zone(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     repo.delete_zone_prefectures_tx(&mut tx, &zone_uuid).await?;
     let rows = repo
         .delete_shipping_zone_tx(&mut tx, &zone_uuid, &store_uuid.as_uuid())
@@ -148,9 +131,7 @@ pub async fn delete_shipping_zone(
         )
         .await?;
     }
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 
@@ -162,9 +143,7 @@ pub async fn list_shipping_rates(
     let store_uuid = StoreId::parse(&store_id)?;
     let zone_uuid = parse_uuid(&zone_id, "zone_id")?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let rows = repo
-        .list_shipping_rates(&store_uuid.as_uuid(), &zone_uuid)
-        .await?;
+    let rows = repo.list_shipping_rates(&store_uuid.as_uuid(), &zone_uuid).await?;
 
     Ok(rows
         .into_iter()
@@ -202,11 +181,7 @@ pub async fn upsert_shipping_rate(
     let min = rate.min_subtotal.clone().map(|m| m.amount);
     let max = rate.max_subtotal.clone().map(|m| m.amount);
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     if rate.id.is_empty() {
         let zone_uuid = parse_uuid(&rate.zone_id, "zone_id")?;
         repo.insert_shipping_rate_tx(
@@ -221,16 +196,8 @@ pub async fn upsert_shipping_rate(
         )
         .await?;
     } else {
-        repo.update_shipping_rate_tx(
-            &mut tx,
-            &rate_id,
-            &rate,
-            fee_amount,
-            &fee_currency,
-            min,
-            max,
-        )
-        .await?;
+        repo.update_shipping_rate_tx(&mut tx, &rate_id, &rate, fee_amount, &fee_currency, min, max)
+            .await?;
     }
 
     let _ = tenant_id;
@@ -257,9 +224,7 @@ pub async fn upsert_shipping_rate(
     )
     .await?;
 
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(updated)
 }
 
@@ -273,17 +238,9 @@ pub async fn delete_shipping_rate(
     let store_uuid = StoreId::parse(&store_id)?;
     let _tenant_uuid = TenantId::parse(&tenant_id)?;
     let repo = PgStoreSettingsRepository::new(&state.db);
-    let mut tx = state
-        .db
-        .begin()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    let mut tx = state.db.begin().await.map_err(crate::infrastructure::db::error)?;
     let rows = repo
-        .delete_shipping_rate_tx(
-            &mut tx,
-            &store_uuid.as_uuid(),
-            &parse_uuid(&rate_id, "rate_id")?,
-        )
+        .delete_shipping_rate_tx(&mut tx, &store_uuid.as_uuid(), &parse_uuid(&rate_id, "rate_id")?)
         .await?;
     let deleted = rows > 0;
     if deleted {
@@ -301,41 +258,37 @@ pub async fn delete_shipping_rate(
         )
         .await?;
     }
-    tx.commit()
-        .await
-        .map_err(crate::infrastructure::db::error)?;
+    tx.commit().await.map_err(crate::infrastructure::db::error)?;
     Ok(deleted)
 }
 
-pub fn validate_shipping_rate(
-    rate: &pb::ShippingRate,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub fn validate_shipping_rate(rate: &pb::ShippingRate) -> Result<(), (StatusCode, Json<ConnectError>)> {
     if let (Some(min), Some(max)) = (&rate.min_subtotal, &rate.max_subtotal)
-        && min.amount > max.amount {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "min_subtotal must be <= max_subtotal".to_string(),
-                }),
-            ));
-        }
+        && min.amount > max.amount
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "min_subtotal must be <= max_subtotal".to_string(),
+            }),
+        ));
+    }
     if let Some(fee) = &rate.fee
-        && fee.amount < 0 {
-            return Err((
-                StatusCode::BAD_REQUEST,
-                Json(ConnectError {
-                    code: crate::rpc::json::ErrorCode::InvalidArgument,
-                    message: "fee must be >= 0".to_string(),
-                }),
-            ));
-        }
+        && fee.amount < 0
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "fee must be >= 0".to_string(),
+            }),
+        ));
+    }
     Ok(())
 }
 
-pub fn validate_shipping_zone(
-    zone: &pb::ShippingZone,
-) -> Result<(), (StatusCode, Json<ConnectError>)> {
+pub fn validate_shipping_zone(zone: &pb::ShippingZone) -> Result<(), (StatusCode, Json<ConnectError>)> {
     for pref in &zone.prefectures {
         if !is_valid_prefecture_code(&pref.code) {
             return Err((

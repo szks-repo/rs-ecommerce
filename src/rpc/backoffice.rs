@@ -40,8 +40,7 @@ pub async fn list_variants(
 ) -> Result<(StatusCode, Json<pb::ListVariantsAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListVariantsAdminRequest>(&headers, body)?;
     let (variants, variant_axes) =
-        product::service::list_variants_admin(&state, req.tenant, req.store, req.product_id)
-            .await?;
+        product::service::list_variants_admin(&state, req.tenant, req.store, req.product_id).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListVariantsAdminResponse {
@@ -84,9 +83,7 @@ pub async fn create_product(
     let product = product::service::create_product(&state, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::CreateProductResponse {
-            product: Some(product),
-        }),
+        Json(pb::CreateProductResponse { product: Some(product) }),
     ))
 }
 
@@ -101,9 +98,7 @@ pub async fn update_product(
     let product = product::service::update_product(&state, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::UpdateProductResponse {
-            product: Some(product),
-        }),
+        Json(pb::UpdateProductResponse { product: Some(product) }),
     ))
 }
 
@@ -115,10 +110,7 @@ pub async fn list_categories(
 ) -> Result<(StatusCode, Json<pb::ListCategoriesAdminResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListCategoriesAdminRequest>(&headers, body)?;
     let categories = product::service::list_categories_admin(&state, req.store, req.status).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ListCategoriesAdminResponse { categories }),
-    ))
+    Ok((StatusCode::OK, Json(pb::ListCategoriesAdminResponse { categories })))
 }
 
 pub async fn create_category(
@@ -176,10 +168,7 @@ pub async fn reorder_categories(
     let req = parse_request::<pb::ReorderCategoriesRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let categories = product::service::reorder_categories(&state, req, actor).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ReorderCategoriesResponse { categories }),
-    ))
+    Ok((StatusCode::OK, Json(pb::ReorderCategoriesResponse { categories })))
 }
 
 pub async fn list_category_products(
@@ -187,17 +176,10 @@ pub async fn list_category_products(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::ListCategoryProductsResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::ListCategoryProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListCategoryProductsRequest>(&headers, body)?;
-    let products =
-        product::service::list_category_products_admin(&state, req.store, req.category_id).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ListCategoryProductsResponse { products }),
-    ))
+    let products = product::service::list_category_products_admin(&state, req.store, req.category_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListCategoryProductsResponse { products })))
 }
 
 pub async fn reorder_category_products(
@@ -205,17 +187,11 @@ pub async fn reorder_category_products(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::ReorderCategoryProductsResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::ReorderCategoryProductsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ReorderCategoryProductsRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let products = product::service::reorder_category_products(&state, req, actor).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ReorderCategoryProductsResponse { products }),
-    ))
+    Ok((StatusCode::OK, Json(pb::ReorderCategoryProductsResponse { products })))
 }
 
 pub async fn create_variant(
@@ -229,9 +205,7 @@ pub async fn create_variant(
     let variant = product::service::create_variant(&state, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::CreateVariantResponse {
-            variant: Some(variant),
-        }),
+        Json(pb::CreateVariantResponse { variant: Some(variant) }),
     ))
 }
 
@@ -246,9 +220,7 @@ pub async fn update_variant(
     let variant = product::service::update_variant(&state, req, actor).await?;
     Ok((
         StatusCode::OK,
-        Json(pb::UpdateVariantResponse {
-            variant: Some(variant),
-        }),
+        Json(pb::UpdateVariantResponse { variant: Some(variant) }),
     ))
 }
 
@@ -259,8 +231,7 @@ pub async fn list_media_assets(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::ListMediaAssetsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListMediaAssetsRequest>(&headers, body)?;
-    let assets =
-        product::media::list_media_assets(&state, req.store, req.tenant, req.query).await?;
+    let assets = product::media::list_media_assets(&state, req.store, req.tenant, req.query).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListMediaAssetsResponse {
@@ -280,13 +251,8 @@ pub async fn create_media_asset(
 ) -> Result<(StatusCode, Json<pb::CreateMediaAssetResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateMediaAssetRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
-    let asset = product::media::create_media_asset(
-        &state,
-        req.store,
-        req.tenant,
-        req.asset.unwrap_or_default(),
-    )
-    .await?;
+    let asset =
+        product::media::create_media_asset(&state, req.store, req.tenant, req.asset.unwrap_or_default()).await?;
     Ok((
         StatusCode::OK,
         Json(pb::CreateMediaAssetResponse { asset: Some(asset) }),
@@ -298,8 +264,7 @@ pub async fn create_media_upload_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::CreateMediaUploadUrlResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<(StatusCode, Json<pb::CreateMediaUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateMediaUploadUrlRequest>(&headers, body)?;
     let resp = product::media::create_media_upload_url(
         &state,
@@ -332,9 +297,7 @@ pub async fn set_sku_images(
 ) -> Result<(StatusCode, Json<pb::SetSkuImagesResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::SetSkuImagesRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
-    let images =
-        product::media::set_sku_images(&state, req.store, req.tenant, req.sku_id, req.images)
-            .await?;
+    let images = product::media::set_sku_images(&state, req.store, req.tenant, req.sku_id, req.images).await?;
     Ok((StatusCode::OK, Json(pb::SetSkuImagesResponse { images })))
 }
 
@@ -345,12 +308,8 @@ pub async fn list_digital_assets(
     body: Bytes,
 ) -> Result<(StatusCode, Json<pb::ListDigitalAssetsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListDigitalAssetsRequest>(&headers, body)?;
-    let assets =
-        product::digital::list_digital_assets(&state, req.store, req.tenant, req.sku_id).await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ListDigitalAssetsResponse { assets }),
-    ))
+    let assets = product::digital::list_digital_assets(&state, req.store, req.tenant, req.sku_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListDigitalAssetsResponse { assets })))
 }
 
 pub async fn create_digital_asset(
@@ -380,8 +339,7 @@ pub async fn create_digital_upload_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::CreateDigitalUploadUrlResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<(StatusCode, Json<pb::CreateDigitalUploadUrlResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateDigitalUploadUrlRequest>(&headers, body)?;
     let resp = product::digital::create_digital_upload_url(
         &state,
@@ -401,14 +359,9 @@ pub async fn create_digital_download_url(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::CreateDigitalDownloadUrlResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::CreateDigitalDownloadUrlResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateDigitalDownloadUrlRequest>(&headers, body)?;
-    let resp =
-        product::digital::create_digital_download_url(&state, req.store, req.tenant, req.asset_id)
-            .await?;
+    let resp = product::digital::create_digital_download_url(&state, req.store, req.tenant, req.asset_id).await?;
     Ok((StatusCode::OK, Json(resp)))
 }
 
@@ -493,8 +446,7 @@ pub async fn update_shipment_status(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)>
-{
+) -> Result<(StatusCode, Json<pb::UpdateShipmentStatusResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateShipmentStatusRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     let shipment = order::service::update_shipment_status(&state, req, actor)
@@ -549,10 +501,7 @@ pub async fn list_product_metafield_definitions(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::ListProductMetafieldDefinitionsResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::ListProductMetafieldDefinitionsResponse>), (StatusCode, Json<ConnectError>)> {
     let _req = parse_request::<pb::ListProductMetafieldDefinitionsRequest>(&headers, body)?;
     let definitions = product::service::list_product_metafield_definitions(&state).await?;
     Ok((
@@ -566,17 +515,11 @@ pub async fn create_product_metafield_definition(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::CreateProductMetafieldDefinitionResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::CreateProductMetafieldDefinitionResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::CreateProductMetafieldDefinitionRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
-    let definition = product::service::create_product_metafield_definition(
-        &state,
-        req.definition.unwrap_or_default(),
-    )
-    .await?;
+    let definition =
+        product::service::create_product_metafield_definition(&state, req.definition.unwrap_or_default()).await?;
     Ok((
         StatusCode::OK,
         Json(pb::CreateProductMetafieldDefinitionResponse {
@@ -590,10 +533,7 @@ pub async fn update_product_metafield_definition(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::UpdateProductMetafieldDefinitionResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::UpdateProductMetafieldDefinitionResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpdateProductMetafieldDefinitionRequest>(&headers, body)?;
     let _actor = req.actor.clone().or(actor_ctx);
     let definition = product::service::update_product_metafield_definition(
@@ -615,21 +555,10 @@ pub async fn list_product_metafield_values(
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::ListProductMetafieldValuesResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::ListProductMetafieldValuesResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListProductMetafieldValuesRequest>(&headers, body)?;
-    let values = product::service::list_product_metafield_values(
-        &state,
-        req.store,
-        req.product_id,
-    )
-    .await?;
-    Ok((
-        StatusCode::OK,
-        Json(pb::ListProductMetafieldValuesResponse { values }),
-    ))
+    let values = product::service::list_product_metafield_values(&state, req.store, req.product_id).await?;
+    Ok((StatusCode::OK, Json(pb::ListProductMetafieldValuesResponse { values })))
 }
 
 pub async fn upsert_product_metafield_value(
@@ -637,10 +566,7 @@ pub async fn upsert_product_metafield_value(
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
     headers: HeaderMap,
     body: Bytes,
-) -> Result<
-    (StatusCode, Json<pb::UpsertProductMetafieldValueResponse>),
-    (StatusCode, Json<ConnectError>),
-> {
+) -> Result<(StatusCode, Json<pb::UpsertProductMetafieldValueResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::UpsertProductMetafieldValueRequest>(&headers, body)?;
     let actor = req.actor.clone().or(actor_ctx);
     product::service::upsert_product_metafield_value(

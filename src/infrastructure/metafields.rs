@@ -1,6 +1,6 @@
-use axum::{http::StatusCode, Json};
+use axum::{Json, http::StatusCode};
 use chrono::{DateTime, Utc};
-use sqlx::{postgres::PgRow, PgPool, Row};
+use sqlx::{PgPool, Row, postgres::PgRow};
 
 use crate::{infrastructure::db, rpc::json::ConnectError};
 
@@ -50,9 +50,7 @@ fn definition_from_row(row: &PgRow) -> MetafieldDefinitionRecord {
         namespace: row.get("namespace"),
         key: row.get("key"),
         name: row.get("name"),
-        description: row
-            .get::<Option<String>, _>("description")
-            .unwrap_or_default(),
+        description: row.get::<Option<String>, _>("description").unwrap_or_default(),
         value_type: row.get("value_type"),
         is_list: row.get("is_list"),
         validations_json: row
@@ -66,9 +64,7 @@ fn definition_from_row(row: &PgRow) -> MetafieldDefinitionRecord {
     }
 }
 
-pub fn normalize_optional_json(
-    value: String,
-) -> Result<String, (StatusCode, Json<ConnectError>)> {
+pub fn normalize_optional_json(value: String) -> Result<String, (StatusCode, Json<ConnectError>)> {
     if value.trim().is_empty() {
         return Ok("{}".to_string());
     }
@@ -284,9 +280,7 @@ pub async fn list_values(
                 namespace: row.get("namespace"),
                 key: row.get("key"),
                 name: row.get("name"),
-                description: row
-                    .get::<Option<String>, _>("description")
-                    .unwrap_or_default(),
+                description: row.get::<Option<String>, _>("description").unwrap_or_default(),
                 value_type: row.get("value_type"),
                 is_list: row.get("is_list"),
                 validations_json: row
@@ -302,9 +296,7 @@ pub async fn list_values(
                 id: row.get("id"),
                 definition_id: row.get("definition_id"),
                 owner_id: row.get("owner_id"),
-                value_json: row
-                    .get::<Option<String>, _>("value_json")
-                    .unwrap_or_default(),
+                value_json: row.get::<Option<String>, _>("value_json").unwrap_or_default(),
                 created_at: row.get::<DateTime<Utc>, _>("created_at"),
                 updated_at: row.get::<DateTime<Utc>, _>("updated_at"),
                 definition,
