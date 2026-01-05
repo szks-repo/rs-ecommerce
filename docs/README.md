@@ -18,9 +18,11 @@
 - `docs/dev/setup.md`
 
 ## Workspace Layout
-- `rs-ecommerce` (root crate): API server
+- `crates/app` (`rs-ecommerce`): API server (main service)
+- `crates/cli` (`rs-ecommerce-cli`): operational CLI (search reindex, etc.)
 - `crates/common`: shared telemetry/env helpers
 - `crates/workers/inventory-worker`: inventory reservation worker
+- `crates/workers/customer-sync-worker`: customer sync worker
 
 ## Operations
 - `docs/operations/audit_log.md`

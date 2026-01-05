@@ -5,7 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1"
-clap = { version = "4", features = ["derive"] }
+clap = { version = "4", features = ["derive", "env"] }
 meilisearch-sdk = "0.24"
 serde = { version = "1", features = ["derive"] }
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "macros", "uuid", "chrono"] }

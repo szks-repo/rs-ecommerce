@@ -16,6 +16,19 @@ Specs, data models, and APIs are still shifting; breaking changes and incomplete
 - Auctions (draft → publish, bidding)
 - Metafield definitions and values
 
+## Workspace layout
+- `crates/app` (`rs-ecommerce`): API server (main service)
+- `crates/cli` (`rs-ecommerce-cli`): operational CLI
+- `crates/common`: shared helpers (telemetry/env)
+- `crates/workers/inventory-worker`: inventory reservation worker
+- `crates/workers/customer-sync-worker`: customer sync worker
+
+## Run
+API server:
+```bash
+cargo run -p rs-ecommerce
+```
+
 ## CLI commands
 Operational commands live in `rs-ecommerce-cli`.
 
@@ -25,6 +38,11 @@ Available subcommands:
 Reindex command:
 ```bash
 cargo run -p rs-ecommerce-cli -- search reindex
+```
+
+Docker Compose:
+```bash
+docker compose run --rm app cargo run -p rs-ecommerce-cli -- search reindex
 ```
 
 Search backend selection:

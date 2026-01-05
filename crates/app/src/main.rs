@@ -1,4 +1,4 @@
-use axum::{Json, Router, extract::State, http::StatusCode, routing::get};
+use axum::{Json, Router, http::StatusCode, routing::get};
 use rs_common::{cli, env};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use std::time::Duration;
@@ -24,7 +24,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
     let db = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
-    sqlx::migrate!().run(&db).await?;
+    sqlx::migrate!("../../migrations").run(&db).await?;
 
     let search_backend = std::env::var("SEARCH_BACKEND").unwrap_or_else(|_| "meili".to_string());
     let search = match search_backend.as_str() {
@@ -58,10 +58,7 @@ async fn main() -> Result<(), anyhow::Error> {
                         tracing::info!(done, "auction auto-bid scheduler executed");
                     }
                 }
-                Err(err) => {
-                    let message = err.1.0.message.clone();
-                    tracing::warn!(error = %message, "auction auto-bid scheduler failed");
-                }
+                Err(err) => tracing::warn!(error = ?err, "auction auto-bid scheduler failed"),
             }
             if oneshot {
                 break;
@@ -69,15 +66,10 @@ async fn main() -> Result<(), anyhow::Error> {
             tokio::time::sleep(Duration::from_millis(sleep_ms)).await;
         }
     });
-    let app = Router::new()
-        .route("/health", get(health))
-        .with_state(app_state.clone())
-        .merge(rpc::router(app_state));
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
-        .await
-        .expect("bind 0.0.0.0:8080");
-    tracing::info!("listening on {}", listener.local_addr().expect("local addr"));
+    let app = rpc::router(app_state);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await?;
     axum::serve(listener, app).await?;
     Ok(())
 }
@@ -88,7 +80,15 @@ pub struct AppState {
     pub search: infrastructure::search::SearchService,
 }
 
-async fn health(State(state): State<AppState>) -> Result<&'static str, (StatusCode, Json<rpc::json::ConnectError>)> {
-    infrastructure::db::ping(&state).await?;
-    Ok("ok")
+async fn health() -> (StatusCode, Json<serde_json::Value>) {
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({
+            "status": "ok",
+        })),
+    )
+}
+
+pub fn router() -> Router<AppState> {
+    Router::new().route("/health", get(health))
 }

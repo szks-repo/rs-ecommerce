@@ -13,20 +13,20 @@ fn main() {
     config.file_descriptor_set_path(&descriptor_path);
 
     let protos = &[
-        "proto/ecommerce/v1/common.proto",
-        "proto/ecommerce/v1/storefront.proto",
-        "proto/ecommerce/v1/backoffice.proto",
-        "proto/ecommerce/v1/store_settings.proto",
-        "proto/ecommerce/v1/setup.proto",
-        "proto/ecommerce/v1/audit.proto",
-        "proto/ecommerce/v1/auth.proto",
-        "proto/ecommerce/v1/store_staff.proto",
-        "proto/ecommerce/v1/permissions.proto",
-        "proto/ecommerce/v1/identity.proto",
-        "proto/ecommerce/v1/customer.proto",
-        "proto/ecommerce/v1/auction.proto",
+        "../../proto/ecommerce/v1/common.proto",
+        "../../proto/ecommerce/v1/storefront.proto",
+        "../../proto/ecommerce/v1/backoffice.proto",
+        "../../proto/ecommerce/v1/store_settings.proto",
+        "../../proto/ecommerce/v1/setup.proto",
+        "../../proto/ecommerce/v1/audit.proto",
+        "../../proto/ecommerce/v1/auth.proto",
+        "../../proto/ecommerce/v1/store_staff.proto",
+        "../../proto/ecommerce/v1/permissions.proto",
+        "../../proto/ecommerce/v1/identity.proto",
+        "../../proto/ecommerce/v1/customer.proto",
+        "../../proto/ecommerce/v1/auction.proto",
     ];
-    let includes = &["proto"];
+    let includes = &["../../proto"];
 
     config.compile_protos(protos, includes).expect("compile protos");
 
