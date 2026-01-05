@@ -19,7 +19,7 @@ Specs, data models, and APIs are still shifting; breaking changes and incomplete
 ## Search reindex (Meilisearch)
 Reindex command:
 ```bash
-cargo run --bin search_reindex
+cargo run -p rs-ecommerce-cli -- search reindex
 ```
 
 Search backend selection:

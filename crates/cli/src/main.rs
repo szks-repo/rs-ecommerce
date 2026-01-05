@@ -1,9 +1,57 @@
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use meilisearch_sdk::client::Client;
 use serde::{Deserialize, Serialize};
 use sqlx::{Postgres, QueryBuilder, postgres::PgPoolOptions};
-use std::env;
 use std::time::{Duration, Instant};
+
+#[derive(Parser, Debug)]
+#[command(name = "rs-ecommerce", version, about = "rs-ecommerce operational CLI")]
+struct Cli {
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Subcommand, Debug)]
+enum Commands {
+    Search {
+        #[command(subcommand)]
+        command: SearchCommands,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+enum SearchCommands {
+    Reindex(ReindexArgs),
+}
+
+#[derive(Parser, Debug)]
+struct ReindexArgs {
+    #[arg(long, env = "DATABASE_URL")]
+    db_url: String,
+    #[arg(long, env = "MEILI_URL")]
+    meili_url: String,
+    #[arg(long, env = "MEILI_MASTER_KEY")]
+    meili_key: Option<String>,
+    #[arg(long, env = "MEILI_INDEX", default_value = "products")]
+    index_name: String,
+    #[arg(long, env = "REINDEX_BATCH_SIZE", default_value_t = 500)]
+    batch_size: usize,
+    #[arg(long, env = "REINDEX_DRY_RUN", default_value_t = false)]
+    dry_run: bool,
+    #[arg(long, env = "REINDEX_COUNT_ONLY", default_value_t = false)]
+    count_only: bool,
+    #[arg(long, env = "REINDEX_TENANT_ID")]
+    tenant_id: Option<String>,
+    #[arg(long, env = "REINDEX_STORE_ID")]
+    store_id: Option<String>,
+    #[arg(long, env = "REINDEX_VENDOR_ID")]
+    vendor_id: Option<String>,
+    #[arg(long, env = "REINDEX_STATUS")]
+    status: Option<String>,
+    #[arg(long, env = "REINDEX_PRODUCT_ID")]
+    product_id: Option<String>,
+}
 
 #[derive(Debug, Default)]
 struct ReindexFilters {
@@ -64,57 +112,55 @@ struct CountRow {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    rs_common::telemetry::init_tracing("search-reindex");
+    rs_common::telemetry::init_tracing("rs-ecommerce-cli");
 
-    let db_url = std::env::var("DATABASE_URL").expect("DATABASE_URL is required");
-    let meili_url = std::env::var("MEILI_URL").expect("MEILI_URL is required");
-    let meili_key = std::env::var("MEILI_MASTER_KEY").ok();
-    let index_name = std::env::var("MEILI_INDEX").unwrap_or_else(|_| "products".to_string());
+    let cli = Cli::parse();
 
-    let batch_size = rs_common::env::env_usize("REINDEX_BATCH_SIZE", 500) as i64;
-    let dry_run = env::var("REINDEX_DRY_RUN")
-        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
-    let count_only = env::var("REINDEX_COUNT_ONLY")
-        .map(|value| value == "1" || value.eq_ignore_ascii_case("true"))
-        .unwrap_or(false);
+    match cli.command {
+        Commands::Search {
+            command: SearchCommands::Reindex(args),
+        } => run_reindex(args).await,
+    }
+}
+
+async fn run_reindex(args: ReindexArgs) -> Result<()> {
     let filters = ReindexFilters {
-        tenant_id: env::var("REINDEX_TENANT_ID").ok().filter(|v| !v.is_empty()),
-        store_id: env::var("REINDEX_STORE_ID").ok().filter(|v| !v.is_empty()),
-        vendor_id: env::var("REINDEX_VENDOR_ID").ok().filter(|v| !v.is_empty()),
-        status: env::var("REINDEX_STATUS").ok().filter(|v| !v.is_empty()),
-        product_id: env::var("REINDEX_PRODUCT_ID").ok().filter(|v| !v.is_empty()),
+        tenant_id: args.tenant_id.filter(|v| !v.is_empty()),
+        store_id: args.store_id.filter(|v| !v.is_empty()),
+        vendor_id: args.vendor_id.filter(|v| !v.is_empty()),
+        status: args.status.filter(|v| !v.is_empty()),
+        product_id: args.product_id.filter(|v| !v.is_empty()),
     };
 
-    let db = PgPoolOptions::new().max_connections(5).connect(&db_url).await?;
+    let batch_size = args.batch_size as i64;
+    let db = PgPoolOptions::new().max_connections(5).connect(&args.db_url).await?;
 
     tracing::info!(
-        index = %index_name,
+        index = %args.index_name,
         batch_size,
-        dry_run,
-        count_only,
+        dry_run = args.dry_run,
+        count_only = args.count_only,
         filters = ?filters,
         "search reindex started"
     );
 
-    if count_only {
+    if args.count_only {
         let mut builder = QueryBuilder::<Postgres>::new("SELECT COUNT(*) as count FROM products p");
         if !filters.is_empty() {
             builder.push(" WHERE ");
             apply_filters(&mut builder, &filters);
         }
         let row = builder.build_query_as::<CountRow>().fetch_one(&db).await?;
-        let count = row.count;
-        tracing::info!(count, filters = ?filters, "search reindex count-only");
+        tracing::info!(count = row.count, filters = ?filters, "search reindex count-only");
         return Ok(());
     }
 
-    if dry_run {
+    if args.dry_run {
         tracing::info!("search reindex running in dry-run mode");
     }
 
-    let client = Client::new(&meili_url, meili_key.map(|v| v.to_string()));
-    let index = client.index(&index_name);
+    let client = Client::new(&args.meili_url, args.meili_key.map(|v| v.to_string()));
+    let index = client.index(&args.index_name);
     index
         .set_filterable_attributes(&[
             "tenant_id",
@@ -190,7 +236,7 @@ async fn main() -> Result<()> {
             });
         }
 
-        if !dry_run {
+        if !args.dry_run {
             index.add_or_replace(&docs, Some("id")).await?;
         }
         total += rows_len;
@@ -199,7 +245,7 @@ async fn main() -> Result<()> {
             processed = total,
             batch_size = rows_len,
             offset,
-            dry_run,
+            dry_run = args.dry_run,
             "search reindex batch completed"
         );
         tokio::time::sleep(Duration::from_millis(50)).await;
@@ -207,7 +253,7 @@ async fn main() -> Result<()> {
 
     tracing::info!(
         total,
-        dry_run,
+        dry_run = args.dry_run,
         elapsed_ms = started_at.elapsed().as_millis(),
         "search reindex completed"
     );

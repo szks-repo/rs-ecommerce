@@ -6,6 +6,7 @@ edition = "2024"
 [workspace]
 members = [
     "crates/common",
+    "crates/cli",
     "crates/workers/inventory-worker",
     "crates/workers/customer-sync-worker",
 ]
