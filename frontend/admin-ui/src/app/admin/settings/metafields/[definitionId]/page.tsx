@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,8 +20,13 @@ import {
   listCustomerMetafieldDefinitions,
   updateCustomerMetafieldDefinition,
 } from "@/lib/customer";
+import {
+  listProductMetafieldDefinitions,
+  updateProductMetafieldDefinition,
+} from "@/lib/product";
 import { identityListRoles } from "@/lib/identity";
-import type { MetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
+import type { MetafieldDefinition as CustomerMetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
+import type { ProductMetafieldDefinition } from "@/gen/ecommerce/v1/backoffice_pb";
 import { CalendarDays, Clock, Palette, Type } from "lucide-react";
 
 const VALUE_TYPES = [
@@ -44,11 +49,15 @@ const OWNER_TYPE_LABELS: Record<string, string> = {
 export default function MetafieldDetailPage() {
   const params = useParams<{ definitionId: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { push } = useToast();
   const { notifyError } = useApiCall();
 
   const definitionId = params.definitionId;
-  const [definition, setDefinition] = useState<MetafieldDefinition | null>(null);
+  const ownerTypeParam = searchParams?.get("ownerType") || "";
+  const [definition, setDefinition] = useState<
+    CustomerMetafieldDefinition | ProductMetafieldDefinition | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -75,8 +84,23 @@ export default function MetafieldDetailPage() {
     async function load() {
       setIsLoading(true);
       try {
-        const resp = await listCustomerMetafieldDefinitions();
-        const found = (resp.definitions ?? []).find((item) => item.id === definitionId) || null;
+        let found: CustomerMetafieldDefinition | ProductMetafieldDefinition | null = null;
+        if (ownerTypeParam === "product") {
+          const resp = await listProductMetafieldDefinitions();
+          found = (resp.definitions ?? []).find((item) => item.id === definitionId) || null;
+        } else if (ownerTypeParam === "customer") {
+          const resp = await listCustomerMetafieldDefinitions();
+          found = (resp.definitions ?? []).find((item) => item.id === definitionId) || null;
+        } else {
+          const [customerResp, productResp] = await Promise.all([
+            listCustomerMetafieldDefinitions(),
+            listProductMetafieldDefinitions(),
+          ]);
+          found =
+            (customerResp.definitions ?? []).find((item) => item.id === definitionId) ||
+            (productResp.definitions ?? []).find((item) => item.id === definitionId) ||
+            null;
+        }
         if (!found) {
           push({
             variant: "error",
@@ -130,7 +154,7 @@ export default function MetafieldDetailPage() {
       }
     }
     void load();
-  }, [definitionId, push]);
+  }, [definitionId, notifyError, ownerTypeParam, push, router]);
 
   useEffect(() => {
     async function loadRoles() {
@@ -239,17 +263,31 @@ export default function MetafieldDetailPage() {
     try {
       setValidationsJson(computedValidationsJson);
       setVisibilityJson(computedVisibilityJson);
-      await updateCustomerMetafieldDefinition({
-        definitionId,
-        namespace,
-        key,
-        name,
-        description: description || undefined,
-        valueType,
-        isList,
-        validationsJson: computedValidationsJson,
-        visibilityJson: computedVisibilityJson,
-      });
+      if ((definition?.ownerType || ownerTypeParam) === "product") {
+        await updateProductMetafieldDefinition({
+          definitionId,
+          namespace,
+          key,
+          name,
+          description: description || undefined,
+          valueType,
+          isList,
+          validationsJson: computedValidationsJson,
+          visibilityJson: computedVisibilityJson,
+        });
+      } else {
+        await updateCustomerMetafieldDefinition({
+          definitionId,
+          namespace,
+          key,
+          name,
+          description: description || undefined,
+          valueType,
+          isList,
+          validationsJson: computedValidationsJson,
+          visibilityJson: computedVisibilityJson,
+        });
+      }
       push({
         variant: "success",
         title: "Definition updated",

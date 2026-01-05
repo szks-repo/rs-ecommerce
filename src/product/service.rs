@@ -4,7 +4,7 @@ use sqlx::Row;
 use crate::rpc::request_context;
 use crate::{
     AppState,
-    infrastructure::{audit, db},
+    infrastructure::{audit, db, metafields},
     pb::pb,
     product::domain::SkuCode,
     rpc::json::ConnectError,
@@ -17,6 +17,8 @@ use crate::{
         time::{chrono_to_timestamp, timestamp_to_chrono},
     },
 };
+
+const METAFIELD_OWNER_TYPE_PRODUCT: &str = "product";
 
 pub async fn list_products(
     state: &AppState,
@@ -536,18 +538,6 @@ pub async fn create_product(
         category_ids: category_ids.clone(),
     };
 
-    let _ = state
-        .search
-        .upsert_products(&[crate::infrastructure::search::SearchProduct {
-            id: product.id.clone(),
-            tenant_id: tenant_id.clone(),
-            vendor_id: product.vendor_id.clone(),
-            title: product.title.clone(),
-            description: product.description.clone(),
-            status: status.clone(),
-        }])
-        .await;
-
     audit::record_tx(
         &mut tx,
         audit_input(
@@ -563,6 +553,8 @@ pub async fn create_product(
     .await?;
 
     tx.commit().await.map_err(db::error)?;
+
+    let _ = reindex_product_by_id(state, &product.id).await;
 
     Ok(product)
 }
@@ -818,17 +810,7 @@ pub async fn update_product(
 
     tx.commit().await.map_err(db::error)?;
 
-    let _ = state
-        .search
-        .upsert_products(&[crate::infrastructure::search::SearchProduct {
-            id: product.id.clone(),
-            tenant_id: tenant_id.clone(),
-            vendor_id: after.vendor_id.clone(),
-            title: after.title.clone(),
-            description: after.description.clone(),
-            status: after.status.clone(),
-        }])
-        .await;
+    let _ = reindex_product_by_id(state, &product.id).await;
 
     Ok(product)
 }
@@ -1230,6 +1212,144 @@ pub async fn reorder_categories(
     Ok(rows.into_iter().map(category_from_row).collect())
 }
 
+pub async fn list_category_products_admin(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    category_id: String,
+) -> Result<Vec<pb::CategoryProductAdmin>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let category_uuid = parse_uuid(&category_id, "category_id")?;
+    let exists = sqlx::query(
+        "SELECT 1 FROM product_categories WHERE id = $1 AND store_id = $2 LIMIT 1",
+    )
+    .bind(category_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+    if exists.is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "category not found".to_string(),
+            }),
+        ));
+    }
+    let rows = sqlx::query(
+        r#"
+        SELECT p.id::text as product_id,
+               p.title,
+               p.status,
+               pc.position
+        FROM product_category_links pc
+        JOIN products p ON p.id = pc.product_id
+        WHERE pc.category_id = $1 AND p.store_id = $2
+        ORDER BY pc.position ASC, p.created_at ASC
+        "#,
+    )
+    .bind(category_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    Ok(rows.into_iter().map(category_product_from_row).collect())
+}
+
+pub async fn reorder_category_products(
+    state: &AppState,
+    req: pb::ReorderCategoryProductsRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<Vec<pb::CategoryProductAdmin>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let category_uuid = parse_uuid(&req.category_id, "category_id")?;
+    let ordered_ids = req
+        .ordered_product_ids
+        .iter()
+        .map(|id| parse_uuid(id, "product_id"))
+        .collect::<Result<Vec<_>, _>>()?;
+    if ordered_ids.is_empty() {
+        return Ok(Vec::new());
+    }
+
+    let rows = sqlx::query(
+        r#"
+        SELECT pc.product_id::text as product_id
+        FROM product_category_links pc
+        JOIN products p ON p.id = pc.product_id
+        WHERE pc.category_id = $1 AND p.store_id = $2
+        ORDER BY pc.position ASC
+        "#,
+    )
+    .bind(category_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    let existing_ids: Vec<String> = rows.into_iter().map(|row| row.get("product_id")).collect();
+    if existing_ids.len() != ordered_ids.len() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "ordered_product_ids must include all products in the category".to_string(),
+            }),
+        ));
+    }
+    let mut sorted_existing = existing_ids.clone();
+    sorted_existing.sort();
+    let mut sorted_requested: Vec<String> = ordered_ids.iter().map(|id| id.to_string()).collect();
+    sorted_requested.sort();
+    if sorted_existing != sorted_requested {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "ordered_product_ids contains invalid product".to_string(),
+            }),
+        ));
+    }
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    for (idx, product_id) in ordered_ids.iter().enumerate() {
+        sqlx::query(
+            r#"
+            UPDATE product_category_links
+            SET position = $1
+            WHERE category_id = $2 AND product_id = $3
+            "#,
+        )
+        .bind((idx + 1) as i32)
+        .bind(category_uuid)
+        .bind(product_id)
+        .execute(tx.as_mut())
+        .await
+        .map_err(db::error)?;
+    }
+    tx.commit().await.map_err(db::error)?;
+
+    let rows = sqlx::query(
+        r#"
+        SELECT p.id::text as product_id,
+               p.title,
+               p.status,
+               pc.position
+        FROM product_category_links pc
+        JOIN products p ON p.id = pc.product_id
+        WHERE pc.category_id = $1 AND p.store_id = $2
+        ORDER BY pc.position ASC, p.created_at ASC
+        "#,
+    )
+    .bind(category_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    Ok(rows.into_iter().map(category_product_from_row).collect())
+}
+
 fn category_from_row(row: sqlx::postgres::PgRow) -> pb::Category {
     pb::Category {
         id: row.get::<String, _>("id"),
@@ -1251,6 +1371,326 @@ fn category_from_row(row: sqlx::postgres::PgRow) -> pb::Category {
             row.get::<Option<chrono::DateTime<chrono::Utc>>, _>("updated_at"),
         ),
     }
+}
+
+fn category_product_from_row(row: sqlx::postgres::PgRow) -> pb::CategoryProductAdmin {
+    pb::CategoryProductAdmin {
+        product_id: row.get::<String, _>("product_id"),
+        title: row.get("title"),
+        status: row.get("status"),
+        position: row.get::<i32, _>("position"),
+    }
+}
+
+fn metafield_definition_from_record(
+    record: &metafields::MetafieldDefinitionRecord,
+) -> pb::ProductMetafieldDefinition {
+    pb::ProductMetafieldDefinition {
+        id: record.id.clone(),
+        owner_type: record.owner_type.clone(),
+        namespace: record.namespace.clone(),
+        key: record.key.clone(),
+        name: record.name.clone(),
+        description: record.description.clone(),
+        value_type: record.value_type.clone(),
+        is_list: record.is_list,
+        validations_json: record.validations_json.clone(),
+        visibility_json: record.visibility_json.clone(),
+        created_at: chrono_to_timestamp(Some(record.created_at)),
+        updated_at: chrono_to_timestamp(Some(record.updated_at)),
+    }
+}
+
+pub async fn list_product_metafield_definitions(
+    state: &AppState,
+) -> Result<Vec<pb::ProductMetafieldDefinition>, (StatusCode, Json<ConnectError>)> {
+    let records = metafields::list_definitions(&state.db, METAFIELD_OWNER_TYPE_PRODUCT).await?;
+    Ok(records
+        .into_iter()
+        .map(|record| metafield_definition_from_record(&record))
+        .collect())
+}
+
+pub async fn create_product_metafield_definition(
+    state: &AppState,
+    input: pb::ProductMetafieldDefinitionInput,
+) -> Result<pb::ProductMetafieldDefinition, (StatusCode, Json<ConnectError>)> {
+    if input.namespace.is_empty()
+        || input.key.is_empty()
+        || input.name.is_empty()
+        || input.value_type.is_empty()
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "definition required fields are missing".to_string(),
+            }),
+        ));
+    }
+
+    let validations_json = metafields::normalize_optional_json(input.validations_json)?;
+    let visibility_json = metafields::normalize_optional_json(input.visibility_json)?;
+
+    let record = metafields::create_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_PRODUCT,
+        metafields::MetafieldDefinitionInput {
+            namespace: input.namespace,
+            key: input.key,
+            name: input.name,
+            description: if input.description.is_empty() {
+                None
+            } else {
+                Some(input.description)
+            },
+            value_type: input.value_type,
+            is_list: input.is_list,
+            validations_json,
+            visibility_json,
+        },
+    )
+    .await?;
+
+    Ok(metafield_definition_from_record(&record))
+}
+
+pub async fn update_product_metafield_definition(
+    state: &AppState,
+    definition_id: String,
+    input: pb::ProductMetafieldDefinitionInput,
+) -> Result<pb::ProductMetafieldDefinition, (StatusCode, Json<ConnectError>)> {
+    if definition_id.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "definition_id is required".to_string(),
+            }),
+        ));
+    }
+    if input.namespace.is_empty()
+        || input.key.is_empty()
+        || input.name.is_empty()
+        || input.value_type.is_empty()
+    {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "definition required fields are missing".to_string(),
+            }),
+        ));
+    }
+
+    let definition_uuid = parse_uuid(&definition_id, "definition_id")?;
+    let validations_json = metafields::normalize_optional_json(input.validations_json)?;
+    let visibility_json = metafields::normalize_optional_json(input.visibility_json)?;
+
+    let record = metafields::update_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_PRODUCT,
+        &definition_uuid,
+        metafields::MetafieldDefinitionInput {
+            namespace: input.namespace,
+            key: input.key,
+            name: input.name,
+            description: if input.description.is_empty() {
+                None
+            } else {
+                Some(input.description)
+            },
+            value_type: input.value_type,
+            is_list: input.is_list,
+            validations_json,
+            visibility_json,
+        },
+    )
+    .await?;
+
+    let Some(record) = record else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "metafield definition not found".to_string(),
+            }),
+        ));
+    };
+
+    Ok(metafield_definition_from_record(&record))
+}
+
+pub async fn list_product_metafield_values(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    product_id: String,
+) -> Result<Vec<pb::ProductMetafieldValue>, (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let product_uuid = parse_uuid(&product_id, "product_id")?;
+
+    let exists = sqlx::query(
+        r#"
+        SELECT 1
+        FROM products
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(product_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if exists.is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "product not found".to_string(),
+            }),
+        ));
+    }
+
+    let records = metafields::list_values(
+        &state.db,
+        METAFIELD_OWNER_TYPE_PRODUCT,
+        &product_uuid,
+    )
+    .await?;
+
+    let values = records
+        .into_iter()
+        .map(|record| pb::ProductMetafieldValue {
+            id: record.id,
+            definition_id: record.definition_id,
+            owner_id: record.owner_id,
+            value_json: record.value_json,
+            created_at: chrono_to_timestamp(Some(record.created_at)),
+            updated_at: chrono_to_timestamp(Some(record.updated_at)),
+            definition: Some(metafield_definition_from_record(&record.definition)),
+        })
+        .collect();
+
+    Ok(values)
+}
+
+pub async fn upsert_product_metafield_value(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    product_id: String,
+    definition_id: String,
+    value_json: String,
+    _actor: Option<pb::ActorContext>,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, store, None).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let product_uuid = parse_uuid(&product_id, "product_id")?;
+    let definition_uuid = parse_uuid(&definition_id, "definition_id")?;
+
+    if value_json.trim().is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "value_json is required".to_string(),
+            }),
+        ));
+    }
+
+    serde_json::from_str::<serde_json::Value>(&value_json).map_err(|_| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "value_json must be valid JSON".to_string(),
+            }),
+        )
+    })?;
+
+    let exists = sqlx::query(
+        r#"
+        SELECT 1
+        FROM products
+        WHERE id = $1 AND store_id = $2
+        "#,
+    )
+    .bind(product_uuid)
+    .bind(store_uuid.as_uuid())
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    if exists.is_none() {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "product not found".to_string(),
+            }),
+        ));
+    }
+
+    let definition = metafields::fetch_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_PRODUCT,
+        &definition_uuid,
+    )
+    .await?;
+
+    let Some(definition) = definition else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "metafield definition not found".to_string(),
+            }),
+        ));
+    };
+    let value_type = definition.value_type.clone();
+    let is_list = definition.is_list;
+    if value_type == "bool" || value_type == "boolean" {
+        let parsed = serde_json::from_str::<serde_json::Value>(&value_json).map_err(|_| {
+            (
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "value_json must be a boolean".to_string(),
+                }),
+            )
+        })?;
+        let valid = if is_list {
+            parsed.is_boolean()
+                || parsed
+                    .as_array()
+                    .map(|items| items.iter().all(|item| item.is_boolean()))
+                    .unwrap_or(false)
+        } else {
+            parsed.is_boolean()
+        };
+        if !valid {
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(ConnectError {
+                    code: crate::rpc::json::ErrorCode::InvalidArgument,
+                    message: "value_json must be a boolean".to_string(),
+                }),
+            ));
+        }
+    }
+
+    let _definition = metafield_definition_from_record(&definition);
+
+    metafields::upsert_value(
+        &state.db,
+        &definition_uuid,
+        &product_uuid,
+        &value_json,
+    )
+    .await?;
+
+    Ok(())
 }
 
 pub async fn create_variant(
@@ -2097,7 +2537,8 @@ async fn reindex_product_by_id(
 ) -> Result<(), (StatusCode, Json<ConnectError>)> {
     let row = sqlx::query(
         r#"
-        SELECT id::text as id, tenant_id::text as tenant_id, vendor_id::text as vendor_id,
+        SELECT id::text as id, tenant_id::text as tenant_id, store_id::text as store_id,
+               vendor_id::text as vendor_id,
                title, description, status
         FROM products
         WHERE id = $1
@@ -2108,17 +2549,60 @@ async fn reindex_product_by_id(
     .await
     .map_err(db::error)?;
 
+    let category_rows = sqlx::query(
+        r#"
+        SELECT category_id::text as category_id, is_primary, position
+        FROM product_category_links
+        WHERE product_id = $1
+        ORDER BY position ASC
+        "#,
+    )
+    .bind(parse_uuid(product_id, "product_id")?)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    let mut category_ids = Vec::new();
+    let mut primary_category_id = String::new();
+    for row in category_rows {
+        let category_id = row.get::<String, _>("category_id");
+        if row.get::<bool, _>("is_primary") && primary_category_id.is_empty() {
+            primary_category_id = category_id.clone();
+        }
+        category_ids.push(category_id);
+    }
+
+    let sku_rows = sqlx::query(
+        r#"
+        SELECT sku
+        FROM product_skus
+        WHERE product_id = $1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(parse_uuid(product_id, "product_id")?)
+    .fetch_all(&state.db)
+    .await
+    .map_err(db::error)?;
+    let sku_codes = sku_rows
+        .into_iter()
+        .map(|row| row.get::<String, _>("sku"))
+        .collect::<Vec<_>>();
+
     state
         .search
         .upsert_products(&[crate::infrastructure::search::SearchProduct {
             id: row.get::<String, _>("id"),
             tenant_id: row.get::<String, _>("tenant_id"),
+            store_id: row.get::<String, _>("store_id"),
             vendor_id: row
                 .get::<Option<String>, _>("vendor_id")
                 .unwrap_or_default(),
             title: row.get("title"),
             description: row.get("description"),
             status: row.get("status"),
+            primary_category_id,
+            category_ids,
+            sku_codes,
         }])
         .await?;
     Ok(())

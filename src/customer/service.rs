@@ -1,11 +1,10 @@
 use chrono::Utc;
 use sqlx::Row;
-use sqlx::postgres::PgRow;
 
 use crate::{
     AppState,
     customer::error::{CustomerError, CustomerResult},
-    infrastructure::{audit, outbox},
+    infrastructure::{audit, metafields, outbox},
     pb::pb,
     shared::validation::{Email, Phone},
     shared::{
@@ -25,10 +24,12 @@ pub async fn list_customers(
     store_id: String,
     tenant_id: String,
     query: String,
-) -> CustomerResult<Vec<pb::CustomerSummary>> {
+    page: Option<pb::PageInfo>,
+) -> CustomerResult<(Vec<pb::CustomerSummary>, pb::PageResult)> {
     let store_uuid = StoreId::parse(&store_id).map_err(CustomerError::from)?;
     let tenant_uuid = TenantId::parse(&tenant_id).map_err(CustomerError::from)?;
     let q = query.trim();
+    let (limit, offset) = page_params(page);
 
     let rows = if q.is_empty() {
         sqlx::query(
@@ -43,11 +44,13 @@ pub async fn list_customers(
             WHERE c.tenant_id = $1
               AND cp.store_id = $2
             ORDER BY c.created_at DESC
-            LIMIT 200
+            LIMIT $3 OFFSET $4
             "#,
         )
         .bind(tenant_uuid.as_uuid())
         .bind(store_uuid.as_uuid())
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(CustomerError::from)?
@@ -66,12 +69,14 @@ pub async fn list_customers(
               AND cp.store_id = $2
               AND (cp.name ILIKE $3 OR cp.email ILIKE $3 OR cp.phone ILIKE $3)
             ORDER BY c.created_at DESC
-            LIMIT 200
+            LIMIT $4 OFFSET $5
             "#,
         )
         .bind(tenant_uuid.as_uuid())
         .bind(store_uuid.as_uuid())
         .bind(pattern)
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(CustomerError::from)?
@@ -93,7 +98,21 @@ pub async fn list_customers(
         })
         .collect();
 
-    Ok(customers)
+    let mut next_page_token = String::new();
+    if (customers.len() as i64) == limit {
+        next_page_token = (offset + limit).to_string();
+    }
+    Ok((customers, pb::PageResult { next_page_token }))
+}
+
+fn page_params(page: Option<pb::PageInfo>) -> (i64, i64) {
+    let page = page.unwrap_or(pb::PageInfo {
+        page_size: 50,
+        page_token: String::new(),
+    });
+    let limit = (page.page_size.max(1).min(200)) as i64;
+    let offset = page.page_token.parse::<i64>().unwrap_or(0).max(0);
+    (limit, offset)
 }
 
 pub async fn get_customer(
@@ -1070,72 +1089,34 @@ pub async fn upsert_customer_address(
     Ok(updated)
 }
 
-fn metafield_definition_from_row(row: &PgRow) -> pb::MetafieldDefinition {
+fn metafield_definition_from_record(
+    record: &metafields::MetafieldDefinitionRecord,
+) -> pb::MetafieldDefinition {
     pb::MetafieldDefinition {
-        id: row.get("id"),
-        owner_type: row.get("owner_type"),
-        namespace: row.get("namespace"),
-        key: row.get("key"),
-        name: row.get("name"),
-        description: row
-            .get::<Option<String>, _>("description")
-            .unwrap_or_default(),
-        value_type: row.get("value_type"),
-        is_list: row.get("is_list"),
-        validations_json: row
-            .get::<Option<String>, _>("validations_json")
-            .unwrap_or_else(|| "{}".to_string()),
-        visibility_json: row
-            .get::<Option<String>, _>("visibility_json")
-            .unwrap_or_else(|| "{}".to_string()),
-        created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
-        updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+        id: record.id.clone(),
+        owner_type: record.owner_type.clone(),
+        namespace: record.namespace.clone(),
+        key: record.key.clone(),
+        name: record.name.clone(),
+        description: record.description.clone(),
+        value_type: record.value_type.clone(),
+        is_list: record.is_list,
+        validations_json: record.validations_json.clone(),
+        visibility_json: record.visibility_json.clone(),
+        created_at: chrono_to_timestamp(Some(record.created_at)),
+        updated_at: chrono_to_timestamp(Some(record.updated_at)),
     }
 }
 
 pub async fn list_customer_metafield_definitions(
     state: &AppState,
 ) -> CustomerResult<Vec<pb::MetafieldDefinition>> {
-    let rows = sqlx::query(
-        r#"
-        SELECT id::text as id,
-               owner_type,
-               namespace,
-               key,
-               name,
-               description,
-               value_type,
-               is_list,
-               validations_json::text as validations_json,
-               visibility_json::text as visibility_json,
-               created_at,
-               updated_at
-        FROM metafield_definitions
-        WHERE owner_type = $1
-        ORDER BY namespace ASC, key ASC
-        "#,
-    )
-    .bind(METAFIELD_OWNER_TYPE_CUSTOMER)
-    .fetch_all(&state.db)
-    .await
-    .map_err(CustomerError::from)?;
-
-    Ok(rows
+    let definitions =
+        metafields::list_definitions(&state.db, METAFIELD_OWNER_TYPE_CUSTOMER).await?;
+    Ok(definitions
         .into_iter()
-        .map(|row| metafield_definition_from_row(&row))
+        .map(|record| metafield_definition_from_record(&record))
         .collect())
-}
-
-fn normalize_optional_json(value: String) -> CustomerResult<String> {
-    if value.trim().is_empty() {
-        return Ok("{}".to_string());
-    }
-    if serde_json::from_str::<serde_json::Value>(&value).is_err() {
-        return Err(CustomerError::InvalidArgument(
-            "invalid json provided".to_string(),
-        ));
-    }
-    Ok(value)
 }
 
 pub async fn create_customer_metafield_definition(
@@ -1152,46 +1133,33 @@ pub async fn create_customer_metafield_definition(
         ));
     }
 
-    let validations_json = normalize_optional_json(input.validations_json)?;
-    let visibility_json = normalize_optional_json(input.visibility_json)?;
+    let validations_json =
+        metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
+    let visibility_json =
+        metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
 
-    let row = sqlx::query(
-        r#"
-        INSERT INTO metafield_definitions
-            (owner_type, namespace, key, name, description, value_type, is_list, validations_json, visibility_json)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb)
-        RETURNING id::text as id,
-                  owner_type,
-                  namespace,
-                  key,
-                  name,
-                  description,
-                  value_type,
-                  is_list,
-                  validations_json::text as validations_json,
-                  visibility_json::text as visibility_json,
-                  created_at,
-                  updated_at
-        "#,
+    let record = metafields::create_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_CUSTOMER,
+        metafields::MetafieldDefinitionInput {
+            namespace: input.namespace,
+            key: input.key,
+            name: input.name,
+            description: if input.description.is_empty() {
+                None
+            } else {
+                Some(input.description)
+            },
+            value_type: input.value_type,
+            is_list: input.is_list,
+            validations_json,
+            visibility_json,
+        },
     )
-    .bind(METAFIELD_OWNER_TYPE_CUSTOMER)
-    .bind(input.namespace)
-    .bind(input.key)
-    .bind(input.name)
-    .bind(if input.description.is_empty() {
-        None
-    } else {
-        Some(input.description)
-    })
-    .bind(input.value_type)
-    .bind(input.is_list)
-    .bind(validations_json)
-    .bind(visibility_json)
-    .fetch_one(&state.db)
     .await
     .map_err(CustomerError::from)?;
 
-    Ok(metafield_definition_from_row(&row))
+    Ok(metafield_definition_from_record(&record))
 }
 
 pub async fn update_customer_metafield_definition(
@@ -1216,61 +1184,40 @@ pub async fn update_customer_metafield_definition(
 
     let definition_uuid =
         parse_uuid(&definition_id, "definition_id").map_err(CustomerError::from)?;
-    let validations_json = normalize_optional_json(input.validations_json)?;
-    let visibility_json = normalize_optional_json(input.visibility_json)?;
+    let validations_json =
+        metafields::normalize_optional_json(input.validations_json).map_err(CustomerError::from)?;
+    let visibility_json =
+        metafields::normalize_optional_json(input.visibility_json).map_err(CustomerError::from)?;
 
-    let row = sqlx::query(
-        r#"
-        UPDATE metafield_definitions
-        SET namespace = $1,
-            key = $2,
-            name = $3,
-            description = $4,
-            value_type = $5,
-            is_list = $6,
-            validations_json = $7::jsonb,
-            visibility_json = $8::jsonb,
-            updated_at = now()
-        WHERE id = $9 AND owner_type = $10
-        RETURNING id::text as id,
-                  owner_type,
-                  namespace,
-                  key,
-                  name,
-                  description,
-                  value_type,
-                  is_list,
-                  validations_json::text as validations_json,
-                  visibility_json::text as visibility_json,
-                  created_at,
-                  updated_at
-        "#,
+    let record = metafields::update_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_CUSTOMER,
+        &definition_uuid,
+        metafields::MetafieldDefinitionInput {
+            namespace: input.namespace,
+            key: input.key,
+            name: input.name,
+            description: if input.description.is_empty() {
+                None
+            } else {
+                Some(input.description)
+            },
+            value_type: input.value_type,
+            is_list: input.is_list,
+            validations_json,
+            visibility_json,
+        },
     )
-    .bind(input.namespace)
-    .bind(input.key)
-    .bind(input.name)
-    .bind(if input.description.is_empty() {
-        None
-    } else {
-        Some(input.description)
-    })
-    .bind(input.value_type)
-    .bind(input.is_list)
-    .bind(validations_json)
-    .bind(visibility_json)
-    .bind(definition_uuid)
-    .bind(METAFIELD_OWNER_TYPE_CUSTOMER)
-    .fetch_optional(&state.db)
     .await
     .map_err(CustomerError::from)?;
 
-    let Some(row) = row else {
+    let Some(record) = record else {
         return Err(CustomerError::NotFound(
             "metafield definition not found".to_string(),
         ));
     };
 
-    Ok(metafield_definition_from_row(&row))
+    Ok(metafield_definition_from_record(&record))
 }
 
 pub async fn list_customer_metafield_values(
@@ -1298,81 +1245,24 @@ pub async fn list_customer_metafield_values(
         return Err(CustomerError::NotFound("customer not found".to_string()));
     }
 
-    let rows = sqlx::query(
-        r#"
-        SELECT v.id::text as id,
-               v.definition_id::text as definition_id,
-               v.owner_id::text as owner_id,
-               v.value_json::text as value_json,
-               v.created_at,
-               v.updated_at,
-               d.id::text as def_id,
-               d.owner_type,
-               d.namespace,
-               d.key,
-               d.name,
-               d.description,
-               d.value_type,
-               d.is_list,
-               d.validations_json::text as validations_json,
-               d.visibility_json::text as visibility_json,
-               d.created_at as def_created_at,
-               d.updated_at as def_updated_at
-        FROM metafield_values v
-        JOIN metafield_definitions d ON d.id = v.definition_id
-        WHERE d.owner_type = $1
-          AND v.owner_id = $2
-        ORDER BY d.namespace ASC, d.key ASC
-        "#,
+    let records = metafields::list_values(
+        &state.db,
+        METAFIELD_OWNER_TYPE_CUSTOMER,
+        &customer_uuid,
     )
-    .bind(METAFIELD_OWNER_TYPE_CUSTOMER)
-    .bind(customer_uuid)
-    .fetch_all(&state.db)
     .await
     .map_err(CustomerError::from)?;
 
-    let values = rows
+    let values = records
         .into_iter()
-        .map(|row| {
-            let definition = pb::MetafieldDefinition {
-                id: row.get("def_id"),
-                owner_type: row.get("owner_type"),
-                namespace: row.get("namespace"),
-                key: row.get("key"),
-                name: row.get("name"),
-                description: row
-                    .get::<Option<String>, _>("description")
-                    .unwrap_or_default(),
-                value_type: row.get("value_type"),
-                is_list: row.get("is_list"),
-                validations_json: row
-                    .get::<Option<String>, _>("validations_json")
-                    .unwrap_or_else(|| "{}".to_string()),
-                visibility_json: row
-                    .get::<Option<String>, _>("visibility_json")
-                    .unwrap_or_else(|| "{}".to_string()),
-                created_at: chrono_to_timestamp(Some(
-                    row.get::<chrono::DateTime<Utc>, _>("def_created_at"),
-                )),
-                updated_at: chrono_to_timestamp(Some(
-                    row.get::<chrono::DateTime<Utc>, _>("def_updated_at"),
-                )),
-            };
-            pb::MetafieldValue {
-                id: row.get("id"),
-                definition_id: row.get("definition_id"),
-                owner_id: row.get("owner_id"),
-                value_json: row
-                    .get::<Option<String>, _>("value_json")
-                    .unwrap_or_default(),
-                created_at: chrono_to_timestamp(Some(
-                    row.get::<chrono::DateTime<Utc>, _>("created_at"),
-                )),
-                updated_at: chrono_to_timestamp(Some(
-                    row.get::<chrono::DateTime<Utc>, _>("updated_at"),
-                )),
-                definition: Some(definition),
-            }
+        .map(|record| pb::MetafieldValue {
+            id: record.id,
+            definition_id: record.definition_id,
+            owner_id: record.owner_id,
+            value_json: record.value_json,
+            created_at: chrono_to_timestamp(Some(record.created_at)),
+            updated_at: chrono_to_timestamp(Some(record.updated_at)),
+            definition: Some(metafield_definition_from_record(&record.definition)),
         })
         .collect();
 
@@ -1418,37 +1308,21 @@ pub async fn upsert_customer_metafield_value(
         return Err(CustomerError::NotFound("customer not found".to_string()));
     }
 
-    let def_row = sqlx::query(
-        r#"
-        SELECT id::text as id,
-               owner_type,
-               namespace,
-               key,
-               name,
-               description,
-               value_type,
-               is_list,
-               validations_json::text as validations_json,
-               visibility_json::text as visibility_json,
-               created_at,
-               updated_at
-        FROM metafield_definitions
-        WHERE id = $1 AND owner_type = $2
-        "#,
+    let definition = metafields::fetch_definition(
+        &state.db,
+        METAFIELD_OWNER_TYPE_CUSTOMER,
+        &definition_uuid,
     )
-    .bind(definition_uuid)
-    .bind(METAFIELD_OWNER_TYPE_CUSTOMER)
-    .fetch_optional(&state.db)
     .await
     .map_err(CustomerError::from)?;
 
-    let Some(def_row) = def_row else {
+    let Some(definition) = definition else {
         return Err(CustomerError::NotFound(
             "metafield definition not found".to_string(),
         ));
     };
-    let value_type = def_row.get::<String, _>("value_type");
-    let is_list = def_row.get::<bool, _>("is_list");
+    let value_type = definition.value_type.clone();
+    let is_list = definition.is_list;
     if value_type == "bool" || value_type == "boolean" {
         let valid = if is_list {
             value.is_boolean()
@@ -1465,20 +1339,14 @@ pub async fn upsert_customer_metafield_value(
             ));
         }
     }
-    let _definition = metafield_definition_from_row(&def_row);
+    let _definition = metafield_definition_from_record(&definition);
 
-    sqlx::query(
-        r#"
-        INSERT INTO metafield_values (definition_id, owner_id, value_json)
-        VALUES ($1, $2, $3::jsonb)
-        ON CONFLICT (definition_id, owner_id)
-        DO UPDATE SET value_json = EXCLUDED.value_json, updated_at = now()
-        "#,
+    metafields::upsert_value(
+        &state.db,
+        &definition_uuid,
+        &customer_uuid,
+        &value_json,
     )
-    .bind(definition_uuid)
-    .bind(customer_uuid)
-    .bind(&value_json)
-    .execute(&state.db)
     .await
     .map_err(CustomerError::from)?;
 

@@ -23,10 +23,18 @@ function money(amount: number, currency: string) {
   });
 }
 
-export async function listAuctions(params: { status?: string }) {
+export async function listAuctions(params: {
+  status?: string;
+  pageSize?: number;
+  pageToken?: string;
+}) {
   return client.listAuctions(
     create(ListAuctionsRequestSchema, {
       status: params.status || "",
+      page: {
+        pageSize: params.pageSize ?? 50,
+        pageToken: params.pageToken ?? "",
+      },
     })
   );
 }

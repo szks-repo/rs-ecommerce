@@ -18,6 +18,7 @@ import { identityListStaff } from "@/lib/identity";
 import { getActiveAccessToken } from "@/lib/auth";
 import { formatTimestampWithStoreTz, getStoreTimeZone, toUtcDateFromStoreDateInput } from "@/lib/time";
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
+import DateCell from "@/components/date-cell";
 import { useApiCall } from "@/lib/use-api-call";
 
 type AuditActionItem = {
@@ -37,6 +38,19 @@ type StaffOption = {
 
 function formatTimestamp(ts?: { seconds?: string | number | bigint; nanos?: number }) {
   return formatTimestampWithStoreTz(ts?.seconds, ts?.nanos);
+}
+
+function toIsoString(ts?: { seconds?: string | number | bigint; nanos?: number }) {
+  if (!ts?.seconds) {
+    return "";
+  }
+  const seconds =
+    typeof ts.seconds === "bigint" ? Number(ts.seconds) : Number(ts.seconds);
+  if (!Number.isFinite(seconds)) {
+    return "";
+  }
+  const date = new Date(seconds * 1000);
+  return Number.isNaN(date.getTime()) ? "" : date.toISOString();
 }
 
 function formatJsonPreview(value?: string) {
@@ -264,7 +278,9 @@ export default function AuditLogsPage() {
               <div key={log.id} className="rounded-lg border border-neutral-200 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-medium text-neutral-900">{log.action}</div>
-                  <div className="text-xs text-neutral-500">{formatTimestamp(log.createdAt)}</div>
+                  <div className="text-xs text-neutral-500">
+                    <DateCell value={toIsoString(log.createdAt)} />
+                  </div>
                 </div>
                 <div className="mt-1 text-xs text-neutral-500">
                   actor: {log.actorType || "-"}{" "}

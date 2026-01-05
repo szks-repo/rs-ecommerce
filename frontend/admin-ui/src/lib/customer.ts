@@ -22,10 +22,14 @@ import {
 
 const client = createServiceClient(CustomerService);
 
-export async function listCustomers(params?: { query?: string }) {
+export async function listCustomers(params?: { query?: string; pageSize?: number; pageToken?: string }) {
   return client.listCustomers(
     create(ListCustomersRequestSchema, {
       query: params?.query || "",
+      page: {
+        pageSize: params?.pageSize ?? 50,
+        pageToken: params?.pageToken ?? "",
+      },
     })
   );
 }

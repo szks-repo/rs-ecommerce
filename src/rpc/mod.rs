@@ -197,6 +197,35 @@ pub fn router(state: AppState) -> Router<()> {
             )),
         )
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListCategoryProducts",
+            post(backoffice::list_category_products).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogRead,
+                    )
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ReorderCategoryProducts",
+            post(backoffice::reorder_category_products)
+                .route_layer(middleware::from_fn_with_state(
+                    state.clone(),
+                    |State(state), req, next| {
+                        permissions::require_permission_key(
+                            state,
+                            req,
+                            next,
+                            permissions::PermissionKey::CatalogWrite,
+                        )
+                    },
+                )),
+        )
+        .route(
             "/rpc/ecommerce.v1.BackofficeService/ListVariants",
             post(backoffice::list_variants).route_layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -613,6 +642,71 @@ pub fn router(state: AppState) -> Router<()> {
                     )
                 },
             )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListProductMetafieldDefinitions",
+            post(backoffice::list_product_metafield_definitions).route_layer(
+                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::SettingsRead,
+                    )
+                }),
+            ),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreateProductMetafieldDefinition",
+            post(backoffice::create_product_metafield_definition).route_layer(
+                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::SettingsWrite,
+                    )
+                }),
+            ),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/UpdateProductMetafieldDefinition",
+            post(backoffice::update_product_metafield_definition).route_layer(
+                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::SettingsWrite,
+                    )
+                }),
+            ),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListProductMetafieldValues",
+            post(backoffice::list_product_metafield_values).route_layer(
+                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogRead,
+                    )
+                }),
+            ),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/UpsertProductMetafieldValue",
+            post(backoffice::upsert_product_metafield_value).route_layer(
+                middleware::from_fn_with_state(state.clone(), |State(state), req, next| {
+                    permissions::require_permission_key(
+                        state,
+                        req,
+                        next,
+                        permissions::PermissionKey::CatalogWrite,
+                    )
+                }),
+            ),
         )
         .route(
             "/rpc/ecommerce.v1.CustomerService/ListCustomers",

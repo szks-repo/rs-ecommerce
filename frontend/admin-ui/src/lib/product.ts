@@ -20,6 +20,12 @@ import {
   CreateDigitalAssetRequestSchema,
   CreateDigitalUploadUrlRequestSchema,
   CreateDigitalDownloadUrlRequestSchema,
+  ListProductMetafieldDefinitionsRequestSchema,
+  CreateProductMetafieldDefinitionRequestSchema,
+  UpdateProductMetafieldDefinitionRequestSchema,
+  ProductMetafieldDefinitionInputSchema,
+  ListProductMetafieldValuesRequestSchema,
+  UpsertProductMetafieldValueRequestSchema,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 
 const client = createServiceClient(BackofficeService);
@@ -117,8 +123,6 @@ export async function createProduct(params: {
     description: params.description,
     status: params.status,
     taxRuleId: params.taxRuleId || "",
-    saleStartAt: params.saleStartAt,
-    saleEndAt: params.saleEndAt,
     primaryCategoryId: params.primaryCategoryId,
     categoryIds: params.categoryIds,
     variantAxes: variantAxes.map((axis, index) => ({
@@ -126,6 +130,13 @@ export async function createProduct(params: {
       position: axis.position ?? index + 1,
     })),
   };
+
+  if (params.saleStartAt) {
+    payload.saleStartAt = params.saleStartAt;
+  }
+  if (params.saleEndAt) {
+    payload.saleEndAt = params.saleEndAt;
+  }
 
   if (params.defaultVariant) {
     payload.defaultVariant = {
@@ -162,20 +173,36 @@ export async function updateProduct(params: {
   primaryCategoryId: string;
   categoryIds: string[];
 }) {
-  return client.updateProduct(
-    create(UpdateProductRequestSchema, {
-      productId: params.productId,
-      title: params.title,
-      description: params.description,
-      status: params.status,
-      taxRuleId: params.taxRuleId || "",
-      saleStartAt: params.saleStartAt,
-      saleEndAt: params.saleEndAt,
-      applyTaxRuleToVariants: Boolean(params.applyTaxRuleToVariants),
-      primaryCategoryId: params.primaryCategoryId,
-      categoryIds: params.categoryIds,
-    })
-  );
+  const payload: {
+    productId: string;
+    title: string;
+    description: string;
+    status: string;
+    taxRuleId: string;
+    saleStartAt?: Timestamp;
+    saleEndAt?: Timestamp;
+    applyTaxRuleToVariants: boolean;
+    primaryCategoryId: string;
+    categoryIds: string[];
+  } = {
+    productId: params.productId,
+    title: params.title,
+    description: params.description,
+    status: params.status,
+    taxRuleId: params.taxRuleId || "",
+    applyTaxRuleToVariants: Boolean(params.applyTaxRuleToVariants),
+    primaryCategoryId: params.primaryCategoryId,
+    categoryIds: params.categoryIds,
+  };
+
+  if (params.saleStartAt) {
+    payload.saleStartAt = params.saleStartAt;
+  }
+  if (params.saleEndAt) {
+    payload.saleEndAt = params.saleEndAt;
+  }
+
+  return client.updateProduct(create(UpdateProductRequestSchema, payload));
 }
 
 export async function createVariant(params: {
@@ -363,6 +390,86 @@ export async function setSkuImages(params: { skuId: string; images: { assetId: s
     create(SetSkuImagesRequestSchema, {
       skuId: params.skuId,
       images: params.images,
+    })
+  );
+}
+
+export async function listProductMetafieldDefinitions() {
+  return client.listProductMetafieldDefinitions(
+    create(ListProductMetafieldDefinitionsRequestSchema, {})
+  );
+}
+
+export async function createProductMetafieldDefinition(params: {
+  namespace: string;
+  key: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  isList: boolean;
+  validationsJson?: string;
+  visibilityJson?: string;
+}) {
+  const definition = create(ProductMetafieldDefinitionInputSchema, {
+    namespace: params.namespace,
+    key: params.key,
+    name: params.name,
+    description: params.description ?? "",
+    valueType: params.valueType,
+    isList: params.isList,
+    validationsJson: params.validationsJson ?? "{}",
+    visibilityJson: params.visibilityJson ?? "{}",
+  });
+  return client.createProductMetafieldDefinition(
+    create(CreateProductMetafieldDefinitionRequestSchema, { definition })
+  );
+}
+
+export async function updateProductMetafieldDefinition(params: {
+  definitionId: string;
+  namespace: string;
+  key: string;
+  name: string;
+  description?: string;
+  valueType: string;
+  isList: boolean;
+  validationsJson?: string;
+  visibilityJson?: string;
+}) {
+  const definition = create(ProductMetafieldDefinitionInputSchema, {
+    namespace: params.namespace,
+    key: params.key,
+    name: params.name,
+    description: params.description ?? "",
+    valueType: params.valueType,
+    isList: params.isList,
+    validationsJson: params.validationsJson ?? "{}",
+    visibilityJson: params.visibilityJson ?? "{}",
+  });
+  return client.updateProductMetafieldDefinition(
+    create(UpdateProductMetafieldDefinitionRequestSchema, {
+      definitionId: params.definitionId,
+      definition,
+    })
+  );
+}
+
+export async function listProductMetafieldValues(productId: string) {
+  return client.listProductMetafieldValues(
+    create(ListProductMetafieldValuesRequestSchema, { productId })
+  );
+}
+
+export async function upsertProductMetafieldValue(params: {
+  productId: string;
+  definitionId: string;
+  valueJson: string;
+}) {
+  return client.upsertProductMetafieldValue(
+    create(UpsertProductMetafieldValueRequestSchema, {
+      productId: params.productId,
+      definitionId: params.definitionId,
+      valueJson: params.valueJson,
     })
   );
 }

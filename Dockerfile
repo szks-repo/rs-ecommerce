@@ -9,4 +9,4 @@ COPY src ./src
 COPY build.rs ./build.rs
 RUN cargo fetch
 
-CMD ["cargo", "run"]
+CMD ["cargo", "run", "--bin", "rs-ecommerce"]

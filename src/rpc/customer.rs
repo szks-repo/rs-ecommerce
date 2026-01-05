@@ -21,16 +21,15 @@ pub async fn list_customers(
 ) -> Result<(StatusCode, Json<pb::ListCustomersResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListCustomersRequest>(&headers, body)?;
     let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
-    let customers = customer::service::list_customers(&state, store_id, tenant_id, req.query)
+    let (customers, page) =
+        customer::service::list_customers(&state, store_id, tenant_id, req.query, req.page)
         .await
         .map_err(|err| err.into_connect())?;
     Ok((
         StatusCode::OK,
         Json(pb::ListCustomersResponse {
             customers,
-            page: Some(pb::PageResult {
-                next_page_token: String::new(),
-            }),
+            page: Some(page),
         }),
     ))
 }

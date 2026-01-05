@@ -5,6 +5,7 @@
 pub mod audit;
 pub mod db;
 pub mod email;
+pub mod metafields;
 pub mod outbox;
 pub mod search;
 pub mod storage;

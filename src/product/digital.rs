@@ -133,7 +133,7 @@ pub async fn create_digital_upload_url(
     sku_id: String,
     filename: String,
     content_type: String,
-    size_bytes: i64,
+    _size_bytes: i64,
 ) -> Result<pb::CreateDigitalUploadUrlResponse, (StatusCode, Json<ConnectError>)> {
     if filename.trim().is_empty() {
         return Err((
@@ -167,7 +167,7 @@ pub async fn create_digital_upload_url(
 
     match storage_config.provider.as_str() {
         "s3" => {
-            let mut loader = aws_config::from_env();
+            let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
             if !storage_config.region.is_empty() {
                 loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
             }
@@ -333,7 +333,7 @@ pub async fn create_digital_download_url(
     }
     match provider.as_str() {
         "s3" => {
-            let mut loader = aws_config::from_env();
+            let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
             if !storage_config.region.is_empty() {
                 loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
             }

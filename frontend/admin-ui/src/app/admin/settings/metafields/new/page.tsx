@@ -17,6 +17,7 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
 import { createCustomerMetafieldDefinition } from "@/lib/customer";
+import { createProductMetafieldDefinition } from "@/lib/product";
 import { identityListRoles } from "@/lib/identity";
 import { CalendarDays, Clock, Palette, Type } from "lucide-react";
 
@@ -33,7 +34,7 @@ const VALUE_TYPES = [
 
 const OWNER_TYPES = [
   { value: "customer", label: "Customers", enabled: true },
-  { value: "product", label: "Products", enabled: false },
+  { value: "product", label: "Products", enabled: true },
   { value: "order", label: "Orders", enabled: false },
 ];
 
@@ -99,11 +100,11 @@ export default function NewMetafieldPage() {
     if (isSaving) {
       return;
     }
-    if (ownerType !== "customer") {
+    if (ownerType === "order") {
       push({
         variant: "error",
         title: "Not supported yet",
-        description: "Metafields are only available for customers right now.",
+        description: "Order metafields are not available yet.",
       });
       return;
     }
@@ -111,24 +112,36 @@ export default function NewMetafieldPage() {
     try {
       setValidationsJson(computedValidationsJson);
       setVisibilityJson(computedVisibilityJson);
-      const resp = await createCustomerMetafieldDefinition({
-        namespace,
-        key,
-        name,
-        description: description || undefined,
-        valueType,
-        isList,
-        validationsJson: computedValidationsJson,
-        visibilityJson: computedVisibilityJson,
-      });
+      const resp =
+        ownerType === "product"
+          ? await createProductMetafieldDefinition({
+              namespace,
+              key,
+              name,
+              description: description || undefined,
+              valueType,
+              isList,
+              validationsJson: computedValidationsJson,
+              visibilityJson: computedVisibilityJson,
+            })
+          : await createCustomerMetafieldDefinition({
+              namespace,
+              key,
+              name,
+              description: description || undefined,
+              valueType,
+              isList,
+              validationsJson: computedValidationsJson,
+              visibilityJson: computedVisibilityJson,
+            });
       const id = resp.definition?.id;
       push({
         variant: "success",
         title: "Definition created",
-        description: "Customer metafield definition has been created.",
+        description: "Metafield definition has been created.",
       });
       if (id) {
-        router.push(`/admin/settings/metafields/${id}`);
+        router.push(`/admin/settings/metafields/${id}?ownerType=${ownerType}`);
       } else {
         router.push("/admin/settings/metafields");
       }
@@ -139,7 +152,7 @@ export default function NewMetafieldPage() {
     }
   }
 
-  const formDisabled = ownerType !== "customer";
+  const formDisabled = ownerType === "order";
   const computedValidationsJson = JSON.stringify(
     {
       required: validationRequired || undefined,

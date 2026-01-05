@@ -156,6 +156,9 @@ export default function CategoryDetailPage() {
           >
             Back
           </Link>
+          <Button asChild variant="outline">
+            <Link href={`/admin/categories/${categoryId}/products`}>Manage Products</Link>
+          </Button>
           <Button variant="outline" onClick={reload} disabled={isSubmitting}>
             Refresh
           </Button>

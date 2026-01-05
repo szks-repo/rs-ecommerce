@@ -29,14 +29,30 @@ async fn main() -> Result<(), anyhow::Error> {
         .await?;
     sqlx::migrate!().run(&db).await?;
 
-    let meili_url = std::env::var("MEILI_URL").expect("MEILI_URL is required");
-    let meili_key = std::env::var("MEILI_MASTER_KEY").ok();
-    let search =
-        infrastructure::search::SearchClient::new(&meili_url, meili_key.as_deref(), "products");
-    search
-        .ensure_settings()
-        .await
-        .expect("meilisearch settings");
+    let search_backend =
+        std::env::var("SEARCH_BACKEND").unwrap_or_else(|_| "meili".to_string());
+    let search = match search_backend.as_str() {
+        "none" => infrastructure::search::SearchService::none(),
+        "meili" | "meilisearch" => {
+            let meili_url = std::env::var("MEILI_URL").expect("MEILI_URL is required");
+            let meili_key = std::env::var("MEILI_MASTER_KEY").ok();
+            infrastructure::search::SearchService::meilisearch(
+                &meili_url,
+                meili_key.as_deref(),
+                "products",
+            )
+        }
+        "opensearch" => {
+            let os_url = std::env::var("OPENSEARCH_URL").expect("OPENSEARCH_URL is required");
+            let os_index =
+                std::env::var("OPENSEARCH_INDEX").unwrap_or_else(|_| "products".to_string());
+            infrastructure::search::SearchService::opensearch(&os_url, &os_index)
+        }
+        other => {
+            panic!("unknown SEARCH_BACKEND: {}", other);
+        }
+    };
+    search.ensure_settings().await.expect("search settings");
 
     let app_state = AppState { db, search };
     let scheduler_state = app_state.clone();
@@ -81,7 +97,7 @@ async fn main() -> Result<(), anyhow::Error> {
 #[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
-    pub search: infrastructure::search::SearchClient,
+    pub search: infrastructure::search::SearchService,
 }
 
 async fn health(

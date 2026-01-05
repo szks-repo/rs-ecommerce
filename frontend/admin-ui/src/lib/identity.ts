@@ -84,9 +84,21 @@ export async function identityCreateStaff(params: {
   );
 }
 
-export async function identityListStaff() {
+export async function identityListStaff(params?: {
+  page?: number;
+  pageSize?: number;
+  query?: string;
+  roleId?: string;
+  status?: string;
+}) {
   return client.listStaff(
-    create(IdentityListStaffRequestSchema, {})
+    create(IdentityListStaffRequestSchema, {
+      page: params?.page ?? 1,
+      pageSize: params?.pageSize ?? 50,
+      query: params?.query ?? "",
+      roleId: params?.roleId ?? "",
+      status: params?.status ?? "",
+    })
   );
 }
 

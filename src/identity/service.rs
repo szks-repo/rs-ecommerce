@@ -237,9 +237,28 @@ pub async fn list_staff(
     let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let repo = PgIdentityRepository::new(&state.db);
-    let staff = repo
-        .list_staff(&store_uuid.as_uuid())
-        .await?
+    let page_size = if req.page_size == 0 {
+        50
+    } else {
+        req.page_size.min(200)
+    } as i64;
+    let page = if req.page == 0 { 1 } else { req.page } as i64;
+    let offset = (page - 1).max(0) * page_size;
+    let query = if req.query.is_empty() { None } else { Some(req.query.as_str()) };
+    let role_id = if req.role_id.is_empty() { None } else { Some(req.role_id.as_str()) };
+    let status = if req.status.is_empty() { None } else { Some(req.status.as_str()) };
+
+    let (staff_rows, total) = repo
+        .list_staff(
+            &store_uuid.as_uuid(),
+            page_size,
+            offset,
+            query,
+            role_id,
+            status,
+        )
+        .await?;
+    let staff = staff_rows
         .into_iter()
         .map(|row| pb::IdentityStaffSummary {
             staff_id: row.staff_id,
@@ -250,10 +269,16 @@ pub async fn list_staff(
             role_key: row.role_key,
             status: row.status,
             display_name: row.display_name.unwrap_or_default(),
+            created_at: chrono_to_timestamp(Some(row.created_at)),
         })
         .collect();
 
-    Ok(pb::IdentityListStaffResponse { staff })
+    Ok(pb::IdentityListStaffResponse {
+        staff,
+        page: page as u32,
+        page_size: page_size as u32,
+        total: total as u32,
+    })
 }
 
 pub async fn list_staff_sessions(
@@ -404,7 +429,7 @@ pub async fn update_staff(
         ));
     }
 
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let staff_uuid = parse_uuid(&req.staff_id, "staff_id")?;
 
@@ -481,6 +506,7 @@ pub async fn update_staff(
         role_key,
         status: row.status,
         display_name: row.display_name.unwrap_or_default(),
+        created_at: chrono_to_timestamp(Some(row.created_at)),
     };
 
     let actor_id = req.actor.as_ref().and_then(|a| {
@@ -541,7 +567,7 @@ pub async fn invite_staff(
     state: &AppState,
     req: pb::IdentityInviteStaffRequest,
 ) -> IdentityResult<pb::IdentityInviteStaffResponse> {
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     require_owner(req.actor.as_ref())?;
 
     let invite_email = Email::parse(&req.email)?;
@@ -780,7 +806,7 @@ pub async fn transfer_owner(
     state: &AppState,
     req: pb::IdentityTransferOwnerRequest,
 ) -> IdentityResult<pb::IdentityTransferOwnerResponse> {
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     require_owner(req.actor.as_ref())?;
 
     if req.new_owner_staff_id.is_empty() {
@@ -1263,7 +1289,7 @@ pub async fn create_role(
                 }
             })
             .unwrap_or_else(|| "staff".to_string());
-        let tenant_id = resolve_store_context(state, req.store, req.tenant)
+        let _tenant_id = resolve_store_context(state, req.store, req.tenant)
             .await
             .map(|(_, tenant_id)| tenant_id)?;
 
@@ -1306,7 +1332,7 @@ pub async fn assign_role_to_staff(
     state: &AppState,
     req: pb::IdentityAssignRoleRequest,
 ) -> IdentityResult<pb::IdentityAssignRoleResponse> {
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     if req.staff_id.is_empty() || req.role_id.is_empty() {
         return Err(IdentityError::invalid_argument(
             "staff_id and role_id are required",
@@ -1483,7 +1509,7 @@ pub async fn update_role(
         return Err(IdentityError::invalid_argument("role_id is required"));
     }
 
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
     let permission_keys = req.permission_keys.clone();
@@ -1592,7 +1618,7 @@ pub async fn delete_role(
         return Err(IdentityError::invalid_argument("role_id is required"));
     }
 
-    let (store_id, tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store, req.tenant).await?;
     let store_uuid = StoreId::parse(&store_id)?;
     let role_uuid = parse_uuid(&req.role_id, "role_id")?;
 
@@ -1997,6 +2023,7 @@ async fn fetch_staff_summary(
         role_key: row.role_key,
         status: row.status,
         display_name: row.display_name.unwrap_or_default(),
+        created_at: chrono_to_timestamp(Some(row.created_at)),
     })
 }
 

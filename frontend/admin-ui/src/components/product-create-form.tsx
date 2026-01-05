@@ -353,7 +353,7 @@ export default function ProductCreateForm() {
               />
             </div>
             <div className="text-xs text-neutral-500 md:col-span-2">
-              Set only start date for open-ended sales. Leave both empty to keep it always purchasable.
+              Set either start or end date (or both). Leave empty to keep it always purchasable.
             </div>
           </div>
           <div className="space-y-2">

@@ -210,7 +210,7 @@ async fn download_external_image(
 }
 
 async fn import_external_asset(
-    state: &AppState,
+    _state: &AppState,
     store_id: &str,
     tenant_id: &str,
     public_url: &str,
@@ -239,7 +239,7 @@ async fn import_external_asset(
 
     match storage_config.provider.as_str() {
         "s3" => {
-            let mut loader = aws_config::from_env();
+            let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
             if !storage_config.region.is_empty() {
                 loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
             }
@@ -337,7 +337,7 @@ pub async fn create_media_upload_url(
 
     match storage_config.provider.as_str() {
         "s3" => {
-            let mut loader = aws_config::from_env();
+            let mut loader = aws_config::defaults(aws_config::BehaviorVersion::latest());
             if !storage_config.region.is_empty() {
                 loader = loader.region(aws_config::Region::new(storage_config.region.clone()));
             }

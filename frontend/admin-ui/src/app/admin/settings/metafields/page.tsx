@@ -14,7 +14,9 @@ import {
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
 import { listCustomerMetafieldDefinitions } from "@/lib/customer";
-import type { MetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
+import { listProductMetafieldDefinitions } from "@/lib/product";
+import type { MetafieldDefinition as CustomerMetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
+import type { ProductMetafieldDefinition } from "@/gen/ecommerce/v1/backoffice_pb";
 import { CalendarDays, Clock, Palette, Type } from "lucide-react";
 
 const VALUE_TYPES = [
@@ -29,7 +31,7 @@ const VALUE_TYPES = [
 
 const OWNER_TYPES = [
   { value: "customer", label: "Customers", enabled: true },
-  { value: "product", label: "Products", enabled: false },
+  { value: "product", label: "Products", enabled: true },
   { value: "order", label: "Orders", enabled: false },
 ];
 
@@ -42,7 +44,9 @@ const OWNER_TYPE_LABELS: Record<string, string> = {
 export default function MetafieldsPage() {
   const { push } = useToast();
   const { notifyError } = useApiCall();
-  const [definitions, setDefinitions] = useState<MetafieldDefinition[]>([]);
+  const [definitions, setDefinitions] = useState<
+    (CustomerMetafieldDefinition | ProductMetafieldDefinition)[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [ownerType, setOwnerType] = useState("customer");
 
@@ -50,12 +54,17 @@ export default function MetafieldsPage() {
     async function load() {
       setIsLoading(true);
       try {
-        if (ownerType !== "customer") {
-          setDefinitions([]);
+        if (ownerType === "customer") {
+          const resp = await listCustomerMetafieldDefinitions();
+          setDefinitions(resp.definitions ?? []);
           return;
         }
-        const resp = await listCustomerMetafieldDefinitions();
-        setDefinitions(resp.definitions ?? []);
+        if (ownerType === "product") {
+          const resp = await listProductMetafieldDefinitions();
+          setDefinitions(resp.definitions ?? []);
+          return;
+        }
+        setDefinitions([]);
       } catch (err) {
         notifyError(err, "Load failed", "Failed to load metafield definitions");
       } finally {
@@ -107,10 +116,10 @@ export default function MetafieldsPage() {
               </SelectContent>
             </Select>
           </div>
-          {ownerType !== "customer" ? (
+          {ownerType === "order" ? (
             <div className="rounded-lg border border-dashed border-neutral-200 bg-neutral-50 p-3 text-sm text-neutral-600">
-              This resource is planned but not available yet. Switch back to Customers to manage
-              definitions today.
+              This resource is planned but not available yet. Switch to Customers or Products to
+              manage definitions today.
             </div>
           ) : null}
         </CardContent>
@@ -124,7 +133,7 @@ export default function MetafieldsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {ownerType !== "customer" ? (
+          {ownerType === "order" ? (
             <div className="text-sm text-neutral-600">No definitions available yet.</div>
           ) : definitions.length === 0 ? (
             <div className="text-sm text-neutral-600">No definitions yet.</div>
@@ -137,7 +146,7 @@ export default function MetafieldsPage() {
               return (
                 <Link
                   key={definition.id}
-                  href={`/admin/settings/metafields/${definition.id}`}
+                  href={`/admin/settings/metafields/${definition.id}?ownerType=${definition.ownerType}`}
                   className="block rounded-lg border border-neutral-200 p-3 transition hover:border-neutral-300"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">

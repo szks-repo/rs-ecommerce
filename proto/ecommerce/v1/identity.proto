@@ -140,15 +140,24 @@ message IdentityStaffSummary {
   string role_key = 6;
   string status = 7;
   string display_name = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 message IdentityListStaffRequest {
   StoreContext store = 1;
   TenantContext tenant = 2;
+  uint32 page_size = 3;
+  uint32 page = 4;
+  string query = 5;
+  string role_id = 6;
+  string status = 7;
 }
 
 message IdentityListStaffResponse {
   repeated IdentityStaffSummary staff = 1;
+  uint32 page = 2;
+  uint32 page_size = 3;
+  uint32 total = 4;
 }
 
 message IdentityUpdateStaffRequest {

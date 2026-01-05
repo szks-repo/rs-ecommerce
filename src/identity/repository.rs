@@ -1,5 +1,5 @@
 use sqlx::Row;
-use sqlx::{Executor, Postgres};
+use sqlx::{Executor, Postgres, QueryBuilder};
 
 use crate::identity::error::{IdentityError, IdentityResult};
 
@@ -16,6 +16,7 @@ pub struct StaffSummaryRow {
     pub display_name: Option<String>,
     pub role_id: String,
     pub role_key: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct StaffAuthRow {
@@ -49,9 +50,35 @@ pub struct StaffInviteRow {
     pub expires_at: chrono::DateTime<chrono::Utc>,
 }
 
+#[derive(sqlx::FromRow)]
+struct StaffListRow {
+    staff_id: String,
+    email: Option<String>,
+    login_id: Option<String>,
+    phone: Option<String>,
+    status: String,
+    display_name: Option<String>,
+    role_id: String,
+    role_key: String,
+    created_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(sqlx::FromRow)]
+struct CountRow {
+    count: i64,
+}
+
 pub trait IdentityRepository {
     /// list_staff
-    async fn list_staff(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<StaffSummaryRow>>;
+    async fn list_staff(
+        &self,
+        store_uuid: &uuid::Uuid,
+        page_size: i64,
+        offset: i64,
+        query: Option<&str>,
+        role_id: Option<&str>,
+        status: Option<&str>,
+    ) -> IdentityResult<(Vec<StaffSummaryRow>, i64)>;
 
     /// staff_role_key
     async fn staff_role_key(
@@ -205,35 +232,59 @@ pub trait IdentityRepository {
 }
 
 impl<'a> IdentityRepository for PgIdentityRepository<'a> {
-    async fn list_staff(&self, store_uuid: &uuid::Uuid) -> IdentityResult<Vec<StaffSummaryRow>> {
-        let rows = sqlx::query(
-            r#"
-            SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
-                   ss.display_name, sr.id::text as role_id, sr.key as role_key
-            FROM store_staff ss
-            JOIN store_roles sr ON sr.id = ss.role_id
-            WHERE ss.store_id = $1
-            ORDER BY ss.created_at ASC
-            "#,
-        )
-        .bind(store_uuid)
-        .fetch_all(self.db)
-        .await
-        .map_err(IdentityError::from)?;
+    async fn list_staff(
+        &self,
+        store_uuid: &uuid::Uuid,
+        page_size: i64,
+        offset: i64,
+        query: Option<&str>,
+        role_id: Option<&str>,
+        status: Option<&str>,
+    ) -> IdentityResult<(Vec<StaffSummaryRow>, i64)> {
+        let mut count_builder = QueryBuilder::<Postgres>::new(
+            "SELECT COUNT(*) as count FROM store_staff ss JOIN store_roles sr ON sr.id = ss.role_id WHERE ss.store_id = ",
+        );
+        count_builder.push_bind(store_uuid);
+        append_staff_filters(&mut count_builder, query, role_id, status);
+        let count_row = count_builder
+            .build_query_as::<CountRow>()
+            .fetch_one(self.db)
+            .await
+            .map_err(IdentityError::from)?;
+        let total = count_row.count;
 
-        Ok(rows
+        let mut builder = QueryBuilder::<Postgres>::new(
+            "SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status, ss.display_name, sr.id::text as role_id, sr.key as role_key, ss.created_at FROM store_staff ss JOIN store_roles sr ON sr.id = ss.role_id WHERE ss.store_id = ",
+        );
+        builder.push_bind(store_uuid);
+        append_staff_filters(&mut builder, query, role_id, status);
+        builder.push(" ORDER BY (sr.key = 'owner') DESC, ss.created_at ASC LIMIT ");
+        builder.push_bind(page_size);
+        builder.push(" OFFSET ");
+        builder.push_bind(offset);
+
+        let rows = builder
+            .build_query_as::<StaffListRow>()
+            .fetch_all(self.db)
+            .await
+            .map_err(IdentityError::from)?;
+
+        let staff = rows
             .into_iter()
             .map(|row| StaffSummaryRow {
-                staff_id: row.get("staff_id"),
-                email: row.get("email"),
-                login_id: row.get("login_id"),
-                phone: row.get("phone"),
-                status: row.get("status"),
-                display_name: row.get("display_name"),
-                role_id: row.get("role_id"),
-                role_key: row.get("role_key"),
+                staff_id: row.staff_id,
+                email: row.email,
+                login_id: row.login_id,
+                phone: row.phone,
+                status: row.status,
+                display_name: row.display_name,
+                role_id: row.role_id,
+                role_key: row.role_key,
+                created_at: row.created_at,
             })
-            .collect())
+            .collect();
+
+        Ok((staff, total))
     }
 
     async fn staff_role_key(
@@ -337,7 +388,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
                 display_name = COALESCE(NULLIF($3, ''), display_name),
                 updated_at = now()
             WHERE id = $4 AND store_id = $5
-            RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name
+            RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name, created_at
             "#,
         )
         .bind(role_id)
@@ -358,6 +409,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
             display_name: row.get("display_name"),
             role_id: row.get("role_id"),
             role_key: String::new(),
+            created_at: row.get("created_at"),
         }))
     }
 
@@ -431,7 +483,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         let row = sqlx::query(
             r#"
             SELECT ss.id::text as staff_id, ss.email, ss.login_id, ss.phone, ss.status,
-                   ss.display_name, sr.id::text as role_id, sr.key as role_key
+                   ss.display_name, sr.id::text as role_id, sr.key as role_key, ss.created_at
             FROM store_staff ss
             JOIN store_roles sr ON sr.id = ss.role_id
             WHERE ss.id = $1 AND ss.store_id = $2
@@ -451,6 +503,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
             display_name: row.get("display_name"),
             role_id: row.get("role_id"),
             role_key: row.get("role_key"),
+            created_at: row.get("created_at"),
         }))
     }
 
@@ -850,6 +903,46 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
     }
 }
 
+fn append_staff_filters<'a>(
+    builder: &mut QueryBuilder<'a, Postgres>,
+    query: Option<&'a str>,
+    role_id: Option<&'a str>,
+    status: Option<&'a str>,
+) {
+    if let Some(query) = query {
+        let term = query.trim();
+        if !term.is_empty() {
+            let like = format!("%{}%", term);
+            builder.push(" AND (");
+            builder.push("COALESCE(ss.display_name, '') ILIKE ");
+            builder.push_bind(like.clone());
+            builder.push(" OR COALESCE(ss.email, '') ILIKE ");
+            builder.push_bind(like.clone());
+            builder.push(" OR COALESCE(ss.login_id, '') ILIKE ");
+            builder.push_bind(like.clone());
+            builder.push(" OR COALESCE(ss.phone, '') ILIKE ");
+            builder.push_bind(like.clone());
+            builder.push(" OR ss.id::text ILIKE ");
+            builder.push_bind(like);
+            builder.push(")");
+        }
+    }
+    if let Some(role_id) = role_id {
+        let trimmed = role_id.trim();
+        if !trimmed.is_empty() {
+            builder.push(" AND sr.id::text = ");
+            builder.push_bind(trimmed);
+        }
+    }
+    if let Some(status) = status {
+        let trimmed = status.trim();
+        if !trimmed.is_empty() {
+            builder.push(" AND ss.status = ");
+            builder.push_bind(trimmed);
+        }
+    }
+}
+
 impl<'a> PgIdentityRepository<'a> {
     pub fn new(db: &'a sqlx::PgPool) -> Self {
         Self { db }
@@ -1023,7 +1116,7 @@ impl<'a> PgIdentityRepository<'a> {
                 display_name = COALESCE(NULLIF($3, ''), display_name),
                 updated_at = now()
             WHERE id = $4 AND store_id = $5
-            RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name
+            RETURNING id::text as staff_id, email, login_id, phone, status, role_id::text as role_id, display_name, created_at
             "#,
         )
         .bind(role_id)
@@ -1044,6 +1137,7 @@ impl<'a> PgIdentityRepository<'a> {
             display_name: row.get("display_name"),
             role_id: row.get("role_id"),
             role_key: String::new(),
+            created_at: row.get("created_at"),
         }))
     }
 

@@ -14,6 +14,8 @@ service BackofficeService {
   rpc UpdateCategory(UpdateCategoryRequest) returns (UpdateCategoryResponse);
   rpc DeleteCategory(DeleteCategoryRequest) returns (DeleteCategoryResponse);
   rpc ReorderCategories(ReorderCategoriesRequest) returns (ReorderCategoriesResponse);
+  rpc ListCategoryProducts(ListCategoryProductsRequest) returns (ListCategoryProductsResponse);
+  rpc ReorderCategoryProducts(ReorderCategoryProductsRequest) returns (ReorderCategoryProductsResponse);
 
   rpc ListVariants(ListVariantsAdminRequest) returns (ListVariantsAdminResponse);
   rpc ListSkus(ListSkusAdminRequest) returns (ListSkusAdminResponse);
@@ -40,6 +42,17 @@ service BackofficeService {
 
   rpc CreatePromotion(CreatePromotionRequest) returns (CreatePromotionResponse);
   rpc UpdatePromotion(UpdatePromotionRequest) returns (UpdatePromotionResponse);
+
+  rpc ListProductMetafieldDefinitions(ListProductMetafieldDefinitionsRequest)
+      returns (ListProductMetafieldDefinitionsResponse);
+  rpc CreateProductMetafieldDefinition(CreateProductMetafieldDefinitionRequest)
+      returns (CreateProductMetafieldDefinitionResponse);
+  rpc UpdateProductMetafieldDefinition(UpdateProductMetafieldDefinitionRequest)
+      returns (UpdateProductMetafieldDefinitionResponse);
+  rpc ListProductMetafieldValues(ListProductMetafieldValuesRequest)
+      returns (ListProductMetafieldValuesResponse);
+  rpc UpsertProductMetafieldValue(UpsertProductMetafieldValueRequest)
+      returns (UpsertProductMetafieldValueResponse);
 }
 
 message ProductAdmin {
@@ -259,6 +272,13 @@ message CategoryInput {
   int32 position = 6;
 }
 
+message CategoryProductAdmin {
+  string product_id = 1;
+  string title = 2;
+  string status = 3;
+  int32 position = 4;
+}
+
 message ListCategoriesAdminRequest {
   StoreContext store = 1;
   string status = 2;
@@ -309,6 +329,110 @@ message ReorderCategoriesRequest {
 message ReorderCategoriesResponse {
   repeated Category categories = 1;
 }
+
+message ListCategoryProductsRequest {
+  StoreContext store = 1;
+  string category_id = 2;
+}
+
+message ListCategoryProductsResponse {
+  repeated CategoryProductAdmin products = 1;
+}
+
+message ReorderCategoryProductsRequest {
+  StoreContext store = 1;
+  string category_id = 2;
+  repeated string ordered_product_ids = 3;
+  ActorContext actor = 4;
+}
+
+message ReorderCategoryProductsResponse {
+  repeated CategoryProductAdmin products = 1;
+}
+
+message ProductMetafieldDefinition {
+  string id = 1;
+  string owner_type = 2;
+  string namespace = 3;
+  string key = 4;
+  string name = 5;
+  string description = 6;
+  string value_type = 7;
+  bool is_list = 8;
+  string validations_json = 9;
+  string visibility_json = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message ProductMetafieldValue {
+  string id = 1;
+  string definition_id = 2;
+  string owner_id = 3;
+  string value_json = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+  ProductMetafieldDefinition definition = 7;
+}
+
+message ProductMetafieldDefinitionInput {
+  string namespace = 1;
+  string key = 2;
+  string name = 3;
+  string description = 4;
+  string value_type = 5;
+  bool is_list = 6;
+  string validations_json = 7;
+  string visibility_json = 8;
+}
+
+message ListProductMetafieldDefinitionsRequest {
+  StoreContext store = 1;
+}
+
+message ListProductMetafieldDefinitionsResponse {
+  repeated ProductMetafieldDefinition definitions = 1;
+}
+
+message CreateProductMetafieldDefinitionRequest {
+  StoreContext store = 1;
+  ProductMetafieldDefinitionInput definition = 2;
+  ActorContext actor = 3;
+}
+
+message CreateProductMetafieldDefinitionResponse {
+  ProductMetafieldDefinition definition = 1;
+}
+
+message UpdateProductMetafieldDefinitionRequest {
+  StoreContext store = 1;
+  string definition_id = 2;
+  ProductMetafieldDefinitionInput definition = 3;
+  ActorContext actor = 4;
+}
+
+message UpdateProductMetafieldDefinitionResponse {
+  ProductMetafieldDefinition definition = 1;
+}
+
+message ListProductMetafieldValuesRequest {
+  StoreContext store = 1;
+  string product_id = 2;
+}
+
+message ListProductMetafieldValuesResponse {
+  repeated ProductMetafieldValue values = 1;
+}
+
+message UpsertProductMetafieldValueRequest {
+  StoreContext store = 1;
+  string product_id = 2;
+  string definition_id = 3;
+  string value_json = 4;
+  ActorContext actor = 5;
+}
+
+message UpsertProductMetafieldValueResponse {}
 
 message CreateVariantRequest {
   TenantContext tenant = 1;

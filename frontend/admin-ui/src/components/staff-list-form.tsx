@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
-import { identityListRoles, identityListStaff, identityUpdateStaff } from "@/lib/identity";
+import { Input } from "@/components/ui/input";
+import DateCell from "@/components/date-cell";
+import { identityListRoles, identityListStaff } from "@/lib/identity";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import {
@@ -26,6 +27,7 @@ type StaffRow = {
   roleKey: string;
   status: string;
   displayName: string;
+  createdAt?: { seconds?: string | number | bigint; nanos?: number };
 };
 
 type RoleRow = {
@@ -37,16 +39,31 @@ type RoleRow = {
 export default function StaffListForm() {
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [roles, setRoles] = useState<RoleRow[]>([]);
-  const [pending, setPending] = useState<Record<string, string>>({});
-  const [pendingName, setPendingName] = useState<Record<string, string>>({});
-  const [isSaving, setIsSaving] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const deferredQuery = useDeferredValue(query);
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [pageSize, setPageSize] = useState(50);
+  const [page, setPage] = useState(1);
   const { push } = useToast();
   const { notifyError } = useApiCall();
   const { data, loading, error, reload } = useAsyncResource<{
     roles: RoleRow[];
     staff: StaffRow[];
+    page: number;
+    pageSize: number;
+    total: number;
   }>(async () => {
-    const [roleResp, staffResp] = await Promise.all([identityListRoles(), identityListStaff()]);
+    const [roleResp, staffResp] = await Promise.all([
+      identityListRoles(),
+      identityListStaff({
+        page,
+        pageSize,
+        query: deferredQuery.trim(),
+        roleId: roleFilter === "all" ? "" : roleFilter,
+        status: statusFilter === "all" ? "" : statusFilter,
+      }),
+    ]);
     const roleRows = roleResp.roles ?? [];
     const list = (staffResp.staff ?? []).map((item) => ({
       staffId: item.staffId,
@@ -57,6 +74,7 @@ export default function StaffListForm() {
       roleKey: item.roleKey ?? "",
       status: item.status ?? "",
       displayName: item.displayName ?? "",
+      createdAt: item.createdAt,
     }));
     list.sort((a, b) => {
       const aOwner = a.roleKey === "owner" ? 1 : 0;
@@ -66,8 +84,14 @@ export default function StaffListForm() {
       }
       return a.staffId.localeCompare(b.staffId);
     });
-    return { roles: roleRows, staff: list };
-  }, []);
+    return {
+      roles: roleRows,
+      staff: list,
+      page: staffResp.page ?? page,
+      pageSize: staffResp.pageSize ?? pageSize,
+      total: staffResp.total ?? list.length,
+    };
+  }, [page, pageSize, deferredQuery, roleFilter, statusFilter]);
 
   const roleLabelMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -76,6 +100,23 @@ export default function StaffListForm() {
     });
     return map;
   }, [roles]);
+
+  const roleOptions = useMemo(() => {
+    return roles.map((role) => ({
+      id: role.id,
+      label: role.name || role.key || role.id,
+    }));
+  }, [roles]);
+
+  const statusOptions = useMemo(() => {
+    const set = new Set<string>();
+    staff.forEach((row) => {
+      if (row.status) {
+        set.add(row.status);
+      }
+    });
+    return Array.from(set).sort();
+  }, [staff]);
 
   useEffect(() => {
     if (error) {
@@ -87,14 +128,6 @@ export default function StaffListForm() {
     }
     setRoles(data.roles);
     setStaff(data.staff);
-    const initial: Record<string, string> = {};
-    const initialNames: Record<string, string> = {};
-    data.staff.forEach((row) => {
-      initial[row.staffId] = row.roleId;
-      initialNames[row.staffId] = row.displayName;
-    });
-    setPending(initial);
-    setPendingName(initialNames);
   }, [data, error, notifyError]);
 
   function formatStaffLabel(row: StaffRow) {
@@ -102,139 +135,203 @@ export default function StaffListForm() {
     return primary;
   }
 
-  async function handleSave(staffId: string) {
-    const roleId = pending[staffId] ?? "";
-    const displayName = pendingName[staffId] ?? "";
-    if (!roleId) {
-      push({
-        variant: "error",
-        title: "Role required",
-        description: "Please select a role before saving.",
-      });
-      return;
+  function formatStaffId(staffId: string) {
+    if (staffId.length <= 12) {
+      return staffId;
     }
-    setIsSaving(staffId);
-    try {
-      const resp = await identityUpdateStaff({ staffId, roleId, displayName });
-      if (!resp.updated) {
-        throw new Error("Update failed");
-      }
-      setStaff((prev) =>
-        prev.map((row) =>
-          row.staffId === staffId ? { ...row, roleId, displayName } : row
-        )
-      );
-      push({
-        variant: "success",
-        title: "Updated",
-        description: "Staff updated.",
-      });
-    } catch (err) {
-      notifyError(err, "Update failed", "Failed to update staff");
-    } finally {
-      setIsSaving(null);
-    }
+    return `${staffId.slice(0, 8)}…${staffId.slice(-4)}`;
   }
+
+  function toIsoString(ts?: { seconds?: string | number | bigint; nanos?: number }) {
+    if (!ts?.seconds) {
+      return "";
+    }
+    const seconds = typeof ts.seconds === "bigint" ? Number(ts.seconds) : Number(ts.seconds);
+    if (!Number.isFinite(seconds)) {
+      return "";
+    }
+    const date = new Date(seconds * 1000);
+    return Number.isNaN(date.getTime()) ? "" : date.toISOString();
+  }
+
+  const total = data?.total ?? staff.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const currentPage = Math.min(page, totalPages);
 
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
       <CardHeader>
         <CardTitle>Staff List</CardTitle>
         <CardDescription className="text-neutral-500">
-          Update staff roles directly from this list.
+          Search staff and open details to edit roles or profile.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-2 text-sm text-neutral-500">
-          <div>{staff.length} staff members</div>
-          <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-500">
+          <div>
+            {total} staff members
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by name, email, login_id, phone, staff_id"
+              className="h-9 w-full min-w-[220px] max-w-[360px] bg-white"
+            />
+            <Select
+              value={roleFilter}
+              onValueChange={(value) => {
+                setRoleFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[180px] bg-white">
+                <SelectValue placeholder="Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All roles</SelectItem>
+                {roleOptions.map((role) => (
+                  <SelectItem key={role.id} value={role.id}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={statusFilter}
+              onValueChange={(value) => {
+                setStatusFilter(value);
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[160px] bg-white">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All status</SelectItem>
+                {statusOptions.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[120px] bg-white">
+                <SelectValue placeholder="Rows" />
+              </SelectTrigger>
+              <SelectContent>
+                {[25, 50, 100].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size} / page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
+              {loading ? "Loading..." : "Refresh"}
+            </Button>
+          </div>
         </div>
         <div className="space-y-3">
           {staff.length === 0 ? (
             <div className="text-sm text-neutral-600">No staff found.</div>
           ) : (
-            staff.map((row) => {
-              const isOwner = row.roleKey === "owner";
-              return (
-                <div
-                  key={row.staffId}
-                  className="grid gap-3 rounded-lg border border-neutral-200 bg-neutral-50/60 p-3 md:grid-cols-[1.6fr_1fr_auto]"
-                >
-                  <div className="space-y-3">
-                    <div>
-                      <div className="text-sm font-medium text-neutral-900">{formatStaffLabel(row)}</div>
-                      <div className="text-xs text-neutral-500">
-                        role: {(roleLabelMap.get(row.roleKey) ?? row.roleKey) || "-"}
-                      </div>
-                      {isOwner ? (
-                        <div className="mt-1 text-xs text-emerald-600">Owner account (locked)</div>
-                      ) : null}
-                      <div className="mt-2 space-y-1 text-xs text-neutral-500">
-                        {row.email ? <div>{`email: ${row.email}`}</div> : null}
-                        {row.loginId ? <div>{`login_id: ${row.loginId}`}</div> : null}
-                        {!row.loginId && row.phone ? <div>{`phone: ${row.phone}`}</div> : null}
-                      </div>
-                    </div>
-                    {!isOwner ? (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-500">Display name</Label>
-                        <Input
-                          value={pendingName[row.staffId] ?? ""}
-                          onChange={(e) =>
-                            setPendingName((prev) => ({ ...prev, [row.staffId]: e.target.value }))
-                          }
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                  {!isOwner ? (
-                    <>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-neutral-500">Role</Label>
-                        <Select
-                          value={pending[row.staffId] ?? ""}
-                          onValueChange={(value) =>
-                            setPending((prev) => ({ ...prev, [row.staffId]: value }))
-                          }
-                        >
-                          <SelectTrigger className="bg-white">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {roles.length === 0 ? (
-                              <SelectItem value="__none__" disabled>
-                                No roles found
-                              </SelectItem>
-                            ) : (
-                              roles.map((role) => (
-                                <SelectItem key={role.id} value={role.id}>
-                                  {role.name} {role.key ? `(${role.key})` : ""}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="flex items-center justify-end">
-                        <Button
-                          type="button"
-                          onClick={() => handleSave(row.staffId)}
-                          disabled={isSaving === row.staffId}
-                        >
-                          {isSaving === row.staffId ? "Saving..." : "Save"}
-                        </Button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-xs text-neutral-500">Owner details are hidden.</div>
-                  )}
-                </div>
-              );
-            })
+            <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
+              <div className="max-h-[520px] overflow-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="sticky top-0 bg-neutral-50 text-xs uppercase text-neutral-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left font-medium">Staff</th>
+                      <th className="px-3 py-2 text-left font-medium">Contact</th>
+                      <th className="px-3 py-2 text-left font-medium">Role</th>
+                      <th className="px-3 py-2 text-left font-medium">Status</th>
+                      <th className="px-3 py-2 text-left font-medium">Created</th>
+                      <th className="px-3 py-2 text-right font-medium">Detail</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200">
+                    {staff.map((row) => {
+                      const isOwner = row.roleKey === "owner";
+                      return (
+                        <tr key={row.staffId} className="align-top">
+                          <td className="px-3 py-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <div className="text-sm font-medium text-neutral-900">
+                                {formatStaffLabel(row)}
+                              </div>
+                              {isOwner ? (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                                  Owner
+                                </span>
+                              ) : null}
+                            </div>
+                            <div className="text-[11px] text-neutral-500">
+                              id: {formatStaffId(row.staffId)}
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-[11px] text-neutral-600">
+                            {row.email ? <div>{row.email}</div> : null}
+                            {row.loginId ? <div>{row.loginId}</div> : null}
+                            {!row.loginId && row.phone ? <div>{row.phone}</div> : null}
+                          </td>
+                          <td className="px-3 py-2 text-[11px] text-neutral-500">
+                            {roleLabelMap.get(row.roleKey) ?? row.roleKey}
+                          </td>
+                          <td className="px-3 py-2 text-[11px] text-neutral-500">{row.status}</td>
+                          <td className="px-3 py-2 text-[11px] text-neutral-500">
+                            <DateCell value={toIsoString(row.createdAt)} />
+                          </td>
+                          <td className="px-3 py-2 text-right">
+                            <Button asChild type="button" size="sm" variant="outline">
+                              <Link href={`/admin/identity/${row.staffId}`}>Open</Link>
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
         </div>
+        {total > pageSize ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-4 text-sm">
+            <div className="text-neutral-500">
+              Page {currentPage} / {totalPages}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage <= 1}
+              >
+                Prev
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

@@ -7,6 +7,8 @@ import {
   UpdateCategoryRequestSchema,
   DeleteCategoryRequestSchema,
   ReorderCategoriesRequestSchema,
+  ListCategoryProductsRequestSchema,
+  ReorderCategoryProductsRequestSchema,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 
 const client = createServiceClient(BackofficeService);
@@ -79,6 +81,26 @@ export async function reorderCategories(params: {
     create(ReorderCategoriesRequestSchema, {
       parentId: params.parentId ?? "",
       orderedIds: params.orderedIds,
+    })
+  );
+}
+
+export async function listCategoryProducts(params: { categoryId: string }) {
+  return client.listCategoryProducts(
+    create(ListCategoryProductsRequestSchema, {
+      categoryId: params.categoryId,
+    })
+  );
+}
+
+export async function reorderCategoryProducts(params: {
+  categoryId: string;
+  orderedProductIds: string[];
+}) {
+  return client.reorderCategoryProducts(
+    create(ReorderCategoryProductsRequestSchema, {
+      categoryId: params.categoryId,
+      orderedProductIds: params.orderedProductIds,
     })
   );
 }

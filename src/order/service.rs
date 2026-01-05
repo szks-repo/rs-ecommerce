@@ -140,7 +140,7 @@ pub async fn create_shipment(
     req: pb::CreateShipmentRequest,
     _actor: Option<pb::ActorContext>,
 ) -> OrderResult<pb::ShipmentAdmin> {
-    let tenant_id = tenant_id_for_order(state, &req.order_id).await?;
+    let _tenant_id = tenant_id_for_order(state, &req.order_id).await?;
     let shipment_id = uuid::Uuid::new_v4();
     let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     sqlx::query(
@@ -191,7 +191,7 @@ pub async fn update_shipment_status(
     req: pb::UpdateShipmentStatusRequest,
     _actor: Option<pb::ActorContext>,
 ) -> OrderResult<pb::ShipmentAdmin> {
-    let tenant_id = tenant_id_for_shipment(state, &req.shipment_id).await?;
+    let _tenant_id = tenant_id_for_shipment(state, &req.shipment_id).await?;
     let mut tx = state.db.begin().await.map_err(OrderError::from)?;
     let before_status = sqlx::query("SELECT status FROM shipments WHERE id = $1")
         .bind(parse_uuid(&req.shipment_id, "shipment_id")?)

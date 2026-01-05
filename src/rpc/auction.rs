@@ -55,12 +55,13 @@ pub async fn list_auctions(
 ) -> Result<(StatusCode, Json<pb::ListAuctionsResponse>), (StatusCode, Json<ConnectError>)> {
     let req = parse_request::<pb::ListAuctionsRequest>(&headers, body)?;
     let store_id = auction::service::resolve_context(&state, req.store.clone()).await?;
-    let auctions = auction::service::list_auctions(&state, store_id, req.status).await?;
+    let (auctions, page) =
+        auction::service::list_auctions(&state, store_id, req.status, req.page).await?;
     Ok((
         StatusCode::OK,
         Json(pb::ListAuctionsResponse {
             auctions,
-            page: None,
+            page: Some(page),
         }),
     ))
 }

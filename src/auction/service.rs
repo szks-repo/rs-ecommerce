@@ -403,8 +403,10 @@ pub async fn list_auctions(
     state: &AppState,
     store_id: String,
     status: String,
-) -> Result<Vec<pb::Auction>, (StatusCode, Json<ConnectError>)> {
+    page: Option<pb::PageInfo>,
+) -> Result<(Vec<pb::Auction>, pb::PageResult), (StatusCode, Json<ConnectError>)> {
     let store_uuid = StoreId::parse(&store_id)?;
+    let (limit, offset) = page_params(page);
     let rows = if status.is_empty() {
         sqlx::query(
             r#"
@@ -412,10 +414,12 @@ pub async fn list_auctions(
             FROM auctions
             WHERE store_id = $1
             ORDER BY created_at DESC
-            LIMIT 200
+            LIMIT $2 OFFSET $3
             "#,
         )
         .bind(store_uuid.as_uuid())
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(db_error)?
@@ -426,17 +430,34 @@ pub async fn list_auctions(
             FROM auctions
             WHERE store_id = $1 AND status = $2
             ORDER BY created_at DESC
-            LIMIT 200
+            LIMIT $3 OFFSET $4
             "#,
         )
         .bind(store_uuid.as_uuid())
         .bind(status.as_str())
+        .bind(limit)
+        .bind(offset)
         .fetch_all(&state.db)
         .await
         .map_err(db_error)?
     };
 
-    Ok(rows.into_iter().map(|row| auction_from_row(&row)).collect())
+    let auctions: Vec<pb::Auction> = rows.into_iter().map(|row| auction_from_row(&row)).collect();
+    let mut next_page_token = String::new();
+    if (auctions.len() as i64) == limit {
+        next_page_token = (offset + limit).to_string();
+    }
+    Ok((auctions, pb::PageResult { next_page_token }))
+}
+
+fn page_params(page: Option<pb::PageInfo>) -> (i64, i64) {
+    let page = page.unwrap_or(pb::PageInfo {
+        page_size: 50,
+        page_token: String::new(),
+    });
+    let limit = (page.page_size.max(1).min(200)) as i64;
+    let offset = page.page_token.parse::<i64>().unwrap_or(0).max(0);
+    (limit, offset)
 }
 
 pub async fn get_auction(

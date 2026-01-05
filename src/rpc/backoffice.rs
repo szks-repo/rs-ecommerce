@@ -182,6 +182,42 @@ pub async fn reorder_categories(
     ))
 }
 
+pub async fn list_category_products(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ListCategoryProductsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::ListCategoryProductsRequest>(&headers, body)?;
+    let products =
+        product::service::list_category_products_admin(&state, req.store, req.category_id).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListCategoryProductsResponse { products }),
+    ))
+}
+
+pub async fn reorder_category_products(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ReorderCategoryProductsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::ReorderCategoryProductsRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let products = product::service::reorder_category_products(&state, req, actor).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ReorderCategoryProductsResponse { products }),
+    ))
+}
+
 pub async fn create_variant(
     State(state): State<AppState>,
     Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
@@ -506,4 +542,115 @@ pub async fn update_promotion(
             promotion: Some(promotion),
         }),
     ))
+}
+
+pub async fn list_product_metafield_definitions(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ListProductMetafieldDefinitionsResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let _req = parse_request::<pb::ListProductMetafieldDefinitionsRequest>(&headers, body)?;
+    let definitions = product::service::list_product_metafield_definitions(&state).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListProductMetafieldDefinitionsResponse { definitions }),
+    ))
+}
+
+pub async fn create_product_metafield_definition(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::CreateProductMetafieldDefinitionResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::CreateProductMetafieldDefinitionRequest>(&headers, body)?;
+    let _actor = req.actor.clone().or(actor_ctx);
+    let definition = product::service::create_product_metafield_definition(
+        &state,
+        req.definition.unwrap_or_default(),
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::CreateProductMetafieldDefinitionResponse {
+            definition: Some(definition),
+        }),
+    ))
+}
+
+pub async fn update_product_metafield_definition(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::UpdateProductMetafieldDefinitionResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::UpdateProductMetafieldDefinitionRequest>(&headers, body)?;
+    let _actor = req.actor.clone().or(actor_ctx);
+    let definition = product::service::update_product_metafield_definition(
+        &state,
+        req.definition_id,
+        req.definition.unwrap_or_default(),
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateProductMetafieldDefinitionResponse {
+            definition: Some(definition),
+        }),
+    ))
+}
+
+pub async fn list_product_metafield_values(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::ListProductMetafieldValuesResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::ListProductMetafieldValuesRequest>(&headers, body)?;
+    let values = product::service::list_product_metafield_values(
+        &state,
+        req.store,
+        req.product_id,
+    )
+    .await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListProductMetafieldValuesResponse { values }),
+    ))
+}
+
+pub async fn upsert_product_metafield_value(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<
+    (StatusCode, Json<pb::UpsertProductMetafieldValueResponse>),
+    (StatusCode, Json<ConnectError>),
+> {
+    let req = parse_request::<pb::UpsertProductMetafieldValueRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    product::service::upsert_product_metafield_value(
+        &state,
+        req.store,
+        req.product_id,
+        req.definition_id,
+        req.value_json,
+        actor,
+    )
+    .await?;
+    Ok((StatusCode::OK, Json(pb::UpsertProductMetafieldValueResponse {})))
 }
