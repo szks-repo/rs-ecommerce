@@ -14,6 +14,8 @@ import {
   ListMediaAssetsRequestSchema,
   CreateMediaAssetRequestSchema,
   CreateMediaUploadUrlRequestSchema,
+  UpdateMediaAssetTagsRequestSchema,
+  DeleteMediaAssetRequestSchema,
   ListSkuImagesRequestSchema,
   SetSkuImagesRequestSchema,
   ListDigitalAssetsRequestSchema,
@@ -317,6 +319,23 @@ export async function createMediaUploadUrl(params: {
       contentType: params.contentType || "",
       sizeBytes:
         typeof params.sizeBytes === "bigint" ? params.sizeBytes : BigInt(params.sizeBytes ?? 0),
+    })
+  );
+}
+
+export async function updateMediaAssetTags(params: { assetId: string; tags: string[] }) {
+  return client.updateMediaAssetTags(
+    create(UpdateMediaAssetTagsRequestSchema, {
+      assetId: params.assetId,
+      tags: params.tags,
+    })
+  );
+}
+
+export async function deleteMediaAsset(params: { assetId: string }) {
+  return client.deleteMediaAsset(
+    create(DeleteMediaAssetRequestSchema, {
+      assetId: params.assetId,
     })
   );
 }

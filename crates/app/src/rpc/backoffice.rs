@@ -7,11 +7,97 @@ use axum::{
 };
 
 use crate::{
-    AppState, order,
+    AppState,
+    identity::context::resolve_store_context,
+    order, pages,
     pb::pb,
     product, promotion,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
+    shared::ids::{StoreId, TenantId},
 };
+
+pub async fn get_dashboard_summary(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::GetDashboardSummaryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::GetDashboardSummaryRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let tenant_uuid = TenantId::parse(&tenant_id)?;
+
+    let product_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM products WHERE store_id = $1")
+        .bind(store_uuid.as_uuid())
+        .fetch_one(&state.db)
+        .await
+        .map_err(crate::infrastructure::db::error)?;
+
+    let product_active_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM products WHERE store_id = $1 AND status = 'active'")
+            .bind(store_uuid.as_uuid())
+            .fetch_one(&state.db)
+            .await
+            .map_err(crate::infrastructure::db::error)?;
+
+    let customer_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM customer_profiles WHERE store_id = $1")
+        .bind(store_uuid.as_uuid())
+        .fetch_one(&state.db)
+        .await
+        .map_err(crate::infrastructure::db::error)?;
+
+    let auction_running_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM auctions WHERE store_id = $1 AND status = 'running'")
+            .bind(store_uuid.as_uuid())
+            .fetch_one(&state.db)
+            .await
+            .map_err(crate::infrastructure::db::error)?;
+
+    let store_time_zone: String =
+        sqlx::query_scalar("SELECT COALESCE(time_zone, 'Asia/Tokyo') FROM store_profile_settings WHERE store_id = $1")
+            .bind(store_uuid.as_uuid())
+            .fetch_optional(&state.db)
+            .await
+            .map_err(crate::infrastructure::db::error)?
+            .unwrap_or_else(|| "Asia/Tokyo".to_string());
+
+    let order_today_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND created_at >= (date_trunc('day', now() AT TIME ZONE $2) AT TIME ZONE $2)",
+    )
+    .bind(tenant_uuid.as_uuid())
+    .bind(store_time_zone)
+    .fetch_one(&state.db)
+    .await
+    .map_err(crate::infrastructure::db::error)?;
+
+    let order_pending_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM orders WHERE tenant_id = $1 AND status = 'pending'")
+            .bind(tenant_uuid.as_uuid())
+            .fetch_one(&state.db)
+            .await
+            .map_err(crate::infrastructure::db::error)?;
+
+    let low_stock_sku_count: i64 =
+        sqlx::query_scalar("SELECT COUNT(*) FROM inventory_stocks WHERE store_id = $1 AND (stock - reserved) <= 0")
+            .bind(store_uuid.as_uuid())
+            .fetch_one(&state.db)
+            .await
+            .map_err(crate::infrastructure::db::error)?;
+
+    Ok((
+        StatusCode::OK,
+        Json(pb::GetDashboardSummaryResponse {
+            summary: Some(pb::DashboardSummary {
+                product_count,
+                product_active_count,
+                customer_count,
+                auction_running_count,
+                order_today_count,
+                order_pending_count,
+                low_stock_sku_count,
+            }),
+        }),
+    ))
+}
 
 pub async fn list_products(
     State(state): State<AppState>,
@@ -278,6 +364,31 @@ pub async fn create_media_upload_url(
     Ok((StatusCode::OK, Json(resp)))
 }
 
+pub async fn update_media_asset_tags(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpdateMediaAssetTagsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::UpdateMediaAssetTagsRequest>(&headers, body)?;
+    let asset = product::media::update_media_asset_tags(&state, req.store, req.tenant, req.asset_id, req.tags).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::UpdateMediaAssetTagsResponse { asset: Some(asset) }),
+    ))
+}
+
+pub async fn delete_media_asset(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::DeleteMediaAssetResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::DeleteMediaAssetRequest>(&headers, body)?;
+    let deleted = product::media::delete_media_asset(&state, req.store, req.tenant, req.asset_id).await?;
+    Ok((StatusCode::OK, Json(pb::DeleteMediaAssetResponse { deleted })))
+}
+
 pub async fn list_sku_images(
     State(state): State<AppState>,
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
@@ -496,6 +607,69 @@ pub async fn update_promotion(
     ))
 }
 
+pub async fn list_pages(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListPagesResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListPagesRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let (pages, page) = pages::service::list_pages(&state, store_id, tenant_id, req.page).await?;
+    Ok((
+        StatusCode::OK,
+        Json(pb::ListPagesResponse {
+            pages,
+            page: Some(page),
+        }),
+    ))
+}
+
+pub async fn get_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::GetPageResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::GetPageRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let page = pages::service::get_page(&state, store_id, tenant_id, req.page_id).await?;
+    Ok((StatusCode::OK, Json(pb::GetPageResponse { page: Some(page) })))
+}
+
+pub async fn create_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::CreatePageResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::CreatePageRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let page_input = require_page_input(req.page)?;
+    let page = pages::service::create_page(&state, store_id, tenant_id, page_input).await?;
+    Ok((StatusCode::OK, Json(pb::CreatePageResponse { page: Some(page) })))
+}
+
+pub async fn update_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::UpdatePageResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::UpdatePageRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let page_input = require_page_input(req.page)?;
+    let page = pages::service::update_page(&state, store_id, tenant_id, req.page_id, page_input).await?;
+    Ok((StatusCode::OK, Json(pb::UpdatePageResponse { page: Some(page) })))
+}
+
+pub async fn delete_page(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::DeletePageResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::DeletePageRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context(&state, req.store, req.tenant).await?;
+    let deleted = pages::service::delete_page(&state, store_id, tenant_id, req.page_id).await?;
+    Ok((StatusCode::OK, Json(pb::DeletePageResponse { deleted })))
+}
+
 pub async fn list_product_metafield_definitions(
     State(state): State<AppState>,
     Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
@@ -548,6 +722,18 @@ pub async fn update_product_metafield_definition(
             definition: Some(definition),
         }),
     ))
+}
+
+fn require_page_input(page: Option<pb::PageInput>) -> Result<pb::PageInput, (StatusCode, Json<ConnectError>)> {
+    page.ok_or_else(|| {
+        (
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "page is required".to_string(),
+            }),
+        )
+    })
 }
 
 pub async fn list_product_metafield_values(

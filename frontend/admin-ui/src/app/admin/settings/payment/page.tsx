@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { getStoreSettings, updateStoreSettings } from "@/lib/store_settings";
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
+import AdminPageHeader from "@/components/admin-page-header";
 
 export default function SettingsPaymentPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -87,13 +88,10 @@ export default function SettingsPaymentPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Settings</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Payment</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Enable the payment methods available in your store.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Payment"
+        description="Enable the payment methods available in your store."
+      />
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
           <CardTitle>Available Methods</CardTitle>

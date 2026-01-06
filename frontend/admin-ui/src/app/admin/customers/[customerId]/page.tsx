@@ -698,8 +698,7 @@ export default function CustomerDetailPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Customers</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Customer Detail</h1>
+          <h1 className="mt-2 text-lg font-semibold text-neutral-900">Customer Detail</h1>
           <p className="mt-2 text-sm text-neutral-600">Manage profile and identity data.</p>
         </div>
         <Button variant="outline" onClick={() => router.push("/admin/customers")}>

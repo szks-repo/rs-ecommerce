@@ -42,6 +42,14 @@ const PERMISSION_GROUPS_CONST = [
     ],
   },
   {
+    label: "Pages",
+    description: "Free pages and content",
+    permissions: [
+      { key: "pages.read", label: "Read pages" },
+      { key: "pages.write", label: "Write pages" },
+    ],
+  },
+  {
     label: "Identity",
     description: "Staff and roles",
     permissions: [{ key: "staff.manage", label: "Manage staff & roles" }],

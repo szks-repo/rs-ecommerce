@@ -135,6 +135,33 @@ a {
   color: var(--muted);
 }
 
+.markdown {
+  display: grid;
+  gap: 12px;
+  font-family: "Manrope", "IBM Plex Sans", "Arial", sans-serif;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.markdown h1 {
+  font-size: 28px;
+  margin-top: 12px;
+}
+
+.markdown h2 {
+  font-size: 24px;
+  margin-top: 12px;
+}
+
+.markdown h3 {
+  font-size: 20px;
+  margin-top: 12px;
+}
+
+.markdown p {
+  color: var(--muted);
+}
+
 @media (min-width: 720px) {
   .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

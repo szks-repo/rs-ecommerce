@@ -8,7 +8,7 @@ export default async function StaffDetailPage({
   const { staffId } = await params;
   return (
     <div>
-      <h1 className="text-2xl font-semibold">Staff Detail</h1>
+      <h1 className="text-lg font-semibold">Staff Detail</h1>
       <p className="mt-2 text-sm text-neutral-600">Review and update staff settings.</p>
 
       <div className="mt-8">

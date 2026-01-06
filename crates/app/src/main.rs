@@ -10,6 +10,7 @@ mod customer;
 mod identity;
 mod infrastructure;
 mod order;
+mod pages;
 mod pb;
 mod product;
 mod promotion;

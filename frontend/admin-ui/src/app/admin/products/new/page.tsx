@@ -6,8 +6,7 @@ export default function ProductCreatePage() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Products</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Create Product</h1>
+        <h1 className="mt-2 text-lg font-semibold text-neutral-900">Create Product</h1>
         <p className="mt-2 text-sm text-neutral-600">
           Register product master data and default SKU, or define variant axes first.
         </p>

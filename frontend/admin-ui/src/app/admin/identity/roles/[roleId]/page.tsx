@@ -14,8 +14,7 @@ export default function RoleDetailPage() {
   return (
     <div className="space-y-6">
       <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Admin</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Role Detail</h1>
+        <h1 className="mt-2 text-lg font-semibold text-neutral-900">Role Detail</h1>
         <p className="mt-2 text-sm text-neutral-600">Update role name and permissions.</p>
       </div>
       <RoleDetailForm roleId={roleId} />

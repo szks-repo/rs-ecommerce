@@ -20,6 +20,7 @@ import { formatTimestampWithStoreTz, getStoreTimeZone, toUtcDateFromStoreDateInp
 import type { AuditLog } from "@/gen/ecommerce/v1/audit_pb";
 import DateCell from "@/components/date-cell";
 import { useApiCall } from "@/lib/use-api-call";
+import AdminPageHeader from "@/components/admin-page-header";
 
 type AuditActionItem = {
   key: string;
@@ -168,13 +169,10 @@ export default function AuditLogsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Admin</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Audit Logs</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Review configuration changes and system actions.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Audit Logs"
+        description="Review configuration changes and system actions."
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

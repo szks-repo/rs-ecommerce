@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import AdminPageHeader from "@/components/admin-page-header";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import { createCategory, listCategoriesAdmin } from "@/lib/category";
@@ -86,21 +87,18 @@ export default function CategoryNewPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Catalog</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">New Category</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Create a new category and optionally assign a parent.
-          </p>
-        </div>
-        <Link
-          className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-          href="/admin/categories"
-        >
-          Back
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="New Category"
+        description="Create a new category and optionally assign a parent."
+        actions={
+          <Link
+            className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+            href="/admin/categories"
+          >
+            Back
+          </Link>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

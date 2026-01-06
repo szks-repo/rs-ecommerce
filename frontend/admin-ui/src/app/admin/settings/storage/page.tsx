@@ -1,15 +1,13 @@
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import AdminPageHeader from "@/components/admin-page-header";
 
 export default function SettingsStoragePage() {
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Settings</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Storage</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Storage is configured by the system operator, not per store.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Storage"
+        description="Storage is configured by the system operator, not per store."
+      />
       <Alert className="border-sky-200 bg-sky-50 text-sky-900">
         <AlertTitle>How storage works</AlertTitle>
         <AlertDescription>

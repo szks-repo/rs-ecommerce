@@ -18,6 +18,7 @@ import { listProductMetafieldDefinitions } from "@/lib/product";
 import type { MetafieldDefinition as CustomerMetafieldDefinition } from "@/gen/ecommerce/v1/customer_pb";
 import type { ProductMetafieldDefinition } from "@/gen/ecommerce/v1/backoffice_pb";
 import { CalendarDays, Clock, Palette, Type } from "lucide-react";
+import AdminPageHeader from "@/components/admin-page-header";
 
 const VALUE_TYPES = [
   { value: "string", label: "string", Icon: Type },
@@ -81,18 +82,15 @@ export default function MetafieldsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Metafields</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Definitions</h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            Define custom fields per resource type. Use namespace + key for stable identifiers.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href={newLink}>New definition</Link>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Definitions"
+        description="Define custom fields per resource type. Use namespace + key for stable identifiers."
+        actions={
+          <Button asChild>
+            <Link href={newLink}>New definition</Link>
+          </Button>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

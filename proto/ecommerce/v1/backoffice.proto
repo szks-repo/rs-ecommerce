@@ -6,6 +6,7 @@ import "google/protobuf/timestamp.proto";
 import "ecommerce/v1/common.proto";
 
 service BackofficeService {
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (GetDashboardSummaryResponse);
   rpc ListProducts(ListProductsAdminRequest) returns (ListProductsAdminResponse);
   rpc CreateProduct(CreateProductRequest) returns (CreateProductResponse);
   rpc UpdateProduct(UpdateProductRequest) returns (UpdateProductResponse);
@@ -25,6 +26,8 @@ service BackofficeService {
   rpc ListMediaAssets(ListMediaAssetsRequest) returns (ListMediaAssetsResponse);
   rpc CreateMediaAsset(CreateMediaAssetRequest) returns (CreateMediaAssetResponse);
   rpc CreateMediaUploadUrl(CreateMediaUploadUrlRequest) returns (CreateMediaUploadUrlResponse);
+  rpc UpdateMediaAssetTags(UpdateMediaAssetTagsRequest) returns (UpdateMediaAssetTagsResponse);
+  rpc DeleteMediaAsset(DeleteMediaAssetRequest) returns (DeleteMediaAssetResponse);
   rpc ListSkuImages(ListSkuImagesRequest) returns (ListSkuImagesResponse);
   rpc SetSkuImages(SetSkuImagesRequest) returns (SetSkuImagesResponse);
   rpc ListDigitalAssets(ListDigitalAssetsRequest) returns (ListDigitalAssetsResponse);
@@ -43,6 +46,12 @@ service BackofficeService {
   rpc CreatePromotion(CreatePromotionRequest) returns (CreatePromotionResponse);
   rpc UpdatePromotion(UpdatePromotionRequest) returns (UpdatePromotionResponse);
 
+  rpc ListPages(ListPagesRequest) returns (ListPagesResponse);
+  rpc GetPage(GetPageRequest) returns (GetPageResponse);
+  rpc CreatePage(CreatePageRequest) returns (CreatePageResponse);
+  rpc UpdatePage(UpdatePageRequest) returns (UpdatePageResponse);
+  rpc DeletePage(DeletePageRequest) returns (DeletePageResponse);
+
   rpc ListProductMetafieldDefinitions(ListProductMetafieldDefinitionsRequest)
       returns (ListProductMetafieldDefinitionsResponse);
   rpc CreateProductMetafieldDefinition(CreateProductMetafieldDefinitionRequest)
@@ -53,6 +62,25 @@ service BackofficeService {
       returns (ListProductMetafieldValuesResponse);
   rpc UpsertProductMetafieldValue(UpsertProductMetafieldValueRequest)
       returns (UpsertProductMetafieldValueResponse);
+}
+
+message DashboardSummary {
+  int64 product_count = 1;
+  int64 product_active_count = 2;
+  int64 customer_count = 3;
+  int64 auction_running_count = 4;
+  int64 order_today_count = 5;
+  int64 order_pending_count = 6;
+  int64 low_stock_sku_count = 7;
+}
+
+message GetDashboardSummaryRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+}
+
+message GetDashboardSummaryResponse {
+  DashboardSummary summary = 1;
 }
 
 message ProductAdmin {
@@ -122,6 +150,28 @@ message MediaAsset {
   string content_type = 6;
   int64 size_bytes = 7;
   google.protobuf.Timestamp created_at = 8;
+  repeated string tags = 9;
+}
+
+message UpdateMediaAssetTagsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string asset_id = 3;
+  repeated string tags = 4;
+}
+
+message UpdateMediaAssetTagsResponse {
+  MediaAsset asset = 1;
+}
+
+message DeleteMediaAssetRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string asset_id = 3;
+}
+
+message DeleteMediaAssetResponse {
+  bool deleted = 1;
 }
 
 message SkuImage {
@@ -170,6 +220,96 @@ message PromotionAdmin {
   string status = 5;
   google.protobuf.Timestamp starts_at = 6;
   google.protobuf.Timestamp ends_at = 7;
+}
+
+message PageSummary {
+  string id = 1;
+  string title = 2;
+  string slug = 3;
+  string status = 4;
+  google.protobuf.Timestamp publish_start_at = 5;
+  google.protobuf.Timestamp publish_end_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message PageAdmin {
+  string id = 1;
+  string store_id = 2;
+  string title = 3;
+  string slug = 4;
+  string body = 5;
+  string body_format = 6;
+  string status = 7;
+  google.protobuf.Timestamp publish_start_at = 8;
+  google.protobuf.Timestamp publish_end_at = 9;
+  string seo_title = 10;
+  string seo_description = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message PageInput {
+  string title = 1;
+  string slug = 2;
+  string body = 3;
+  string body_format = 4; // markdown
+  string status = 5; // draft | published
+  google.protobuf.Timestamp publish_start_at = 6;
+  google.protobuf.Timestamp publish_end_at = 7;
+  string seo_title = 8;
+  string seo_description = 9;
+}
+
+message ListPagesRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  PageInfo page = 3;
+}
+
+message ListPagesResponse {
+  repeated PageSummary pages = 1;
+  PageResult page = 2;
+}
+
+message GetPageRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string page_id = 3;
+}
+
+message GetPageResponse {
+  PageAdmin page = 1;
+}
+
+message CreatePageRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  PageInput page = 3;
+}
+
+message CreatePageResponse {
+  PageAdmin page = 1;
+}
+
+message UpdatePageRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string page_id = 3;
+  PageInput page = 4;
+}
+
+message UpdatePageResponse {
+  PageAdmin page = 1;
+}
+
+message DeletePageRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string page_id = 3;
+}
+
+message DeletePageResponse {
+  bool deleted = 1;
 }
 
 message ListProductsAdminRequest {

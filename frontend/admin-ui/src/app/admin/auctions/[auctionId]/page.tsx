@@ -12,7 +12,7 @@ export default async function AuctionDetailPage({
     <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Auction Detail</h1>
+          <h1 className="text-lg font-semibold">Auction Detail</h1>
           <p className="mt-2 text-sm text-neutral-600">Review bids and approve the winner.</p>
         </div>
         <Button variant="outline" asChild>

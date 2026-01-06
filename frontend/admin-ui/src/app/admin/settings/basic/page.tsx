@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import StoreSettingsForm from "@/components/store-settings-form";
+import AdminPageHeader from "@/components/admin-page-header";
 
 type BasicSection =
   | "profile"
@@ -32,13 +33,10 @@ export default function SettingsBasicPage() {
   const active = BASIC_SECTIONS.find((section) => section.id === activeSection) ?? BASIC_SECTIONS[0];
   return (
     <div className="space-y-6">
-      <div>
-        <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Settings</div>
-        <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Basic</h1>
-        <p className="mt-2 text-sm text-neutral-600">
-          Update each section without scrolling through a long form.
-        </p>
-      </div>
+      <AdminPageHeader
+        title="Basic"
+        description="Update each section without scrolling through a long form."
+      />
       <div className="grid gap-6 lg:grid-cols-[240px_minmax(0,1fr)]">
         <aside className="space-y-2">
           {BASIC_SECTIONS.map((section) => (

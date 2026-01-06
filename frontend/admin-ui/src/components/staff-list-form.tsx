@@ -11,6 +11,13 @@ import { identityListRoles, identityListStaff } from "@/lib/identity";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import {
+  AdminTable,
+  AdminTableCell,
+  AdminTableHeaderCell,
+  AdminTablePagination,
+  AdminTableToolbar,
+} from "@/components/admin-table";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -167,170 +174,148 @@ export default function StaffListForm() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-neutral-500">
-          <div>
-            {total} staff members
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Input
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by name, email, login_id, phone, staff_id"
-              className="h-9 w-full min-w-[220px] max-w-[360px] bg-white"
-            />
-            <Select
-              value={roleFilter}
-              onValueChange={(value) => {
-                setRoleFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[180px] bg-white">
-                <SelectValue placeholder="Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All roles</SelectItem>
-                {roleOptions.map((role) => (
-                  <SelectItem key={role.id} value={role.id}>
-                    {role.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={statusFilter}
-              onValueChange={(value) => {
-                setStatusFilter(value);
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[160px] bg-white">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All status</SelectItem>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select
-              value={String(pageSize)}
-              onValueChange={(value) => {
-                setPageSize(Number(value));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[120px] bg-white">
-                <SelectValue placeholder="Rows" />
-              </SelectTrigger>
-              <SelectContent>
-                {[25, 50, 100].map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size} / page
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
-              {loading ? "Loading..." : "Refresh"}
-            </Button>
-          </div>
-        </div>
+        <AdminTableToolbar
+          left={`${total} staff members`}
+          right={
+            <>
+              <Input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by name, email, login_id, phone, staff_id"
+                className="h-9 w-full min-w-[220px] max-w-[320px] bg-white"
+              />
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => {
+                  setRoleFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[180px] bg-white">
+                  <SelectValue placeholder="Role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All roles</SelectItem>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role.id} value={role.id}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={statusFilter}
+                onValueChange={(value) => {
+                  setStatusFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[160px] bg-white">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All status</SelectItem>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-9 w-[120px] bg-white">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[25, 50, 100].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
+                {loading ? "Loading..." : "Refresh"}
+              </Button>
+            </>
+          }
+        />
         <div className="space-y-3">
           {staff.length === 0 ? (
             <div className="text-sm text-neutral-600">No staff found.</div>
           ) : (
-            <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-              <div className="max-h-[520px] overflow-auto">
-                <table className="min-w-full text-sm">
-                  <thead className="sticky top-0 bg-neutral-50 text-xs uppercase text-neutral-500">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium">Staff</th>
-                      <th className="px-3 py-2 text-left font-medium">Contact</th>
-                      <th className="px-3 py-2 text-left font-medium">Role</th>
-                      <th className="px-3 py-2 text-left font-medium">Status</th>
-                      <th className="px-3 py-2 text-left font-medium">Created</th>
-                      <th className="px-3 py-2 text-right font-medium">Detail</th>
+            <AdminTable>
+              <thead className="sticky top-0 bg-neutral-50">
+                <tr>
+                  <AdminTableHeaderCell>Staff</AdminTableHeaderCell>
+                  <AdminTableHeaderCell>Contact</AdminTableHeaderCell>
+                  <AdminTableHeaderCell>Role</AdminTableHeaderCell>
+                  <AdminTableHeaderCell>Status</AdminTableHeaderCell>
+                  <AdminTableHeaderCell>Created</AdminTableHeaderCell>
+                  <AdminTableHeaderCell align="right">Detail</AdminTableHeaderCell>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-neutral-200">
+                {staff.map((row) => {
+                  const isOwner = row.roleKey === "owner";
+                  return (
+                    <tr key={row.staffId}>
+                      <AdminTableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="text-sm font-medium text-neutral-900">
+                            {formatStaffLabel(row)}
+                          </div>
+                          {isOwner ? (
+                            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
+                              Owner
+                            </span>
+                          ) : null}
+                        </div>
+                        <div className="text-[11px] text-neutral-500">
+                          id: {formatStaffId(row.staffId)}
+                        </div>
+                      </AdminTableCell>
+                      <AdminTableCell>
+                        {row.email ? <div>{row.email}</div> : null}
+                        {row.loginId ? <div>{row.loginId}</div> : null}
+                        {!row.loginId && row.phone ? <div>{row.phone}</div> : null}
+                      </AdminTableCell>
+                      <AdminTableCell className="text-neutral-500">
+                        {roleLabelMap.get(row.roleKey) ?? row.roleKey}
+                      </AdminTableCell>
+                      <AdminTableCell className="text-neutral-500">{row.status}</AdminTableCell>
+                      <AdminTableCell className="text-neutral-500">
+                        <DateCell value={toIsoString(row.createdAt)} />
+                      </AdminTableCell>
+                      <AdminTableCell align="right">
+                        <Button asChild type="button" size="sm" variant="outline">
+                          <Link href={`/admin/identity/${row.staffId}`}>Open</Link>
+                        </Button>
+                      </AdminTableCell>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-neutral-200">
-                    {staff.map((row) => {
-                      const isOwner = row.roleKey === "owner";
-                      return (
-                        <tr key={row.staffId} className="align-top">
-                          <td className="px-3 py-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <div className="text-sm font-medium text-neutral-900">
-                                {formatStaffLabel(row)}
-                              </div>
-                              {isOwner ? (
-                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
-                                  Owner
-                                </span>
-                              ) : null}
-                            </div>
-                            <div className="text-[11px] text-neutral-500">
-                              id: {formatStaffId(row.staffId)}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 text-[11px] text-neutral-600">
-                            {row.email ? <div>{row.email}</div> : null}
-                            {row.loginId ? <div>{row.loginId}</div> : null}
-                            {!row.loginId && row.phone ? <div>{row.phone}</div> : null}
-                          </td>
-                          <td className="px-3 py-2 text-[11px] text-neutral-500">
-                            {roleLabelMap.get(row.roleKey) ?? row.roleKey}
-                          </td>
-                          <td className="px-3 py-2 text-[11px] text-neutral-500">{row.status}</td>
-                          <td className="px-3 py-2 text-[11px] text-neutral-500">
-                            <DateCell value={toIsoString(row.createdAt)} />
-                          </td>
-                          <td className="px-3 py-2 text-right">
-                            <Button asChild type="button" size="sm" variant="outline">
-                              <Link href={`/admin/identity/${row.staffId}`}>Open</Link>
-                            </Button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                  );
+                })}
+              </tbody>
+            </AdminTable>
           )}
         </div>
         {total > pageSize ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-neutral-200 pt-4 text-sm">
-            <div className="text-neutral-500">
-              Page {currentPage} / {totalPages}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                disabled={currentPage <= 1}
-              >
-                Prev
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={currentPage >= totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          </div>
+          <AdminTablePagination
+            label={`Page ${currentPage} / ${totalPages}`}
+            onPrev={() => setPage((prev) => Math.max(1, prev - 1))}
+            onNext={() => setPage((prev) => Math.min(totalPages, prev + 1))}
+            canPrev={currentPage > 1}
+            canNext={currentPage < totalPages}
+          />
         ) : null}
       </CardContent>
     </Card>

@@ -38,6 +38,7 @@ import type {
   VariantAdmin,
 } from "@/gen/ecommerce/v1/backoffice_pb";
 import { useApiCall } from "@/lib/use-api-call";
+import AdminPageHeader from "@/components/admin-page-header";
 import { formatTimestampWithStoreTz } from "@/lib/time";
 
 type MetafieldValueState = string | string[] | boolean;
@@ -554,36 +555,31 @@ export default function ProductDetailPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Products</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">
-            {product?.title || "Product details"}
-          </h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Review the product and manage its SKUs.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-            href={buildProductPreviewUrl(productId)}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Preview
-          </a>
-          <Link
-            className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-            href="/admin/products"
-          >
-            Back
-          </Link>
-          <Button variant="outline" onClick={loadData} disabled={isLoading}>
-            {isLoading ? "Loading..." : "Refresh"}
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title={product?.title || "Product details"}
+        description="Review the product and manage its SKUs."
+        actions={
+          <>
+            <a
+              className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+              href={buildProductPreviewUrl(productId)}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Preview
+            </a>
+            <Link
+              className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+              href="/admin/products"
+            >
+              Back
+            </Link>
+            <Button variant="outline" onClick={loadData} disabled={isLoading}>
+              {isLoading ? "Loading..." : "Refresh"}
+            </Button>
+          </>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

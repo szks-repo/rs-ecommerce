@@ -5,6 +5,7 @@ import {
   StorefrontService,
   ListProductsRequestSchema,
   GetProductRequestSchema,
+  GetPageBySlugRequestSchema,
 } from "@/gen/ecommerce/v1/storefront_pb";
 
 const client = createServiceClient(StorefrontService);
@@ -26,6 +27,15 @@ export async function getProduct(tenantId: string, productId: string) {
     create(GetProductRequestSchema, {
       tenant: { tenantId },
       productId,
+    })
+  );
+}
+
+export async function getPageBySlug(tenantId: string, slug: string) {
+  return client.getPageBySlug(
+    create(GetPageBySlugRequestSchema, {
+      tenant: { tenantId },
+      slug,
     })
   );
 }

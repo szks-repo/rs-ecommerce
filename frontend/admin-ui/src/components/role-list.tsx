@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import { identityListRolesWithPermissions } from "@/lib/identity";
+import { AdminTableToolbar } from "@/components/admin-table";
 
 type RoleRow = {
   id: string;
@@ -48,12 +49,14 @@ export default function RoleList() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between gap-2 text-sm text-neutral-500">
-          <div>{roles.length} roles</div>
-          <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
-            Refresh
-          </Button>
-        </div>
+        <AdminTableToolbar
+          left={`${roles.length} roles`}
+          right={
+            <Button type="button" variant="outline" size="sm" onClick={reload} disabled={loading}>
+              Refresh
+            </Button>
+          }
+        />
         {roles.length === 0 ? (
           <div className="text-sm text-neutral-600">No roles found.</div>
         ) : (

@@ -296,6 +296,7 @@ async fn import_external_asset(
         content_type,
         size_bytes: bytes.len() as i64,
         created_at: None,
+        tags: Vec::new(),
     })
 }
 
@@ -455,7 +456,7 @@ pub async fn list_media_assets(
     let rows = if query.trim().is_empty() {
         sqlx::query(
             r#"
-            SELECT id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, created_at
+            SELECT id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, tags, created_at
             FROM store_media_assets
             WHERE store_id = $1
             ORDER BY created_at DESC
@@ -469,7 +470,7 @@ pub async fn list_media_assets(
     } else {
         sqlx::query(
             r#"
-            SELECT id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, created_at
+            SELECT id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, tags, created_at
             FROM store_media_assets
             WHERE store_id = $1
               AND (public_url ILIKE $2 OR object_key ILIKE $2)
@@ -494,6 +495,7 @@ pub async fn list_media_assets(
             object_key: row.get("object_key"),
             content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
             size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
+            tags: row.get::<Option<Vec<String>>, _>("tags").unwrap_or_default(),
             created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
         })
         .collect();
@@ -515,6 +517,7 @@ pub async fn create_media_asset(
         asset = imported;
     }
     validate_store_asset_input(&asset)?;
+    let tags = normalize_tags(asset.tags);
     let store_uuid = parse_uuid(&store_id, "store_id")?;
     let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
     let now = Utc::now();
@@ -522,9 +525,9 @@ pub async fn create_media_asset(
     let row = sqlx::query(
         r#"
         INSERT INTO store_media_assets (
-            tenant_id, store_id, provider, bucket, object_key, public_url, content_type, size_bytes, created_at
-        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-        RETURNING id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, created_at
+            tenant_id, store_id, provider, bucket, object_key, public_url, content_type, size_bytes, tags, created_at
+        ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        RETURNING id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, tags, created_at
         "#,
     )
     .bind(tenant_uuid)
@@ -543,6 +546,7 @@ pub async fn create_media_asset(
     } else {
         Some(asset.size_bytes)
     })
+    .bind(tags)
     .bind(now)
     .fetch_one(&state.db)
     .await
@@ -556,8 +560,104 @@ pub async fn create_media_asset(
         object_key: row.get("object_key"),
         content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
         size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
+        tags: row.get::<Option<Vec<String>>, _>("tags").unwrap_or_default(),
         created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
     })
+}
+
+pub async fn update_media_asset_tags(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    tenant: Option<pb::TenantContext>,
+    asset_id: String,
+    tags: Vec<String>,
+) -> Result<pb::MediaAsset, (StatusCode, Json<ConnectError>)> {
+    let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
+    let asset_uuid = parse_uuid(&asset_id, "asset_id")?;
+    let tags = normalize_tags(tags);
+    let row = sqlx::query(
+        r#"
+        UPDATE store_media_assets
+           SET tags = $1
+         WHERE id = $2 AND store_id = $3 AND tenant_id = $4
+         RETURNING id::text as id, public_url, provider, bucket, object_key, content_type, size_bytes, tags, created_at
+        "#,
+    )
+    .bind(tags)
+    .bind(asset_uuid)
+    .bind(store_uuid)
+    .bind(tenant_uuid)
+    .fetch_optional(&state.db)
+    .await
+    .map_err(db::error)?;
+
+    let Some(row) = row else {
+        return Err((
+            StatusCode::NOT_FOUND,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::NotFound,
+                message: "asset not found".to_string(),
+            }),
+        ));
+    };
+
+    Ok(pb::MediaAsset {
+        id: row.get("id"),
+        public_url: row.get("public_url"),
+        provider: row.get("provider"),
+        bucket: row.get("bucket"),
+        object_key: row.get("object_key"),
+        content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
+        size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
+        tags: row.get::<Option<Vec<String>>, _>("tags").unwrap_or_default(),
+        created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),
+    })
+}
+
+pub async fn delete_media_asset(
+    state: &AppState,
+    store: Option<pb::StoreContext>,
+    tenant: Option<pb::TenantContext>,
+    asset_id: String,
+) -> Result<bool, (StatusCode, Json<ConnectError>)> {
+    let (store_id, tenant_id) = resolve_store_context(state, store, tenant).await?;
+    let store_uuid = parse_uuid(&store_id, "store_id")?;
+    let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
+    let asset_uuid = parse_uuid(&asset_id, "asset_id")?;
+
+    let used_count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sku_images WHERE asset_id = $1")
+        .bind(asset_uuid)
+        .fetch_one(&state.db)
+        .await
+        .map_err(db::error)?;
+    if used_count > 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "asset is used by sku images".to_string(),
+            }),
+        ));
+    }
+
+    let rows = sqlx::query("DELETE FROM store_media_assets WHERE id = $1 AND store_id = $2 AND tenant_id = $3")
+        .bind(asset_uuid)
+        .bind(store_uuid)
+        .bind(tenant_uuid)
+        .execute(&state.db)
+        .await
+        .map_err(db::error)?;
+    Ok(rows.rows_affected() > 0)
+}
+
+fn normalize_tags(tags: Vec<String>) -> Vec<String> {
+    tags.into_iter()
+        .map(|t| t.trim().to_string())
+        .filter(|t| !t.is_empty())
+        .take(50)
+        .collect()
 }
 
 pub async fn list_sku_images(

@@ -7,7 +7,9 @@ use axum::{
 
 use crate::{
     AppState, cart,
+    identity::context::resolve_store_context_without_token_guard,
     infrastructure::search::SearchProduct,
+    pages,
     pb::pb,
     product,
     rpc::json::{ConnectError, parse_request, require_tenant_id},
@@ -61,6 +63,17 @@ pub async fn search_products(
             }),
         }),
     ))
+}
+
+pub async fn get_page_by_slug(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::GetPageBySlugResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::GetPageBySlugRequest>(&headers, body)?;
+    let (store_id, tenant_id) = resolve_store_context_without_token_guard(&state, req.store, req.tenant).await?;
+    let page = pages::service::get_page_by_slug(&state, store_id, tenant_id, req.slug).await?;
+    Ok((StatusCode::OK, Json(pb::GetPageBySlugResponse { page: Some(page) })))
 }
 
 fn hits_to_products(hits: Vec<SearchProduct>, tenant_id: String) -> Vec<pb::Product> {

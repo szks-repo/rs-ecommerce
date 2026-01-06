@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AdminPageHeader from "@/components/admin-page-header";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import { listCategoriesAdmin, listCategoryProducts, reorderCategoryProducts } from "@/lib/category";
@@ -89,29 +90,24 @@ export default function CategoryProductsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Catalog</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Category Products</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            {category ? (
-              <>
-                Reorder products in <span className="font-medium">{category.name}</span>.
-              </>
-            ) : (
-              "Reorder products inside this category."
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="outline">
-            <Link href={`/admin/categories/${categoryId}`}>Back</Link>
-          </Button>
-          <Button variant="outline" onClick={reload} disabled={loading || categoriesLoading}>
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Category Products"
+        description={
+          category
+            ? `Reorder products in ${category.name}.`
+            : "Reorder products inside this category."
+        }
+        actions={
+          <>
+            <Button asChild variant="outline">
+              <Link href={`/admin/categories/${categoryId}`}>Back</Link>
+            </Button>
+            <Button variant="outline" onClick={reload} disabled={loading || categoriesLoading}>
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

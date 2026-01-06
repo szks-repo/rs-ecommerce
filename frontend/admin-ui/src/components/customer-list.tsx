@@ -12,6 +12,13 @@ import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import DateCell from "@/components/date-cell";
 import {
+  AdminTable,
+  AdminTableCell,
+  AdminTableHeaderCell,
+  AdminTablePagination,
+  AdminTableToolbar,
+} from "@/components/admin-table";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -85,114 +92,98 @@ export default function CustomerList() {
             Search by name, email, or phone in this store.
           </CardDescription>
         </div>
-        <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center">
-          <Input
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setPageToken("");
-            }}
-            placeholder="Search customers"
-          />
-          <Select
-            value={String(pageSize)}
-            onValueChange={(value) => {
-              setPageSize(Number(value));
-              setPageToken("");
-            }}
-          >
-            <SelectTrigger className="bg-white">
-              <SelectValue placeholder="Rows" />
-            </SelectTrigger>
-            <SelectContent>
-              {[25, 50, 100].map((size) => (
-                <SelectItem key={size} value={String(size)}>
-                  {size} / page
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button variant="outline" onClick={reload} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        </div>
       </CardHeader>
       <CardContent>
+        <AdminTableToolbar
+          left={`Showing ${customers.length} customers`}
+          right={
+            <>
+              <Input
+                value={query}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  setPageToken("");
+                }}
+                placeholder="Search customers"
+                className="h-9 w-full min-w-[220px] max-w-[320px]"
+              />
+              <Select
+                value={String(pageSize)}
+                onValueChange={(value) => {
+                  setPageSize(Number(value));
+                  setPageToken("");
+                }}
+              >
+                <SelectTrigger className="h-9 w-[120px] bg-white">
+                  <SelectValue placeholder="Rows" />
+                </SelectTrigger>
+                <SelectContent>
+                  {[25, 50, 100].map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size} / page
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={reload} disabled={loading} size="sm">
+                {loading ? "Loading..." : "Refresh"}
+              </Button>
+            </>
+          }
+        />
         {customers.length === 0 ? (
           <div className="text-sm text-neutral-600">No customers found.</div>
         ) : (
-          <div className="overflow-hidden rounded-lg border border-neutral-200 bg-white">
-            <div className="max-h-[520px] overflow-auto">
-              <table className="min-w-full text-sm">
-                <thead className="sticky top-0 bg-neutral-50 text-xs uppercase text-neutral-500">
-                  <tr>
-                    <th className="px-3 py-2 text-left font-medium">Customer</th>
-                    <th className="px-3 py-2 text-left font-medium">Contact</th>
-                    <th className="px-3 py-2 text-left font-medium">Status</th>
-                    <th className="px-3 py-2 text-left font-medium">Created</th>
-                    <th className="px-3 py-2 text-right font-medium">Detail</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200">
-                  {customers.map((customer) => (
-                    <tr key={customer.customerId} className="align-top">
-                      <td className="px-3 py-2">
-                        <div className="text-sm font-medium text-neutral-900">
-                          {customer.name || "Unnamed"}
-                        </div>
-                        <div className="text-[11px] text-neutral-500">
-                          id: {customer.customerId}
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 text-[11px] text-neutral-600">
-                        {customer.email ? <div>{customer.email}</div> : null}
-                        {customer.phone ? <div>{customer.phone}</div> : null}
-                      </td>
-                      <td className="px-3 py-2 text-[11px] text-neutral-500">{customer.status}</td>
-                      <td className="px-3 py-2 text-[11px] text-neutral-500">
-                        <DateCell value={toIsoString(customer.createdAt)} />
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <Button asChild type="button" size="sm" variant="outline">
-                          <Link href={`/admin/customers/${customer.customerId}`}>Open</Link>
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <AdminTable>
+            <thead className="sticky top-0 bg-neutral-50">
+              <tr>
+                <AdminTableHeaderCell>Customer</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Contact</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Status</AdminTableHeaderCell>
+                <AdminTableHeaderCell>Created</AdminTableHeaderCell>
+                <AdminTableHeaderCell align="right">Detail</AdminTableHeaderCell>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-200">
+              {customers.map((customer) => (
+                <tr key={customer.customerId}>
+                  <AdminTableCell>
+                    <div className="text-sm font-medium text-neutral-900">
+                      {customer.name || "Unnamed"}
+                    </div>
+                    <div className="text-[11px] text-neutral-500">
+                      id: {customer.customerId}
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    {customer.email ? <div>{customer.email}</div> : null}
+                    {customer.phone ? <div>{customer.phone}</div> : null}
+                  </AdminTableCell>
+                  <AdminTableCell className="text-neutral-500">{customer.status}</AdminTableCell>
+                  <AdminTableCell className="text-neutral-500">
+                    <DateCell value={toIsoString(customer.createdAt)} />
+                  </AdminTableCell>
+                  <AdminTableCell align="right">
+                    <Button asChild type="button" size="sm" variant="outline">
+                      <Link href={`/admin/customers/${customer.customerId}`}>Open</Link>
+                    </Button>
+                  </AdminTableCell>
+                </tr>
+              ))}
+            </tbody>
+          </AdminTable>
         )}
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm">
-          <div className="text-neutral-500">
-            Showing {customers.length} customers
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                const offset = Number.parseInt(pageToken || "0", 10);
-                const prev = Math.max(0, offset - pageSize);
-                setPageToken(prev > 0 ? String(prev) : "");
-              }}
-              disabled={!pageToken || Number.parseInt(pageToken || "0", 10) <= 0}
-            >
-              Prev
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setPageToken(nextPageToken)}
-              disabled={!nextPageToken}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+        <AdminTablePagination
+          label={`Showing ${customers.length} customers`}
+          onPrev={() => {
+            const offset = Number.parseInt(pageToken || "0", 10);
+            const prev = Math.max(0, offset - pageSize);
+            setPageToken(prev > 0 ? String(prev) : "");
+          }}
+          onNext={() => setPageToken(nextPageToken)}
+          canPrev={!!pageToken && Number.parseInt(pageToken || "0", 10) > 0}
+          canNext={!!nextPageToken}
+        />
       </CardContent>
     </Card>
   );

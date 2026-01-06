@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import AdminPageHeader from "@/components/admin-page-header";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import {
@@ -141,29 +142,26 @@ export default function CategoryDetailPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Catalog</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Category Detail</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Update the category attributes and hierarchy.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link
-            className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
-            href="/admin/categories"
-          >
-            Back
-          </Link>
-          <Button asChild variant="outline">
-            <Link href={`/admin/categories/${categoryId}/products`}>Manage Products</Link>
-          </Button>
-          <Button variant="outline" onClick={reload} disabled={isSubmitting}>
-            Refresh
-          </Button>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Category Detail"
+        description="Update the category attributes and hierarchy."
+        actions={
+          <>
+            <Link
+              className="rounded-md border border-neutral-200 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50"
+              href="/admin/categories"
+            >
+              Back
+            </Link>
+            <Button asChild variant="outline">
+              <Link href={`/admin/categories/${categoryId}/products`}>Manage Products</Link>
+            </Button>
+            <Button variant="outline" onClick={reload} disabled={isSubmitting}>
+              Refresh
+            </Button>
+          </>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>

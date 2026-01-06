@@ -55,6 +55,8 @@ INSERT INTO permissions (key, name, description) VALUES
     ('promotions.write', 'Promotions Write', 'Create/update promotions'),
     ('settings.read', 'Settings Read', 'Read store settings'),
     ('settings.write', 'Settings Write', 'Update store settings'),
+    ('pages.read', 'Pages Read', 'Read pages'),
+    ('pages.write', 'Pages Write', 'Create/update pages'),
     ('staff.manage', 'Staff Manage', 'Create/update staff and roles'),
     ('customers.read', 'Customers Read', 'Read customer profiles and identities'),
     ('customers.write', 'Customers Write', 'Create/update customer profiles and identities'),
@@ -340,6 +342,29 @@ CREATE INDEX IF NOT EXISTS products_tax_rule_id_idx
 CREATE INDEX IF NOT EXISTS products_sale_period_idx
     ON products (sale_start_at, sale_end_at);
 
+CREATE TABLE IF NOT EXISTS pages (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id uuid NOT NULL REFERENCES tenants(id),
+    store_id uuid NOT NULL REFERENCES stores(id),
+    title text NOT NULL,
+    slug text NOT NULL,
+    body text NOT NULL,
+    body_format text NOT NULL DEFAULT 'markdown',
+    status text NOT NULL DEFAULT 'draft',
+    publish_start_at timestamptz,
+    publish_end_at timestamptz,
+    seo_title text,
+    seo_description text,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE (store_id, slug)
+);
+
+CREATE INDEX IF NOT EXISTS pages_store_status_idx
+    ON pages (store_id, status);
+CREATE INDEX IF NOT EXISTS pages_store_slug_idx
+    ON pages (store_id, slug);
+
 CREATE TABLE IF NOT EXISTS product_categories (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     tenant_id uuid NOT NULL REFERENCES tenants(id),
@@ -477,6 +502,7 @@ CREATE TABLE IF NOT EXISTS store_media_assets (
     public_url text NOT NULL,
     content_type text,
     size_bytes bigint,
+    tags text[] NOT NULL DEFAULT '{}',
     created_at timestamptz NOT NULL DEFAULT now()
 );
 

@@ -12,6 +12,7 @@ import { listProductsAdmin } from "@/lib/product";
 import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
+import { AdminTableToolbar } from "@/components/admin-table";
 
 export default function ProductList() {
   const [query, setQuery] = useState("");
@@ -50,25 +51,29 @@ export default function ProductList() {
 
   return (
     <Card className="border-neutral-200 bg-white text-neutral-900">
-      <CardHeader className="flex flex-row items-center justify-between gap-4">
-        <div>
-          <CardTitle>Products</CardTitle>
-          <CardDescription className="text-neutral-500">
-            Recently created products in this store.
-          </CardDescription>
-        </div>
-        <div className="flex w-full max-w-sm items-center gap-2">
-          <Input
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Search by title, id, description"
-          />
-          <Button variant="outline" onClick={reload} disabled={loading}>
-            {loading ? "Loading..." : "Refresh"}
-          </Button>
-        </div>
+      <CardHeader>
+        <CardTitle>Products</CardTitle>
+        <CardDescription className="text-neutral-500">
+          Recently created products in this store.
+        </CardDescription>
       </CardHeader>
       <CardContent>
+        <AdminTableToolbar
+          left={`${filtered.length} products`}
+          right={
+            <>
+              <Input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search by title, id, description"
+                className="h-9 w-full min-w-[220px] max-w-[320px]"
+              />
+              <Button variant="outline" onClick={reload} disabled={loading} size="sm">
+                {loading ? "Loading..." : "Refresh"}
+              </Button>
+            </>
+          }
+        />
         {filtered.length === 0 ? (
           <div className="text-sm text-neutral-600">No products yet.</div>
         ) : (

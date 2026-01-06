@@ -45,6 +45,10 @@ pub fn router(state: AppState) -> Router<()> {
 
     Router::new()
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/GetDashboardSummary",
+            post(backoffice::get_dashboard_summary),
+        )
+        .route(
             "/rpc/ecommerce.v1.StorefrontService/ListProducts",
             post(storefront::list_products),
         )
@@ -55,6 +59,10 @@ pub fn router(state: AppState) -> Router<()> {
         .route(
             "/rpc/ecommerce.v1.StorefrontService/SearchProducts",
             post(storefront::search_products),
+        )
+        .route(
+            "/rpc/ecommerce.v1.StorefrontService/GetPageBySlug",
+            post(storefront::get_page_by_slug),
         )
         .route(
             "/rpc/ecommerce.v1.StorefrontService/CreateCart",
@@ -193,6 +201,51 @@ pub fn router(state: AppState) -> Router<()> {
             )),
         )
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListPages",
+            post(backoffice::list_pages).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PagesRead)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/GetPage",
+            post(backoffice::get_page).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PagesRead)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/CreatePage",
+            post(backoffice::create_page).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PagesWrite)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/UpdatePage",
+            post(backoffice::update_page).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PagesWrite)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/DeletePage",
+            post(backoffice::delete_page).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::PagesWrite)
+                },
+            )),
+        )
+        .route(
             "/rpc/ecommerce.v1.AuctionService/ListAuctions",
             post(auction::list_auctions).route_layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -321,6 +374,24 @@ pub fn router(state: AppState) -> Router<()> {
         .route(
             "/rpc/ecommerce.v1.BackofficeService/CreateMediaUploadUrl",
             post(backoffice::create_media_upload_url).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/UpdateMediaAssetTags",
+            post(backoffice::update_media_asset_tags).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/DeleteMediaAsset",
+            post(backoffice::delete_media_asset).route_layer(middleware::from_fn_with_state(
                 state.clone(),
                 |State(state), req, next| {
                     permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)

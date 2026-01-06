@@ -9,6 +9,7 @@ service StorefrontService {
   rpc ListProducts(ListProductsRequest) returns (ListProductsResponse);
   rpc GetProduct(GetProductRequest) returns (GetProductResponse);
   rpc SearchProducts(SearchProductsRequest) returns (SearchProductsResponse);
+  rpc GetPageBySlug(GetPageBySlugRequest) returns (GetPageBySlugResponse);
 
   rpc CreateCart(CreateCartRequest) returns (CreateCartResponse);
   rpc AddCartItem(AddCartItemRequest) returns (AddCartItemResponse);
@@ -98,6 +99,29 @@ message SearchProductsRequest {
 message SearchProductsResponse {
   repeated Product products = 1;
   PageResult page = 2;
+}
+
+message StorefrontPage {
+  string id = 1;
+  string title = 2;
+  string slug = 3;
+  string body = 4;
+  string body_format = 5;
+  google.protobuf.Timestamp publish_start_at = 6;
+  google.protobuf.Timestamp publish_end_at = 7;
+  string seo_title = 8;
+  string seo_description = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message GetPageBySlugRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string slug = 3;
+}
+
+message GetPageBySlugResponse {
+  StorefrontPage page = 1;
 }
 
 message CreateCartRequest {

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import AdminPageHeader from "@/components/admin-page-header";
+import { AdminTableToolbar } from "@/components/admin-table";
 import { useApiCall } from "@/lib/use-api-call";
 import { useAsyncResource } from "@/lib/use-async-resource";
 import { deleteCategory, listCategoriesAdmin, reorderCategories } from "@/lib/category";
@@ -89,18 +91,15 @@ export default function CategoriesPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Catalog</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">Categories</h1>
-          <p className="mt-2 text-sm text-neutral-600">
-            Manage hierarchical product categories and ordering.
-          </p>
-        </div>
-        <Button asChild>
-          <Link href="/admin/categories/new">New Category</Link>
-        </Button>
-      </div>
+      <AdminPageHeader
+        title="Categories"
+        description="Manage hierarchical product categories and ordering."
+        actions={
+          <Button asChild>
+            <Link href="/admin/categories/new">New Category</Link>
+          </Button>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
@@ -109,7 +108,15 @@ export default function CategoriesPage() {
             Click a category to edit its details or reorder within its parent.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <AdminTableToolbar
+            left={`${flattened.length} categories`}
+            right={
+              <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
+                Refresh
+              </Button>
+            }
+          />
           {loading ? (
             <div className="text-sm text-neutral-500">Loading categories…</div>
           ) : error ? (

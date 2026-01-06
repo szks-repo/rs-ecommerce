@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useApiCall } from "@/lib/use-api-call";
+import AdminPageHeader from "@/components/admin-page-header";
 import { createCustomerMetafieldDefinition } from "@/lib/customer";
 import { createProductMetafieldDefinition } from "@/lib/product";
 import { identityListRoles } from "@/lib/identity";
@@ -202,16 +203,15 @@ export default function NewMetafieldPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-neutral-400">Metafields</div>
-          <h1 className="mt-2 text-2xl font-semibold text-neutral-900">New definition</h1>
-          <p className="mt-2 text-sm text-neutral-500">
-            Create a new metafield definition for a resource type.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => router.push("/admin/settings/metafields")}>Back to list</Button>
-      </div>
+      <AdminPageHeader
+        title="New definition"
+        description="Create a new metafield definition for a resource type."
+        actions={
+          <Button variant="outline" onClick={() => router.push("/admin/settings/metafields")}>
+            Back to list
+          </Button>
+        }
+      />
 
       <Card className="border-neutral-200 bg-white text-neutral-900">
         <CardHeader>
