@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { getTenantId, listProducts } from "@/lib/storefront";
+import { getStoreCode, getTenantId, listProducts } from "@/lib/storefront";
 import type { Product } from "@/gen/ecommerce/v1/storefront_pb";
 
 const TENANT_STORAGE_KEY = "storefront_tenant_id";
+const STORE_CODE_STORAGE_KEY = "storefront_store_code";
 
 export default function HomePage() {
   const [tenantId, setTenantId] = useState(getTenantId());
+  const [storeCode, setStoreCode] = useState(getStoreCode());
   const [products, setProducts] = useState<Product[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -17,6 +19,10 @@ export default function HomePage() {
     const saved = window.localStorage.getItem(TENANT_STORAGE_KEY);
     if (saved) {
       setTenantId(saved);
+    }
+    const savedStore = window.localStorage.getItem(STORE_CODE_STORAGE_KEY);
+    if (savedStore) {
+      setStoreCode(savedStore);
     }
   }, []);
 
@@ -27,12 +33,17 @@ export default function HomePage() {
       setError("tenant_id is required. Set it below to load products.");
       return;
     }
+    if (!storeCode.trim()) {
+      setError("store_code is required for pages and storefront context.");
+      return;
+    }
     setError(null);
     setIsLoading(true);
     try {
       const data = await listProducts(tenantId.trim());
       setProducts(data.products ?? []);
       window.localStorage.setItem(TENANT_STORAGE_KEY, tenantId.trim());
+      window.localStorage.setItem(STORE_CODE_STORAGE_KEY, storeCode.trim());
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load products");
     } finally {
@@ -81,6 +92,25 @@ export default function HomePage() {
           </button>
         </div>
         {error ? <div className="warning">{error}</div> : null}
+      </div>
+
+      <div className="card" style={{ marginTop: "24px" }}>
+        <label className="meta" htmlFor="storeCodeInput">
+          Store code
+        </label>
+        <div style={{ display: "flex", gap: "12px", marginTop: "8px" }}>
+          <input
+            id="storeCodeInput"
+            className="pill"
+            style={{ flex: 1, borderRadius: "12px", padding: "10px 12px" }}
+            value={storeCode}
+            onChange={(e) => setStoreCode(e.target.value)}
+            placeholder="store code"
+          />
+        </div>
+        <p className="subhead" style={{ marginTop: "8px" }}>
+          Required to resolve pages by slug.
+        </p>
       </div>
 
       <div className="grid">

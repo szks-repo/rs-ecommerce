@@ -4,6 +4,7 @@ use sqlx::{Postgres, Row, Transaction};
 
 use crate::{
     AppState,
+    auction::status::{AuctionStatus, AuctionType, AutoBidStatus},
     infrastructure::audit,
     pb::pb,
     rpc::json::ConnectError,
@@ -17,18 +18,6 @@ use crate::{
     store_settings::service::resolve_store_context,
 };
 
-const AUCTION_TYPE_OPEN: &str = "open";
-const AUCTION_TYPE_SEALED: &str = "sealed";
-
-const STATUS_DRAFT: &str = "draft";
-const STATUS_SCHEDULED: &str = "scheduled";
-const STATUS_RUNNING: &str = "running";
-const STATUS_ENDED: &str = "ended";
-const STATUS_AWAITING_APPROVAL: &str = "awaiting_approval";
-const STATUS_APPROVED: &str = "approved";
-
-const AUTO_BID_STATUS_ACTIVE: &str = "active";
-const AUTO_BID_STATUS_DISABLED: &str = "disabled";
 
 #[derive(Debug, Clone)]
 struct AutoBidCandidate {
@@ -56,15 +45,7 @@ pub async fn create_auction(
         ));
     }
 
-    if req.auction_type != AUCTION_TYPE_OPEN && req.auction_type != AUCTION_TYPE_SEALED {
-        return Err((
-            StatusCode::BAD_REQUEST,
-            Json(ConnectError {
-                code: crate::rpc::json::ErrorCode::InvalidArgument,
-                message: "auction_type is invalid".to_string(),
-            }),
-        ));
-    }
+    let auction_type = AuctionType::try_from(req.auction_type.as_str()).map_err(invalid_arg)?;
     if req.title.trim().is_empty() {
         return Err(invalid_arg("title is required"));
     }
@@ -89,12 +70,18 @@ pub async fn create_auction(
     };
 
     let now = Utc::now();
-    let status = if req.status == STATUS_DRAFT {
-        STATUS_DRAFT.to_string()
+    let status = if req.status.trim().is_empty() {
+        if start_at > now {
+            AuctionStatus::Scheduled
+        } else {
+            AuctionStatus::Running
+        }
+    } else if AuctionStatus::try_from(req.status.as_str()).map_err(invalid_arg)? == AuctionStatus::Draft {
+        AuctionStatus::Draft
     } else if start_at > now {
-        STATUS_SCHEDULED.to_string()
+        AuctionStatus::Scheduled
     } else {
-        STATUS_RUNNING.to_string()
+        AuctionStatus::Running
     };
 
     let mut tx = state.db.begin().await.map_err(db_error)?;
@@ -120,12 +107,12 @@ pub async fn create_auction(
         return Err(invalid_arg("sku_id not found"));
     };
 
-    let current_price_amount = if req.auction_type == AUCTION_TYPE_OPEN {
+    let current_price_amount = if auction_type == AuctionType::Open {
         Some(start_price_amount)
     } else {
         None
     };
-    let current_price_currency = if req.auction_type == AUCTION_TYPE_OPEN {
+    let current_price_currency = if auction_type == AuctionType::Open {
         Some(start_price_currency.clone())
     } else {
         None
@@ -149,7 +136,7 @@ pub async fn create_auction(
     .bind(store_uuid.as_uuid())
     .bind(product_id)
     .bind(sku_uuid)
-    .bind(req.auction_type.as_str())
+    .bind(auction_type.as_str())
     .bind(status.as_str())
     .bind(start_at)
     .bind(end_at)
@@ -174,8 +161,8 @@ pub async fn create_auction(
         store_id: store_id.clone(),
         product_id: product_id.to_string(),
         sku_id: req.sku_id,
-        auction_type: req.auction_type,
-        status,
+        auction_type: auction_type.as_str().to_string(),
+        status: status.as_str().to_string(),
         start_at: chrono_to_timestamp(Some(start_at)),
         end_at: chrono_to_timestamp(Some(end_at)),
         bid_increment: Some(money_from_parts(increment_amount, increment_currency.clone())),
@@ -230,9 +217,7 @@ pub async fn update_auction(
     if req.sku_id.is_empty() {
         return Err(invalid_arg("sku_id is required"));
     }
-    if req.auction_type != AUCTION_TYPE_OPEN && req.auction_type != AUCTION_TYPE_SEALED {
-        return Err(invalid_arg("auction_type is invalid"));
-    }
+    let auction_type = AuctionType::try_from(req.auction_type.as_str()).map_err(invalid_arg)?;
     if req.title.trim().is_empty() {
         return Err(invalid_arg("title is required"));
     }
@@ -270,7 +255,8 @@ pub async fn update_auction(
     .await
     .map_err(db_error)?;
     let current_status: String = row.get("status");
-    if current_status != STATUS_DRAFT {
+    let current_status = AuctionStatus::try_from(current_status.as_str()).map_err(invalid_arg)?;
+    if current_status != AuctionStatus::Draft {
         return Err(invalid_arg("only draft auctions can be edited"));
     }
 
@@ -296,24 +282,29 @@ pub async fn update_auction(
 
     let now = Utc::now();
     let requested_status = req.status.trim();
-    let status = if requested_status.is_empty() || requested_status == STATUS_DRAFT {
-        STATUS_DRAFT.to_string()
-    } else if requested_status == STATUS_SCHEDULED {
-        if start_at > now {
-            STATUS_SCHEDULED.to_string()
-        } else {
-            STATUS_RUNNING.to_string()
-        }
+    let status = if requested_status.is_empty() {
+        AuctionStatus::Draft
     } else {
-        return Err(invalid_arg("status is invalid"));
+        AuctionStatus::try_from(requested_status).map_err(invalid_arg)?
+    };
+    let status = match status {
+        AuctionStatus::Draft => AuctionStatus::Draft,
+        AuctionStatus::Scheduled => {
+            if start_at > now {
+                AuctionStatus::Scheduled
+            } else {
+                AuctionStatus::Running
+            }
+        }
+        _ => return Err(invalid_arg("status is invalid")),
     };
 
-    let current_price_amount = if req.auction_type == AUCTION_TYPE_OPEN {
+    let current_price_amount = if auction_type == AuctionType::Open {
         Some(start_price_amount)
     } else {
         None
     };
-    let current_price_currency = if req.auction_type == AUCTION_TYPE_OPEN {
+    let current_price_currency = if auction_type == AuctionType::Open {
         Some(start_price_currency.clone())
     } else {
         None
@@ -346,7 +337,7 @@ pub async fn update_auction(
     )
     .bind(sku_uuid)
     .bind(product_id)
-    .bind(req.auction_type.as_str())
+    .bind(auction_type.as_str())
     .bind(status.as_str())
     .bind(start_at)
     .bind(end_at)
@@ -418,6 +409,7 @@ pub async fn list_auctions(
         .await
         .map_err(db_error)?
     } else {
+        let status = AuctionStatus::try_from(status.as_str()).map_err(invalid_arg)?;
         sqlx::query(
             r#"
             SELECT *
@@ -567,7 +559,9 @@ pub async fn place_bid(
     .map_err(db_error)?;
 
     let auction_type: String = row.get("auction_type");
+    let auction_type = AuctionType::try_from(auction_type.as_str()).map_err(invalid_arg)?;
     let status: String = row.get("status");
+    let status = AuctionStatus::try_from(status.as_str()).map_err(invalid_arg)?;
     let start_at: DateTime<Utc> = row.get("start_at");
     let end_at: DateTime<Utc> = row.get("end_at");
     let now = Utc::now();
@@ -578,7 +572,7 @@ pub async fn place_bid(
     if now >= end_at {
         return Err(invalid_arg("auction has already ended"));
     }
-    if status != STATUS_RUNNING && status != STATUS_SCHEDULED {
+    if status != AuctionStatus::Running && status != AuctionStatus::Scheduled {
         return Err(invalid_arg("auction is not running"));
     }
 
@@ -588,7 +582,7 @@ pub async fn place_bid(
         return Err(invalid_arg("currency mismatch"));
     }
 
-    if auction_type == AUCTION_TYPE_OPEN {
+    if auction_type == AuctionType::Open {
         let increment_amount: i64 = row.get("bid_increment_amount");
         let current_price_amount: Option<i64> = row.get("current_price_amount");
         let min_amount = match current_price_amount {
@@ -623,13 +617,13 @@ pub async fn place_bid(
     let buyout_amount: Option<i64> = row.get("buyout_price_amount");
     let buyout_currency: Option<String> = row.get("buyout_price_currency");
 
-    let mut next_status = status.clone();
+    let mut next_status = status;
     let mut winning_bid_id: Option<uuid::Uuid> = row.get("winning_bid_id");
     let mut winning_amount: Option<i64> = row.get("winning_price_amount");
     let mut current_bid_id: Option<uuid::Uuid> = row.get("current_bid_id");
     let mut current_price_amount: Option<i64> = row.get("current_price_amount");
 
-    if auction_type == AUCTION_TYPE_OPEN {
+    if auction_type == AuctionType::Open {
         current_bid_id = Some(bid_id);
         current_price_amount = Some(bid_amount);
         winning_bid_id = Some(bid_id);
@@ -643,11 +637,11 @@ pub async fn place_bid(
         && cur == bid_currency
         && bid_amount >= buyout
     {
-        next_status = STATUS_AWAITING_APPROVAL.to_string();
+        next_status = AuctionStatus::AwaitingApproval;
     }
 
-    if status == STATUS_SCHEDULED && now >= start_at {
-        next_status = STATUS_RUNNING.to_string();
+    if status == AuctionStatus::Scheduled && now >= start_at {
+        next_status = AuctionStatus::Running;
     }
 
     sqlx::query(
@@ -738,7 +732,8 @@ pub async fn set_auto_bid(
         .map_err(db_error)?;
     let auction = auction_from_row(&auction_row);
     let auction_type: String = auction_row.get("auction_type");
-    if auction_type != AUCTION_TYPE_OPEN {
+    let auction_type = AuctionType::try_from(auction_type.as_str()).map_err(invalid_arg)?;
+    if auction_type != AuctionType::Open {
         return Err(invalid_arg("auto bid is only available for open auctions"));
     }
 
@@ -780,9 +775,9 @@ pub async fn set_auto_bid(
     }
 
     let status = if enabled {
-        AUTO_BID_STATUS_ACTIVE
+        AutoBidStatus::Active
     } else {
-        AUTO_BID_STATUS_DISABLED
+        AutoBidStatus::Disabled
     };
 
     let row = sqlx::query(
@@ -804,7 +799,7 @@ pub async fn set_auto_bid(
     .bind(customer_uuid)
     .bind(max_amount_value)
     .bind(max_currency.as_str())
-    .bind(status)
+    .bind(status.as_str())
     .fetch_one(tx.as_mut())
     .await
     .map_err(db_error)?;
@@ -944,8 +939,10 @@ async fn apply_auto_bids_tx(
     .map_err(db_error)?;
 
     let auction_type: String = row.get("auction_type");
+    let auction_type = AuctionType::try_from(auction_type.as_str()).map_err(invalid_arg)?;
     let status: String = row.get("status");
-    if auction_type != AUCTION_TYPE_OPEN || status != STATUS_RUNNING {
+    let status = AuctionStatus::try_from(status.as_str()).map_err(invalid_arg)?;
+    if auction_type != AuctionType::Open || status != AuctionStatus::Running {
         return Ok(None);
     }
 
@@ -982,7 +979,7 @@ async fn apply_auto_bids_tx(
     )
     .bind(auction_uuid)
     .bind(store_uuid)
-    .bind(AUTO_BID_STATUS_ACTIVE)
+    .bind(AutoBidStatus::Active.as_str())
     .bind(start_price_currency.as_str())
     .fetch_all(tx.as_mut())
     .await
@@ -1046,12 +1043,12 @@ async fn apply_auto_bids_tx(
     .await
     .map_err(db_error)?;
 
-    let mut next_status = status.clone();
+    let mut next_status = status;
     if let (Some(buyout), Some(cur)) = (buyout_amount, buyout_currency.clone())
         && cur == start_price_currency
         && target_amount >= buyout
     {
-        next_status = STATUS_AWAITING_APPROVAL.to_string();
+        next_status = AuctionStatus::AwaitingApproval;
     }
 
     sqlx::query(
@@ -1163,13 +1160,13 @@ pub async fn close_auction(
         (None, None, None)
     };
 
-    let mut next_status = STATUS_ENDED.to_string();
+    let mut next_status = AuctionStatus::Ended;
     if let (Some(win_amount), Some(win_currency)) = (winning_amount, winning_currency.clone())
         && (reserve_amount.is_none()
             || (reserve_currency.as_deref() == Some(win_currency.as_str())
                 && reserve_amount.unwrap_or(0) <= win_amount))
     {
-        next_status = STATUS_AWAITING_APPROVAL.to_string();
+        next_status = AuctionStatus::AwaitingApproval;
     }
 
     sqlx::query(
@@ -1256,7 +1253,8 @@ pub async fn approve_auction(
     .map_err(db_error)?;
 
     let status: String = row.get("status");
-    if status != STATUS_AWAITING_APPROVAL {
+    let status = AuctionStatus::try_from(status.as_str()).map_err(invalid_arg)?;
+    if status != AuctionStatus::AwaitingApproval {
         return Err(invalid_arg("auction is not awaiting approval"));
     }
 
@@ -1270,7 +1268,7 @@ pub async fn approve_auction(
         WHERE id = $3
         "#,
     )
-    .bind(STATUS_APPROVED)
+    .bind(AuctionStatus::Approved.as_str())
     .bind(approved_by)
     .bind(auction_uuid)
     .execute(tx.as_mut())

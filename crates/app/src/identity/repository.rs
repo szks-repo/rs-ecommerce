@@ -1,7 +1,10 @@
 use sqlx::Row;
 use sqlx::{Executor, Postgres, QueryBuilder};
 
-use crate::identity::error::{IdentityError, IdentityResult};
+use crate::identity::{
+    error::{IdentityError, IdentityResult},
+    status::StoreStaffStatus,
+};
 
 pub struct PgIdentityRepository<'a> {
     db: &'a sqlx::PgPool,
@@ -694,7 +697,7 @@ impl<'a> IdentityRepository for PgIdentityRepository<'a> {
         .bind(store_uuid)
         .bind(email)
         .bind(role_uuid)
-        .bind("invited")
+        .bind(StoreStaffStatus::Invited.as_str())
         .bind(display_name)
         .execute(&mut *exec)
         .await

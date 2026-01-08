@@ -134,25 +134,89 @@ async fn process_request(pool: &PgPool, request: ReservationRequest, ttl_seconds
     };
 
     let mut tx = pool.begin().await?;
-    let updated = sqlx::query(
+    let stock_row = sqlx::query(
         r#"
-        UPDATE inventory_stocks
-        SET reserved = reserved + $1,
-            updated_at = now()
-        WHERE variant_id = $2
-          AND location_id = $3
-          AND store_id = $4
-          AND stock - reserved >= $1
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE sku_id = $1
+          AND location_id = $2
+          AND store_id = $3
+        FOR UPDATE
         "#,
     )
-    .bind(request.quantity)
+    .bind(request.sku_id)
+    .bind(location_id)
+    .bind(request.store_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let Some(stock_row) = stock_row else {
+        sqlx::query(
+            r#"
+            UPDATE inventory_reservation_requests
+            SET status = 'failed', updated_at = now()
+            WHERE id = $1
+            "#,
+        )
+        .bind(request.id)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        return Ok(false);
+    };
+
+    let before_on_hand: i32 = stock_row.get("on_hand");
+    let before_reserved: i32 = stock_row.get("reserved");
+    if before_on_hand - before_reserved < request.quantity {
+        sqlx::query(
+            r#"
+            UPDATE inventory_reservation_requests
+            SET status = 'failed', updated_at = now()
+            WHERE id = $1
+            "#,
+        )
+        .bind(request.id)
+        .execute(&mut *tx)
+        .await?;
+        tx.commit().await?;
+        return Ok(false);
+    }
+
+    let after_reserved = before_reserved + request.quantity;
+    sqlx::query(
+        r#"
+        UPDATE inventory_stocks
+        SET reserved = $1,
+            updated_at = now()
+        WHERE sku_id = $2
+          AND location_id = $3
+          AND store_id = $4
+        "#,
+    )
+    .bind(after_reserved)
     .bind(request.sku_id)
     .bind(location_id)
     .bind(request.store_id)
     .execute(&mut *tx)
     .await?;
 
-    if updated.rows_affected() == 1 {
+    insert_inventory_movement_tx(
+        &mut tx,
+        request.store_id,
+        request.sku_id,
+        location_id,
+        "reserve",
+        request.quantity,
+        before_on_hand,
+        before_on_hand,
+        before_reserved,
+        after_reserved,
+        Some("cart_reservation"),
+        Some(request.cart_id),
+    )
+    .await?;
+
+    {
         let expires_at = chrono::Utc::now() + chrono::Duration::seconds(ttl_seconds);
         sqlx::query(
             r#"
@@ -184,21 +248,10 @@ async fn process_request(pool: &PgPool, request: ReservationRequest, ttl_seconds
         .bind(request.id)
         .execute(&mut *tx)
         .await?;
-    } else {
-        sqlx::query(
-            r#"
-            UPDATE inventory_reservation_requests
-            SET status = 'failed', updated_at = now()
-            WHERE id = $1
-            "#,
-        )
-        .bind(request.id)
-        .execute(&mut *tx)
-        .await?;
     }
 
     tx.commit().await?;
-    Ok(updated.rows_affected() == 1)
+    Ok(true)
 }
 
 async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<usize> {
@@ -231,25 +284,102 @@ async fn release_expired_reservations(pool: &PgPool, batch_size: i64) -> Result<
         let location_id: Option<uuid::Uuid> = row.get("location_id");
         let quantity: i32 = row.get("quantity");
         if let Some(location_id) = location_id {
-            sqlx::query(
+            let stock_row = sqlx::query(
                 r#"
-                UPDATE inventory_stocks
-                SET reserved = GREATEST(reserved - $1, 0),
-                    updated_at = now()
-                WHERE variant_id = $2
-                  AND location_id = $3
-                  AND store_id = $4
+                SELECT on_hand, reserved
+                FROM inventory_stocks
+                WHERE sku_id = $1
+                  AND location_id = $2
+                  AND store_id = $3
+                FOR UPDATE
                 "#,
             )
-            .bind(quantity)
             .bind(sku_id)
             .bind(location_id)
             .bind(store_id)
-            .execute(&mut *tx)
+            .fetch_optional(&mut *tx)
             .await?;
+            if let Some(stock_row) = stock_row {
+                let before_on_hand: i32 = stock_row.get("on_hand");
+                let before_reserved: i32 = stock_row.get("reserved");
+                let after_reserved = (before_reserved - quantity).max(0);
+
+                sqlx::query(
+                    r#"
+                    UPDATE inventory_stocks
+                    SET reserved = $1,
+                        updated_at = now()
+                    WHERE sku_id = $2
+                      AND location_id = $3
+                      AND store_id = $4
+                    "#,
+                )
+                .bind(after_reserved)
+                .bind(sku_id)
+                .bind(location_id)
+                .bind(store_id)
+                .execute(&mut *tx)
+                .await?;
+
+                insert_inventory_movement_tx(
+                    &mut tx,
+                    store_id,
+                    sku_id,
+                    location_id,
+                    "release",
+                    quantity,
+                    before_on_hand,
+                    before_on_hand,
+                    before_reserved,
+                    after_reserved,
+                    Some("reservation_expired"),
+                    None,
+                )
+                .await?;
+            }
         }
     }
 
     tx.commit().await?;
     Ok(released)
+}
+
+async fn insert_inventory_movement_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    store_id: uuid::Uuid,
+    sku_id: uuid::Uuid,
+    location_id: uuid::Uuid,
+    movement_type: &str,
+    quantity: i32,
+    before_on_hand: i32,
+    after_on_hand: i32,
+    before_reserved: i32,
+    after_reserved: i32,
+    source_type: Option<&str>,
+    source_id: Option<uuid::Uuid>,
+) -> Result<()> {
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_movements (
+            store_id, sku_id, location_id, movement_type, quantity,
+            before_on_hand, after_on_hand, before_reserved, after_reserved,
+            source_type, source_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        "#,
+    )
+    .bind(store_id)
+    .bind(sku_id)
+    .bind(location_id)
+    .bind(movement_type)
+    .bind(quantity)
+    .bind(before_on_hand)
+    .bind(after_on_hand)
+    .bind(before_reserved)
+    .bind(after_reserved)
+    .bind(source_type)
+    .bind(source_id)
+    .execute(&mut **tx)
+    .await?;
+    Ok(())
 }

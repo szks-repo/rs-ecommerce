@@ -697,6 +697,7 @@ pub async fn list_sku_images(
                 provider: row.get("provider"),
                 bucket: row.get("bucket"),
                 object_key: row.get("object_key"),
+                tags: Vec::new(),
                 content_type: row.get::<Option<String>, _>("content_type").unwrap_or_default(),
                 size_bytes: row.get::<Option<i64>, _>("size_bytes").unwrap_or_default(),
                 created_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("created_at"))),

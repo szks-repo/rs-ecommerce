@@ -13,6 +13,7 @@ import { getActiveAccessToken } from "@/lib/auth";
 import { buildProductPreviewUrl } from "@/lib/storefront";
 import type { ProductAdmin } from "@/gen/ecommerce/v1/backoffice_pb";
 import { AdminTableToolbar } from "@/components/admin-table";
+import ProductInventoryQuickEdit from "@/components/product-inventory-quick-edit";
 
 export default function ProductList() {
   const [query, setQuery] = useState("");
@@ -111,6 +112,9 @@ export default function ProductList() {
                       </a>
                     </div>
                   </div>
+                </div>
+                <div className="mt-3">
+                  <ProductInventoryQuickEdit productId={product.id} />
                 </div>
                 {product.description ? (
                   <div className="mt-2 text-sm text-neutral-600">

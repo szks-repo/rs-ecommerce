@@ -10,7 +10,11 @@ import {
   UpdateProductRequestSchema,
   CreateVariantRequestSchema,
   UpdateVariantRequestSchema,
+  ListInventoryStocksRequestSchema,
+  ListInventoryMovementsRequestSchema,
   SetInventoryRequestSchema,
+  AdjustInventoryRequestSchema,
+  TransferInventoryRequestSchema,
   ListMediaAssetsRequestSchema,
   CreateMediaAssetRequestSchema,
   CreateMediaUploadUrlRequestSchema,
@@ -261,18 +265,90 @@ export async function updateVariant(params: {
   );
 }
 
+export async function listInventoryStocks(params: {
+  skuId?: string;
+  locationId?: string;
+  pageToken?: string;
+  pageSize?: number;
+}) {
+  return client.listInventoryStocks(
+    create(ListInventoryStocksRequestSchema, {
+      skuId: params.skuId || "",
+      locationId: params.locationId || "",
+      page: {
+        pageToken: params.pageToken || "",
+        pageSize: params.pageSize ?? 50,
+      },
+    })
+  );
+}
+
+export async function listInventoryMovements(params: {
+  skuId?: string;
+  locationId?: string;
+  movementType?: string;
+  pageToken?: string;
+  pageSize?: number;
+}) {
+  return client.listInventoryMovements(
+    create(ListInventoryMovementsRequestSchema, {
+      skuId: params.skuId || "",
+      locationId: params.locationId || "",
+      movementType: params.movementType || "",
+      page: {
+        pageToken: params.pageToken || "",
+        pageSize: params.pageSize ?? 50,
+      },
+    })
+  );
+}
+
 export async function setInventory(params: {
-  variantId: string;
+  skuId: string;
   locationId: string;
-  stock: number;
+  onHand: number;
   reserved: number;
 }) {
   return client.setInventory(
     create(SetInventoryRequestSchema, {
-      variantId: params.variantId,
+      skuId: params.skuId,
       locationId: params.locationId,
-      stock: params.stock,
+      onHand: params.onHand,
       reserved: params.reserved,
+    })
+  );
+}
+
+export async function adjustInventory(params: {
+  skuId: string;
+  locationId: string;
+  delta: number;
+  reason?: string;
+}) {
+  return client.adjustInventory(
+    create(AdjustInventoryRequestSchema, {
+      skuId: params.skuId,
+      locationId: params.locationId,
+      delta: params.delta,
+      reason: params.reason || "",
+    })
+  );
+}
+
+export async function transferInventory(params: {
+  skuId: string;
+  fromLocationId: string;
+  toLocationId: string;
+  quantity: number;
+  reason?: string;
+}) {
+  return client.transferInventory(
+    create(TransferInventoryRequestSchema, {
+      skuId: params.skuId,
+      fromLocationId: params.fromLocationId,
+      toLocationId: params.toLocationId,
+      quantity: params.quantity,
+      reason: params.reason || "",
     })
   );
 }

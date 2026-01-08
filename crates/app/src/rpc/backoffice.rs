@@ -77,7 +77,7 @@ pub async fn get_dashboard_summary(
             .map_err(crate::infrastructure::db::error)?;
 
     let low_stock_sku_count: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM inventory_stocks WHERE store_id = $1 AND (stock - reserved) <= 0")
+        sqlx::query_scalar("SELECT COUNT(*) FROM inventory_stocks WHERE store_id = $1 AND (on_hand - reserved) <= 0")
             .bind(store_uuid.as_uuid())
             .fetch_one(&state.db)
             .await
@@ -491,6 +491,52 @@ pub async fn set_inventory(
             inventory: Some(inventory),
         }),
     ))
+}
+
+pub async fn list_inventory_stocks(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListInventoryStocksResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListInventoryStocksRequest>(&headers, body)?;
+    let (inventories, page) = product::service::list_inventory_stocks(&state, req).await?;
+    Ok((StatusCode::OK, Json(pb::ListInventoryStocksResponse { inventories, page: Some(page) })))
+}
+
+pub async fn list_inventory_movements(
+    State(state): State<AppState>,
+    Extension(_actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::ListInventoryMovementsResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::ListInventoryMovementsRequest>(&headers, body)?;
+    let (movements, page) = product::service::list_inventory_movements(&state, req).await?;
+    Ok((StatusCode::OK, Json(pb::ListInventoryMovementsResponse { movements, page: Some(page) })))
+}
+
+pub async fn adjust_inventory(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::AdjustInventoryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::AdjustInventoryRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let inventory = product::service::adjust_inventory(&state, req, actor).await?;
+    Ok((StatusCode::OK, Json(pb::AdjustInventoryResponse { inventory: Some(inventory) })))
+}
+
+pub async fn transfer_inventory(
+    State(state): State<AppState>,
+    Extension(actor_ctx): Extension<Option<pb::ActorContext>>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> Result<(StatusCode, Json<pb::TransferInventoryResponse>), (StatusCode, Json<ConnectError>)> {
+    let req = parse_request::<pb::TransferInventoryRequest>(&headers, body)?;
+    let actor = req.actor.clone().or(actor_ctx);
+    let resp = product::service::transfer_inventory(&state, req, actor).await?;
+    Ok((StatusCode::OK, Json(resp)))
 }
 
 pub async fn list_orders(

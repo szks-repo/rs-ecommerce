@@ -462,6 +462,42 @@ pub fn router(state: AppState) -> Router<()> {
             )),
         )
         .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListInventoryStocks",
+            post(backoffice::list_inventory_stocks).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/ListInventoryMovements",
+            post(backoffice::list_inventory_movements).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogRead)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/AdjustInventory",
+            post(backoffice::adjust_inventory).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
+        )
+        .route(
+            "/rpc/ecommerce.v1.BackofficeService/TransferInventory",
+            post(backoffice::transfer_inventory).route_layer(middleware::from_fn_with_state(
+                state.clone(),
+                |State(state), req, next| {
+                    permissions::require_permission_key(state, req, next, permissions::PermissionKey::CatalogWrite)
+                },
+            )),
+        )
+        .route(
             "/rpc/ecommerce.v1.BackofficeService/ListOrders",
             post(backoffice::list_orders).route_layer(middleware::from_fn_with_state(
                 state.clone(),

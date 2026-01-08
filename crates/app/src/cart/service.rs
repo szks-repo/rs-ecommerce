@@ -235,20 +235,45 @@ pub async fn remove_cart_item(state: &AppState, req: pb::RemoveCartItemRequest) 
         let sku_uuid = SkuId::parse(&sku_id)?;
         let location_uuid = location_id.as_deref().map(LocationId::parse).transpose()?;
         if let Some(location_uuid) = location_uuid {
+            let (before_on_hand, before_reserved) = fetch_inventory_stock_tx(
+                &mut tx,
+                store_uuid.as_uuid(),
+                sku_uuid.as_uuid(),
+                location_uuid.as_uuid(),
+            )
+            .await?;
+            let after_reserved = (before_reserved - quantity).max(0);
             sqlx::query(
                 r#"
                 UPDATE inventory_stocks
-                SET reserved = GREATEST(reserved - $1, 0),
+                SET reserved = $1,
                     updated_at = now()
-                WHERE variant_id = $2 AND location_id = $3
+                WHERE store_id = $2 AND sku_id = $3 AND location_id = $4
                 "#,
             )
-            .bind(quantity)
+            .bind(after_reserved)
+            .bind(store_uuid.as_uuid())
             .bind(sku_uuid.as_uuid())
             .bind(location_uuid.as_uuid())
             .execute(&mut *tx)
             .await
             .map_err(CartError::from)?;
+
+            insert_inventory_movement_tx(
+                &mut tx,
+                store_uuid.as_uuid(),
+                sku_uuid.as_uuid(),
+                location_uuid.as_uuid(),
+                "release",
+                quantity,
+                before_on_hand,
+                before_on_hand,
+                before_reserved,
+                after_reserved,
+                Some("cart_item_removed"),
+                Some(cart_item_uuid.as_uuid()),
+            )
+            .await?;
         }
     }
 
@@ -406,20 +431,45 @@ pub async fn update_cart_item(state: &AppState, req: pb::UpdateCartItemRequest) 
             }
 
             if let Some(location_uuid) = location_uuid {
+                let (before_on_hand, before_reserved) = fetch_inventory_stock_tx(
+                    &mut tx,
+                    store_uuid.as_uuid(),
+                    sku_uuid.as_uuid(),
+                    location_uuid.as_uuid(),
+                )
+                .await?;
+                let after_reserved = (before_reserved - release_qty).max(0);
                 sqlx::query(
                     r#"
                     UPDATE inventory_stocks
-                    SET reserved = GREATEST(reserved - $1, 0),
+                    SET reserved = $1,
                         updated_at = now()
-                    WHERE variant_id = $2 AND location_id = $3
+                    WHERE store_id = $2 AND sku_id = $3 AND location_id = $4
                     "#,
                 )
-                .bind(release_qty)
+                .bind(after_reserved)
+                .bind(store_uuid.as_uuid())
                 .bind(sku_uuid.as_uuid())
                 .bind(location_uuid.as_uuid())
                 .execute(&mut *tx)
                 .await
                 .map_err(CartError::from)?;
+
+                insert_inventory_movement_tx(
+                    &mut tx,
+                    store_uuid.as_uuid(),
+                    sku_uuid.as_uuid(),
+                    location_uuid.as_uuid(),
+                    "release",
+                    release_qty,
+                    before_on_hand,
+                    before_on_hand,
+                    before_reserved,
+                    after_reserved,
+                    Some("cart_item_updated"),
+                    Some(cart_item_uuid.as_uuid()),
+                )
+                .await?;
             }
         }
     }
@@ -532,6 +582,7 @@ pub async fn checkout(state: &AppState, tenant_id: String, req: pb::CheckoutRequ
     let tenant_uuid = parse_uuid(&tenant_id, "tenant_id")?;
     let cart_uuid = CartId::parse(&req.cart_id)?;
     let payment_method = PaymentMethod::from_pb(req.payment_method)?;
+    let order_id = uuid::Uuid::new_v4();
 
     let mut tx = state.db.begin().await.map_err(CartError::from)?;
     let store_row =
@@ -627,27 +678,54 @@ pub async fn checkout(state: &AppState, tenant_id: String, req: pb::CheckoutRequ
                 .map(|value| parse_uuid(value, "location_id"))
                 .transpose()?;
             if let Some(location_uuid) = location_uuid {
+                let (before_on_hand, before_reserved) = fetch_inventory_stock_tx(
+                    &mut tx,
+                    store_uuid.as_uuid(),
+                    sku_uuid,
+                    location_uuid,
+                )
+                .await?;
                 let updated = sqlx::query(
                     r#"
                     UPDATE inventory_stocks
-                    SET stock = stock - $1,
+                    SET on_hand = on_hand - $1,
                         reserved = reserved - $1,
                         updated_at = now()
-                    WHERE variant_id = $2
+                    WHERE sku_id = $2
                       AND location_id = $3
-                      AND stock >= $1
+                      AND store_id = $4
+                      AND on_hand >= $1
                       AND reserved >= $1
                     "#,
                 )
                 .bind(quantity)
                 .bind(sku_uuid)
                 .bind(location_uuid)
+                .bind(store_uuid.as_uuid())
                 .execute(&mut *tx)
                 .await
                 .map_err(CartError::from)?;
                 if updated.rows_affected() != 1 {
                     return Err(CartError::failed_precondition("inventory stock is insufficient"));
                 }
+
+                let after_on_hand = (before_on_hand - quantity).max(0);
+                let after_reserved = (before_reserved - quantity).max(0);
+                insert_inventory_movement_tx(
+                    &mut tx,
+                    store_uuid.as_uuid(),
+                    sku_uuid,
+                    location_uuid,
+                    "consume",
+                    quantity,
+                    before_on_hand,
+                    after_on_hand,
+                    before_reserved,
+                    after_reserved,
+                    Some("order_created"),
+                    Some(order_id),
+                )
+                .await?;
             }
 
             let reservation_id: String = reservation.get("id");
@@ -667,7 +745,6 @@ pub async fn checkout(state: &AppState, tenant_id: String, req: pb::CheckoutRequ
         total_amount = total_amount.saturating_add(price_amount * (quantity as i64));
     }
 
-    let order_id = uuid::Uuid::new_v4();
     let status = match payment_method {
         PaymentMethod::BankTransfer => "pending_payment",
         PaymentMethod::Cod => "pending_shipment",
@@ -751,4 +828,71 @@ pub async fn checkout(state: &AppState, tenant_id: String, req: pb::CheckoutRequ
         billing_address: req.billing_address,
         created_at: None,
     })
+}
+
+async fn fetch_inventory_stock_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    store_id: uuid::Uuid,
+    sku_id: uuid::Uuid,
+    location_id: uuid::Uuid,
+) -> CartResult<(i32, i32)> {
+    let row = sqlx::query(
+        r#"
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE store_id = $1 AND sku_id = $2 AND location_id = $3
+        FOR UPDATE
+        "#,
+    )
+    .bind(store_id)
+    .bind(sku_id)
+    .bind(location_id)
+    .fetch_optional(&mut **tx)
+    .await
+    .map_err(CartError::from)?;
+    let Some(row) = row else {
+        return Ok((0, 0));
+    };
+    Ok((row.get::<i32, _>("on_hand"), row.get::<i32, _>("reserved")))
+}
+
+async fn insert_inventory_movement_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    store_id: uuid::Uuid,
+    sku_id: uuid::Uuid,
+    location_id: uuid::Uuid,
+    movement_type: &str,
+    quantity: i32,
+    before_on_hand: i32,
+    after_on_hand: i32,
+    before_reserved: i32,
+    after_reserved: i32,
+    source_type: Option<&str>,
+    source_id: Option<uuid::Uuid>,
+) -> CartResult<()> {
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_movements (
+            store_id, sku_id, location_id, movement_type, quantity,
+            before_on_hand, after_on_hand, before_reserved, after_reserved,
+            source_type, source_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+        "#,
+    )
+    .bind(store_id)
+    .bind(sku_id)
+    .bind(location_id)
+    .bind(movement_type)
+    .bind(quantity)
+    .bind(before_on_hand)
+    .bind(after_on_hand)
+    .bind(before_reserved)
+    .bind(after_reserved)
+    .bind(source_type)
+    .bind(source_id)
+    .execute(&mut **tx)
+    .await
+    .map_err(CartError::from)?;
+    Ok(())
 }

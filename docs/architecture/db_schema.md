@@ -105,21 +105,37 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 
 ### inventory_stocks
 - id (uuid, pk)
-- tenant_id (uuid, fk -> tenants.id)
 - store_id (uuid, fk -> stores.id)
 - location_id (uuid, fk -> store_locations.id)
-- variant_id (uuid, fk -> variants.id)
-- stock (int)
+- sku_id (uuid, fk -> product_skus.id)
+- on_hand (int)
 - reserved (int)
-- updated_at
+- created_at, updated_at
+
+### inventory_movements
+- id (uuid, pk)
+- store_id (uuid, fk -> stores.id)
+- location_id (uuid, fk -> store_locations.id)
+- sku_id (uuid, fk -> product_skus.id)
+- movement_type (text)
+- quantity (int)
+- before_on_hand (int)
+- after_on_hand (int)
+- before_reserved (int)
+- after_reserved (int)
+- reason (text, nullable)
+- source_type (text, nullable)
+- source_id (uuid, nullable)
+- actor_id (uuid, nullable)
+- occurred_at (timestamptz)
 
 ### inventory_reservations
 - id (uuid, pk)
-- tenant_id (uuid, fk -> tenants.id)
 - store_id (uuid, fk -> stores.id)
 - cart_id (uuid, fk -> carts.id)
 - cart_item_id (uuid, fk -> cart_items.id, nullable)
-- variant_id (uuid, fk -> variants.id)
+- sku_id (uuid, fk -> product_skus.id)
+- location_id (uuid, fk -> store_locations.id, nullable)
 - quantity (int)
 - status (text) -- active | expired | consumed | released
 - expires_at (timestamptz)
@@ -127,11 +143,11 @@ Note: `store_settings` and related configuration tables are linked by `store_id`
 
 ### inventory_reservation_requests (async queue)
 - id (uuid, pk)
-- tenant_id (uuid, fk -> tenants.id)
 - store_id (uuid, fk -> stores.id)
 - cart_id (uuid, fk -> carts.id)
 - cart_item_id (uuid, fk -> cart_items.id, nullable)
-- variant_id (uuid, fk -> variants.id)
+- sku_id (uuid, fk -> product_skus.id)
+- location_id (uuid, fk -> store_locations.id, nullable)
 - quantity (int)
 - status (text) -- queued | processing | done | failed
 - is_hot (bool)
@@ -333,7 +349,7 @@ Search index is external (Meilisearch). Track update cursors if needed:
 - store_digital_settings(store_id)
 - product_digital_settings(product_id)
 - variants(product_id, sku)
-- inventory_stocks(variant_id, location_id)
+- inventory_stocks(store_id, sku_id, location_id)
 - inventory_reservations(expires_at) WHERE status = 'active'
 - inventory_reservation_requests(status, is_hot, created_at)
 - orders(tenant_id, created_at)

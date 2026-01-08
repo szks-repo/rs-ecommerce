@@ -7,6 +7,7 @@
 - `docs/architecture/auth_ui.md`
 - `docs/architecture/identity.md`
 - `docs/architecture/inventory_reservation.md`
+- `docs/architecture/inventory_management.md`
 - `docs/architecture/multi_store.md`
 
 ## API

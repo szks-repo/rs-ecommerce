@@ -97,6 +97,26 @@ pub fn require_store_id(store: Option<pb::StoreContext>) -> Result<String, (Stat
     }
 }
 
+pub fn invalid_argument(message: impl Into<String>) -> (StatusCode, Json<ConnectError>) {
+    (
+        StatusCode::BAD_REQUEST,
+        Json(ConnectError {
+            code: ErrorCode::InvalidArgument,
+            message: message.into(),
+        }),
+    )
+}
+
+pub fn not_found(message: impl Into<String>) -> (StatusCode, Json<ConnectError>) {
+    (
+        StatusCode::NOT_FOUND,
+        Json(ConnectError {
+            code: ErrorCode::NotFound,
+            message: message.into(),
+        }),
+    )
+}
+
 fn is_json_content_type(headers: &HeaderMap) -> bool {
     let Some(content_type) = headers.get(axum::http::header::CONTENT_TYPE) else {
         return false;

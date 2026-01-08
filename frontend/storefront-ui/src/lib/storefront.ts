@@ -14,6 +14,13 @@ export function getTenantId() {
   return DEFAULT_TENANT_ID;
 }
 
+export function getStoreCode() {
+  if (typeof window === "undefined") {
+    return "";
+  }
+  return window.localStorage.getItem("storefront_store_code") ?? "";
+}
+
 export async function listProducts(tenantId: string) {
   return client.listProducts(
     create(ListProductsRequestSchema, {
@@ -34,6 +41,9 @@ export async function getProduct(tenantId: string, productId: string) {
 export async function getPageBySlug(tenantId: string, slug: string) {
   return client.getPageBySlug(
     create(GetPageBySlugRequestSchema, {
+      store: {
+        storeCode: getStoreCode(),
+      },
       tenant: { tenantId },
       slug,
     })

@@ -5,8 +5,9 @@ use sqlx::Row;
 use crate::{
     AppState,
     infrastructure::db,
+    pages::status::PageStatus,
     pb::pb,
-    rpc::json::{ConnectError, ErrorCode},
+    rpc::json::{ConnectError, invalid_argument, not_found},
     shared::{
         ids::{StoreId, TenantId, parse_uuid},
         time::{chrono_to_timestamp, timestamp_to_chrono},
@@ -154,7 +155,7 @@ pub async fn create_page(
     .bind(&input.slug)
     .bind(&input.body)
     .bind(&input.body_format)
-    .bind(&input.status)
+    .bind(input.status.as_str())
     .bind(input.publish_start_at)
     .bind(input.publish_end_at)
     .bind(&input.seo_title)
@@ -210,7 +211,7 @@ pub async fn update_page(
     .bind(&input.slug)
     .bind(&input.body)
     .bind(&input.body_format)
-    .bind(&input.status)
+    .bind(input.status.as_str())
     .bind(input.publish_start_at)
     .bind(input.publish_end_at)
     .bind(&input.seo_title)
@@ -357,7 +358,7 @@ struct ValidatedPageInput {
     slug: String,
     body: String,
     body_format: String,
-    status: String,
+    status: PageStatus,
     publish_start_at: Option<DateTime<Utc>>,
     publish_end_at: Option<DateTime<Utc>>,
     seo_title: Option<String>,
@@ -403,33 +404,6 @@ fn normalize_body_format(value: &str) -> PageResult<String> {
     Ok(trimmed.to_string())
 }
 
-fn normalize_status(value: &str) -> PageResult<String> {
-    let normalized = value.trim();
-    if normalized.is_empty() {
-        return Ok("draft".to_string());
-    }
-    match normalized {
-        "draft" | "published" => Ok(normalized.to_string()),
-        _ => Err(invalid_argument("status must be draft or published")),
-    }
-}
-
-fn invalid_argument(message: impl Into<String>) -> (StatusCode, Json<ConnectError>) {
-    (
-        StatusCode::BAD_REQUEST,
-        Json(ConnectError {
-            code: ErrorCode::InvalidArgument,
-            message: message.into(),
-        }),
-    )
-}
-
-fn not_found(message: impl Into<String>) -> (StatusCode, Json<ConnectError>) {
-    (
-        StatusCode::NOT_FOUND,
-        Json(ConnectError {
-            code: ErrorCode::NotFound,
-            message: message.into(),
-        }),
-    )
+fn normalize_status(value: &str) -> PageResult<PageStatus> {
+    PageStatus::try_from(value).map_err(invalid_argument)
 }

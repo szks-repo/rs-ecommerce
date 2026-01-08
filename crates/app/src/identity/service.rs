@@ -14,6 +14,7 @@ use crate::{
     identity::context::{parse_uuid, resolve_store_context, resolve_store_context_without_token_guard},
     identity::error::{IdentityError, IdentityResult},
     identity::repository::{IdentityRepository, PgIdentityRepository},
+    identity::status::StoreStaffStatus,
     infrastructure::{audit, email},
     pb::pb,
     shared::validation::{Email, Phone},
@@ -236,14 +237,17 @@ pub async fn list_staff(
     } else {
         Some(req.role_id.as_str())
     };
-    let status = if req.status.is_empty() {
-        None
-    } else {
-        Some(req.status.as_str())
-    };
+    let status = parse_staff_status_optional(&req.status)?;
 
     let (staff_rows, total) = repo
-        .list_staff(&store_uuid.as_uuid(), page_size, offset, query, role_id, status)
+        .list_staff(
+            &store_uuid.as_uuid(),
+            page_size,
+            offset,
+            query,
+            role_id,
+            status.map(StoreStaffStatus::as_str),
+        )
         .await?;
     let staff = staff_rows
         .into_iter()
@@ -426,6 +430,9 @@ pub async fn update_staff(
         }
     }
 
+    let status = parse_staff_status_optional(&req.status)?;
+    let status_value = status.map(StoreStaffStatus::as_str).unwrap_or("");
+
     let mut tx = state.db.begin().await.map_err(IdentityError::from)?;
     let updated = repo
         .update_staff_tx(
@@ -433,7 +440,7 @@ pub async fn update_staff(
             &staff_uuid,
             &store_uuid.as_uuid(),
             &req.role_id,
-            &req.status,
+            status_value,
             &req.display_name,
         )
         .await?;
@@ -701,13 +708,14 @@ pub async fn accept_invite(
         r#"
         UPDATE store_staff
         SET password_hash = $1,
-            status = 'active',
-            display_name = COALESCE($2, display_name),
+            status = $2,
+            display_name = COALESCE($3, display_name),
             updated_at = now()
-        WHERE id = $3 AND store_id = $4
+        WHERE id = $4 AND store_id = $5
         "#,
     )
     .bind(password_hash)
+    .bind(StoreStaffStatus::Active.as_str())
     .bind(display_name)
     .bind(staff_uuid)
     .bind(store_uuid.as_uuid())
@@ -808,7 +816,8 @@ pub async fn transfer_owner(
     let Some(target_status) = target_status else {
         return Err(IdentityError::not_found("new owner staff not found"));
     };
-    if target_status != "active" {
+    let target_status = parse_staff_status_db(&target_status)?;
+    if target_status != StoreStaffStatus::Active {
         return Err(IdentityError::invalid_argument("new owner must be active"));
     }
 
@@ -1009,7 +1018,8 @@ pub async fn refresh_token(
     };
 
     let status: String = staff_row.get("status");
-    if status != "active" {
+    let status = parse_staff_status_db(&status)?;
+    if status != StoreStaffStatus::Active {
         return Err(IdentityError::unauthenticated("staff is inactive"));
     }
 
@@ -1885,7 +1895,7 @@ async fn create_staff_core(
         phone_value,
         &password_hash,
         &role_uuid,
-        "active",
+        StoreStaffStatus::Active.as_str(),
         display_name_value,
     )
     .await?;
@@ -2028,4 +2038,15 @@ async fn list_roles_core(
         .collect();
 
     Ok(pb::ListRolesResponse { roles })
+}
+
+fn parse_staff_status_optional(value: &str) -> IdentityResult<Option<StoreStaffStatus>> {
+    if value.trim().is_empty() {
+        return Ok(None);
+    }
+    StoreStaffStatus::try_from(value).map(Some).map_err(IdentityError::invalid_argument)
+}
+
+fn parse_staff_status_db(value: &str) -> IdentityResult<StoreStaffStatus> {
+    StoreStaffStatus::try_from(value).map_err(|_| IdentityError::internal("staff status is invalid"))
 }

@@ -35,7 +35,11 @@ service BackofficeService {
   rpc CreateDigitalUploadUrl(CreateDigitalUploadUrlRequest) returns (CreateDigitalUploadUrlResponse);
   rpc CreateDigitalDownloadUrl(CreateDigitalDownloadUrlRequest) returns (CreateDigitalDownloadUrlResponse);
 
+  rpc ListInventoryStocks(ListInventoryStocksRequest) returns (ListInventoryStocksResponse);
+  rpc ListInventoryMovements(ListInventoryMovementsRequest) returns (ListInventoryMovementsResponse);
   rpc SetInventory(SetInventoryRequest) returns (SetInventoryResponse);
+  rpc AdjustInventory(AdjustInventoryRequest) returns (AdjustInventoryResponse);
+  rpc TransferInventory(TransferInventoryRequest) returns (TransferInventoryResponse);
 
   rpc ListOrders(ListOrdersRequest) returns (ListOrdersResponse);
   rpc UpdateOrderStatus(UpdateOrderStatusRequest) returns (UpdateOrderStatusResponse);
@@ -187,11 +191,29 @@ message SkuImageInput {
 }
 
 message InventoryAdmin {
-  string variant_id = 1;
+  string sku_id = 1;
   string location_id = 2;
-  int32 stock = 3;
+  int32 on_hand = 3;
   int32 reserved = 4;
-  google.protobuf.Timestamp updated_at = 5;
+  int32 available = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message InventoryMovement {
+  string id = 1;
+  string sku_id = 2;
+  string location_id = 3;
+  string movement_type = 4;
+  int32 quantity = 5;
+  int32 before_on_hand = 6;
+  int32 after_on_hand = 7;
+  int32 before_reserved = 8;
+  int32 after_reserved = 9;
+  string reason = 10;
+  string source_type = 11;
+  string source_id = 12;
+  string actor_id = 13;
+  google.protobuf.Timestamp occurred_at = 14;
 }
 
 message OrderAdmin {
@@ -730,11 +752,38 @@ message CreateDigitalDownloadUrlResponse {
   google.protobuf.Timestamp expires_at = 2;
 }
 
+message ListInventoryStocksRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  string location_id = 4;
+  PageInfo page = 5;
+}
+
+message ListInventoryStocksResponse {
+  repeated InventoryAdmin inventories = 1;
+  PageResult page = 2;
+}
+
+message ListInventoryMovementsRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  string location_id = 4;
+  string movement_type = 5;
+  PageInfo page = 6;
+}
+
+message ListInventoryMovementsResponse {
+  repeated InventoryMovement movements = 1;
+  PageResult page = 2;
+}
+
 message SetInventoryRequest {
   TenantContext tenant = 1;
-  string variant_id = 2;
+  string sku_id = 2;
   string location_id = 3;
-  int32 stock = 4;
+  int32 on_hand = 4;
   int32 reserved = 5;
   ActorContext actor = 6;
   StoreContext store = 10;
@@ -742,6 +791,36 @@ message SetInventoryRequest {
 
 message SetInventoryResponse {
   InventoryAdmin inventory = 1;
+}
+
+message AdjustInventoryRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  string location_id = 4;
+  int32 delta = 5;
+  string reason = 6;
+  ActorContext actor = 7;
+}
+
+message AdjustInventoryResponse {
+  InventoryAdmin inventory = 1;
+}
+
+message TransferInventoryRequest {
+  StoreContext store = 1;
+  TenantContext tenant = 2;
+  string sku_id = 3;
+  string from_location_id = 4;
+  string to_location_id = 5;
+  int32 quantity = 6;
+  string reason = 7;
+  ActorContext actor = 8;
+}
+
+message TransferInventoryResponse {
+  InventoryAdmin from_inventory = 1;
+  InventoryAdmin to_inventory = 2;
 }
 
 message ListOrdersRequest {

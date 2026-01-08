@@ -20,11 +20,11 @@ import type { StoreLocation } from "@/gen/ecommerce/v1/store_settings_pb";
 import { useApiCall } from "@/lib/use-api-call";
 
 export default function InventorySetForm() {
-  const [variantId, setVariantId] = useState("");
+  const [skuId, setSkuId] = useState("");
   const [locationId, setLocationId] = useState("");
   const [locations, setLocations] = useState<StoreLocation[]>([]);
   const [isLoadingLocations, setIsLoadingLocations] = useState(false);
-  const [stock, setStock] = useState("0");
+  const [onHand, setOnHand] = useState("0");
   const [reserved, setReserved] = useState("0");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { push } = useToast();
@@ -67,25 +67,25 @@ export default function InventorySetForm() {
       if (!locationId) {
         throw new Error("location_id is missing. Please select a location.");
       }
-      const stockValue = Number(stock);
+      const onHandValue = Number(onHand);
       const reservedValue = Number(reserved);
-      if (!Number.isFinite(stockValue) || !Number.isFinite(reservedValue)) {
-        throw new Error("stock/reserved must be numbers.");
+      if (!Number.isFinite(onHandValue) || !Number.isFinite(reservedValue)) {
+        throw new Error("on_hand/reserved must be numbers.");
       }
       const data = await setInventory({
-        variantId,
+        skuId,
         locationId,
-        stock: stockValue,
+        onHand: onHandValue,
         reserved: reservedValue,
       });
       push({
         variant: "success",
         title: "Inventory updated",
-        description: `Inventory updated for variant: ${data.inventory.variantId}`,
+        description: `Inventory updated for SKU: ${data.inventory.skuId}`,
       });
-      setVariantId("");
+      setSkuId("");
       setLocationId("");
-      setStock("0");
+      setOnHand("0");
       setReserved("0");
     } catch (err) {
       notifyError(err, "Update failed", "Unknown error");
@@ -105,11 +105,11 @@ export default function InventorySetForm() {
       <CardContent>
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="inventoryVariantId">Variant ID</Label>
+            <Label htmlFor="inventorySkuId">SKU ID</Label>
             <Input
-              id="inventoryVariantId"
-              value={variantId}
-              onChange={(e) => setVariantId(e.target.value)}
+              id="inventorySkuId"
+              value={skuId}
+              onChange={(e) => setSkuId(e.target.value)}
               required
             />
           </div>
@@ -138,11 +138,11 @@ export default function InventorySetForm() {
           </div>
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="inventoryStock">Stock</Label>
+              <Label htmlFor="inventoryOnHand">On-hand</Label>
               <Input
-                id="inventoryStock"
-                value={stock}
-                onChange={(e) => setStock(e.target.value)}
+                id="inventoryOnHand"
+                value={onHand}
+                onChange={(e) => setOnHand(e.target.value)}
                 required
               />
             </div>

@@ -1,6 +1,88 @@
 -- Consolidated schema for rs-ecommerce.
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+DO $$
+BEGIN
+    IF to_regclass('public.inventory_stocks') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_stocks' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_stocks' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE inventory_stocks RENAME COLUMN variant_id TO sku_id;
+    END IF;
+
+    IF to_regclass('public.inventory_reservations') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_reservations' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_reservations' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE inventory_reservations RENAME COLUMN variant_id TO sku_id;
+    END IF;
+
+    IF to_regclass('public.inventory_reservation_requests') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_reservation_requests' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'inventory_reservation_requests' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE inventory_reservation_requests RENAME COLUMN variant_id TO sku_id;
+    END IF;
+
+    IF to_regclass('public.cart_items') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'cart_items' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'cart_items' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE cart_items RENAME COLUMN variant_id TO sku_id;
+    END IF;
+
+    IF to_regclass('public.sku_images') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'sku_images' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'sku_images' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE sku_images RENAME COLUMN variant_id TO sku_id;
+    END IF;
+
+    IF to_regclass('public.store_digital_assets') IS NOT NULL
+        AND EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'store_digital_assets' AND column_name = 'variant_id'
+        )
+        AND NOT EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_name = 'store_digital_assets' AND column_name = 'sku_id'
+        )
+    THEN
+        ALTER TABLE store_digital_assets RENAME COLUMN variant_id TO sku_id;
+    END IF;
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS tenants (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     name text NOT NULL,
@@ -482,15 +564,46 @@ CREATE INDEX IF NOT EXISTS variant_axis_values_variant_idx
 
 CREATE TABLE IF NOT EXISTS inventory_stocks (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id uuid NOT NULL REFERENCES tenants(id),
     store_id uuid NOT NULL REFERENCES stores(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
     location_id uuid NOT NULL REFERENCES store_locations(id),
-    variant_id uuid NOT NULL REFERENCES product_skus(id),
-    stock int NOT NULL,
-    reserved int NOT NULL,
-    updated_at timestamptz NOT NULL DEFAULT now(),
-    UNIQUE (variant_id, location_id)
+    on_hand int NOT NULL DEFAULT 0,
+    reserved int NOT NULL DEFAULT 0,
+    created_at timestamptz NOT NULL DEFAULT now(),
+    updated_at timestamptz NOT NULL DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS inventory_stocks_unique
+    ON inventory_stocks (store_id, sku_id, location_id);
+CREATE INDEX IF NOT EXISTS inventory_stocks_sku_idx
+    ON inventory_stocks (store_id, sku_id);
+CREATE INDEX IF NOT EXISTS inventory_stocks_location_idx
+    ON inventory_stocks (store_id, location_id);
+
+CREATE TABLE IF NOT EXISTS inventory_movements (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    store_id uuid NOT NULL REFERENCES stores(id),
+    sku_id uuid NOT NULL REFERENCES product_skus(id),
+    location_id uuid NOT NULL REFERENCES store_locations(id),
+    movement_type text NOT NULL,
+    quantity int NOT NULL,
+    before_on_hand int NOT NULL,
+    after_on_hand int NOT NULL,
+    before_reserved int NOT NULL,
+    after_reserved int NOT NULL,
+    reason text,
+    source_type text,
+    source_id uuid,
+    actor_id uuid,
+    occurred_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS inventory_movements_sku_idx
+    ON inventory_movements (store_id, sku_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS inventory_movements_location_idx
+    ON inventory_movements (store_id, location_id, occurred_at DESC);
+CREATE INDEX IF NOT EXISTS inventory_movements_source_idx
+    ON inventory_movements (store_id, source_type, source_id);
 
 CREATE TABLE IF NOT EXISTS store_media_assets (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

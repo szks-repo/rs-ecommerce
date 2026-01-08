@@ -1,4 +1,5 @@
 use axum::{Json, http::StatusCode};
+use chrono::Utc;
 use sqlx::Row;
 
 use crate::rpc::request_context;
@@ -2048,35 +2049,92 @@ pub async fn set_inventory(
             }),
         ));
     }
-    let (store_id, tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    if req.sku_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sku_id is required".to_string(),
+            }),
+        ));
+    }
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
     let store_uuid = StoreId::parse(&store_id)?;
-    let tenant_uuid = TenantId::parse(&tenant_id)?;
-    ensure_variant_belongs_to_store(state, &req.variant_id, &store_id).await?;
+    ensure_variant_belongs_to_store(state, &req.sku_id, &store_id).await?;
     ensure_location_belongs_to_store(state, &req.location_id, &store_id).await?;
+    let actor_id = actor_id_from_ctx(&_actor)?;
     let mut tx = state.db.begin().await.map_err(db::error)?;
+    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let location_uuid = parse_uuid(&req.location_id, "location_id")?;
+    let row = sqlx::query(
+        r#"
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE store_id = $1 AND sku_id = $2 AND location_id = $3
+        FOR UPDATE
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(location_uuid)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+    let (before_on_hand, before_reserved) = if let Some(row) = row {
+        (row.get::<i32, _>("on_hand"), row.get::<i32, _>("reserved"))
+    } else {
+        (0, 0)
+    };
     sqlx::query(
         r#"
-        INSERT INTO inventory_stocks (tenant_id, store_id, location_id, variant_id, stock, reserved)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        ON CONFLICT (variant_id, location_id)
-        DO UPDATE SET stock = EXCLUDED.stock, reserved = EXCLUDED.reserved, updated_at = now()
+        INSERT INTO inventory_stocks (store_id, location_id, sku_id, on_hand, reserved)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (store_id, sku_id, location_id)
+        DO UPDATE SET on_hand = EXCLUDED.on_hand, reserved = EXCLUDED.reserved, updated_at = now()
     "#,
     )
-    .bind(tenant_uuid.as_uuid())
     .bind(store_uuid.as_uuid())
-    .bind(parse_uuid(&req.location_id, "location_id")?)
-    .bind(parse_uuid(&req.variant_id, "variant_id")?)
-    .bind(req.stock)
+    .bind(location_uuid)
+    .bind(sku_uuid)
+    .bind(req.on_hand)
     .bind(req.reserved)
     .execute(tx.as_mut())
     .await
     .map_err(db::error)?;
 
+    if req.on_hand != before_on_hand || req.reserved != before_reserved {
+        let diff_on_hand = req.on_hand - before_on_hand;
+        let diff_reserved = req.reserved - before_reserved;
+        let movement_qty = if diff_on_hand != 0 {
+            diff_on_hand.abs()
+        } else {
+            diff_reserved.abs()
+        };
+        insert_inventory_movement_tx(
+            &mut tx,
+            store_uuid.as_uuid(),
+            sku_uuid,
+            location_uuid,
+            "adjust",
+            movement_qty,
+            before_on_hand,
+            req.on_hand,
+            before_reserved,
+            req.reserved,
+            None,
+            Some("manual"),
+            None,
+            actor_id,
+        )
+        .await?;
+    }
+
     let inventory = pb::InventoryAdmin {
-        variant_id: req.variant_id,
+        sku_id: req.sku_id,
         location_id: req.location_id,
-        stock: req.stock,
+        on_hand: req.on_hand,
         reserved: req.reserved,
+        available: req.on_hand - req.reserved,
         updated_at: None,
     };
 
@@ -2086,7 +2144,7 @@ pub async fn set_inventory(
             Some(store_id.clone()),
             InventoryAuditAction::Set.into(),
             Some("inventory"),
-            Some(inventory.variant_id.clone()),
+            Some(inventory.sku_id.clone()),
             None,
             to_json_opt(Some(inventory.clone())),
             _actor,
@@ -2104,7 +2162,7 @@ pub async fn set_inventory(
         WHERE v.id = $1
         "#,
     )
-    .bind(parse_uuid(&inventory.variant_id, "variant_id")?)
+    .bind(parse_uuid(&inventory.sku_id, "sku_id")?)
     .fetch_one(&state.db)
     .await
     {
@@ -2113,6 +2171,559 @@ pub async fn set_inventory(
     }
 
     Ok(inventory)
+}
+
+pub async fn list_inventory_stocks(
+    state: &AppState,
+    req: pb::ListInventoryStocksRequest,
+) -> Result<(Vec<pb::InventoryAdmin>, pb::PageResult), (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let sku_uuid = if req.sku_id.is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.sku_id, "sku_id")?)
+    };
+    let location_uuid = if req.location_id.is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.location_id, "location_id")?)
+    };
+    let (limit, offset) = inventory_page_params(req.page);
+
+    let mut builder = sqlx::QueryBuilder::new(
+        r#"
+        SELECT sku_id::text as sku_id,
+               location_id::text as location_id,
+               on_hand,
+               reserved,
+               updated_at
+        FROM inventory_stocks
+        WHERE store_id = 
+        "#,
+    );
+    builder.push_bind(store_uuid.as_uuid());
+    if let Some(sku_uuid) = sku_uuid {
+        builder.push(" AND sku_id = ");
+        builder.push_bind(sku_uuid);
+    }
+    if let Some(location_uuid) = location_uuid {
+        builder.push(" AND location_id = ");
+        builder.push_bind(location_uuid);
+    }
+    builder.push(" ORDER BY updated_at DESC, sku_id, location_id");
+    builder.push(" LIMIT ");
+    builder.push_bind(limit);
+    builder.push(" OFFSET ");
+    builder.push_bind(offset);
+
+    let rows = builder
+        .build()
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?;
+
+    let inventories = rows
+        .into_iter()
+        .map(|row| {
+            let on_hand: i32 = row.get("on_hand");
+            let reserved: i32 = row.get("reserved");
+            pb::InventoryAdmin {
+                sku_id: row.get("sku_id"),
+                location_id: row.get("location_id"),
+                on_hand,
+                reserved,
+                available: on_hand - reserved,
+                updated_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("updated_at"))),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let mut next_page_token = String::new();
+    if (inventories.len() as i64) == limit {
+        next_page_token = (offset + limit).to_string();
+    }
+
+    Ok((inventories, pb::PageResult { next_page_token }))
+}
+
+pub async fn list_inventory_movements(
+    state: &AppState,
+    req: pb::ListInventoryMovementsRequest,
+) -> Result<(Vec<pb::InventoryMovement>, pb::PageResult), (StatusCode, Json<ConnectError>)> {
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    let sku_uuid = if req.sku_id.is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.sku_id, "sku_id")?)
+    };
+    let location_uuid = if req.location_id.is_empty() {
+        None
+    } else {
+        Some(parse_uuid(&req.location_id, "location_id")?)
+    };
+    let movement_type = req.movement_type.trim();
+    let (limit, offset) = inventory_page_params(req.page);
+
+    let mut builder = sqlx::QueryBuilder::new(
+        r#"
+        SELECT id::text as id,
+               sku_id::text as sku_id,
+               location_id::text as location_id,
+               movement_type,
+               quantity,
+               before_on_hand,
+               after_on_hand,
+               before_reserved,
+               after_reserved,
+               reason,
+               source_type,
+               source_id::text as source_id,
+               actor_id::text as actor_id,
+               occurred_at
+        FROM inventory_movements
+        WHERE store_id =
+        "#,
+    );
+    builder.push_bind(store_uuid.as_uuid());
+    if let Some(sku_uuid) = sku_uuid {
+        builder.push(" AND sku_id = ");
+        builder.push_bind(sku_uuid);
+    }
+    if let Some(location_uuid) = location_uuid {
+        builder.push(" AND location_id = ");
+        builder.push_bind(location_uuid);
+    }
+    if !movement_type.is_empty() {
+        builder.push(" AND movement_type = ");
+        builder.push_bind(movement_type);
+    }
+    builder.push(" ORDER BY occurred_at DESC, id DESC");
+    builder.push(" LIMIT ");
+    builder.push_bind(limit);
+    builder.push(" OFFSET ");
+    builder.push_bind(offset);
+
+    let rows = builder
+        .build()
+        .fetch_all(&state.db)
+        .await
+        .map_err(db::error)?;
+
+    let movements = rows
+        .into_iter()
+        .map(|row| pb::InventoryMovement {
+            id: row.get("id"),
+            sku_id: row.get("sku_id"),
+            location_id: row.get("location_id"),
+            movement_type: row.get("movement_type"),
+            quantity: row.get("quantity"),
+            before_on_hand: row.get("before_on_hand"),
+            after_on_hand: row.get("after_on_hand"),
+            before_reserved: row.get("before_reserved"),
+            after_reserved: row.get("after_reserved"),
+            reason: row.get::<Option<String>, _>("reason").unwrap_or_default(),
+            source_type: row.get::<Option<String>, _>("source_type").unwrap_or_default(),
+            source_id: row.get::<Option<String>, _>("source_id").unwrap_or_default(),
+            actor_id: row.get::<Option<String>, _>("actor_id").unwrap_or_default(),
+            occurred_at: chrono_to_timestamp(Some(row.get::<chrono::DateTime<Utc>, _>("occurred_at"))),
+        })
+        .collect::<Vec<_>>();
+
+    let mut next_page_token = String::new();
+    if (movements.len() as i64) == limit {
+        next_page_token = (offset + limit).to_string();
+    }
+
+    Ok((movements, pb::PageResult { next_page_token }))
+}
+
+pub async fn adjust_inventory(
+    state: &AppState,
+    req: pb::AdjustInventoryRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<pb::InventoryAdmin, (StatusCode, Json<ConnectError>)> {
+    if req.sku_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sku_id is required".to_string(),
+            }),
+        ));
+    }
+    if req.location_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "location_id is required".to_string(),
+            }),
+        ));
+    }
+    if req.delta == 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "delta must be non-zero".to_string(),
+            }),
+        ));
+    }
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    ensure_variant_belongs_to_store(state, &req.sku_id, &store_id).await?;
+    ensure_location_belongs_to_store(state, &req.location_id, &store_id).await?;
+
+    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let location_uuid = parse_uuid(&req.location_id, "location_id")?;
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+    let row = sqlx::query(
+        r#"
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE store_id = $1 AND sku_id = $2 AND location_id = $3
+        FOR UPDATE
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(location_uuid)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+
+    let (on_hand, reserved) = if let Some(row) = row {
+        (row.get::<i32, _>("on_hand"), row.get::<i32, _>("reserved"))
+    } else {
+        (0, 0)
+    };
+    let new_on_hand = on_hand.saturating_add(req.delta);
+    if new_on_hand < 0 || new_on_hand < reserved {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "inventory would be negative or below reserved".to_string(),
+            }),
+        ));
+    }
+
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_stocks (store_id, sku_id, location_id, on_hand, reserved)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (store_id, sku_id, location_id)
+        DO UPDATE SET on_hand = EXCLUDED.on_hand, updated_at = now()
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(location_uuid)
+    .bind(new_on_hand)
+    .bind(reserved)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+
+    let actor_id = actor_id_from_ctx(&_actor)?;
+    if new_on_hand != on_hand {
+        insert_inventory_movement_tx(
+            &mut tx,
+            store_uuid.as_uuid(),
+            sku_uuid,
+            location_uuid,
+            "adjust",
+            (new_on_hand - on_hand).abs(),
+            on_hand,
+            new_on_hand,
+            reserved,
+            reserved,
+            None,
+            Some("manual"),
+            None,
+            actor_id,
+        )
+        .await?;
+    }
+
+    tx.commit().await.map_err(db::error)?;
+
+    Ok(pb::InventoryAdmin {
+        sku_id: req.sku_id,
+        location_id: req.location_id,
+        on_hand: new_on_hand,
+        reserved,
+        available: new_on_hand - reserved,
+        updated_at: None,
+    })
+}
+
+pub async fn transfer_inventory(
+    state: &AppState,
+    req: pb::TransferInventoryRequest,
+    _actor: Option<pb::ActorContext>,
+) -> Result<pb::TransferInventoryResponse, (StatusCode, Json<ConnectError>)> {
+    if req.sku_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "sku_id is required".to_string(),
+            }),
+        ));
+    }
+    if req.from_location_id.is_empty() || req.to_location_id.is_empty() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "from_location_id and to_location_id are required".to_string(),
+            }),
+        ));
+    }
+    if req.from_location_id == req.to_location_id {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "from_location_id and to_location_id must be different".to_string(),
+            }),
+        ));
+    }
+    if req.quantity <= 0 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "quantity must be positive".to_string(),
+            }),
+        ));
+    }
+    let (store_id, _tenant_id) = resolve_store_context(state, req.store.clone(), req.tenant.clone()).await?;
+    let store_uuid = StoreId::parse(&store_id)?;
+    ensure_variant_belongs_to_store(state, &req.sku_id, &store_id).await?;
+    ensure_location_belongs_to_store(state, &req.from_location_id, &store_id).await?;
+    ensure_location_belongs_to_store(state, &req.to_location_id, &store_id).await?;
+
+    let sku_uuid = parse_uuid(&req.sku_id, "sku_id")?;
+    let from_location_uuid = parse_uuid(&req.from_location_id, "from_location_id")?;
+    let to_location_uuid = parse_uuid(&req.to_location_id, "to_location_id")?;
+
+    let mut tx = state.db.begin().await.map_err(db::error)?;
+
+    let from_row = sqlx::query(
+        r#"
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE store_id = $1 AND sku_id = $2 AND location_id = $3
+        FOR UPDATE
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(from_location_uuid)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+    let (from_on_hand, from_reserved) = if let Some(row) = from_row {
+        (row.get::<i32, _>("on_hand"), row.get::<i32, _>("reserved"))
+    } else {
+        (0, 0)
+    };
+    if from_on_hand - from_reserved < req.quantity {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(ConnectError {
+                code: crate::rpc::json::ErrorCode::InvalidArgument,
+                message: "insufficient available inventory".to_string(),
+            }),
+        ));
+    }
+    let new_from_on_hand = from_on_hand - req.quantity;
+
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_stocks (store_id, sku_id, location_id, on_hand, reserved)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (store_id, sku_id, location_id)
+        DO UPDATE SET on_hand = EXCLUDED.on_hand, updated_at = now()
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(from_location_uuid)
+    .bind(new_from_on_hand)
+    .bind(from_reserved)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+
+    let to_row = sqlx::query(
+        r#"
+        SELECT on_hand, reserved
+        FROM inventory_stocks
+        WHERE store_id = $1 AND sku_id = $2 AND location_id = $3
+        FOR UPDATE
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(to_location_uuid)
+    .fetch_optional(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+    let (to_on_hand, to_reserved) = if let Some(row) = to_row {
+        (row.get::<i32, _>("on_hand"), row.get::<i32, _>("reserved"))
+    } else {
+        (0, 0)
+    };
+    let new_to_on_hand = to_on_hand + req.quantity;
+
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_stocks (store_id, sku_id, location_id, on_hand, reserved)
+        VALUES ($1,$2,$3,$4,$5)
+        ON CONFLICT (store_id, sku_id, location_id)
+        DO UPDATE SET on_hand = EXCLUDED.on_hand, updated_at = now()
+        "#,
+    )
+    .bind(store_uuid.as_uuid())
+    .bind(sku_uuid)
+    .bind(to_location_uuid)
+    .bind(new_to_on_hand)
+    .bind(to_reserved)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+
+    let actor_id = actor_id_from_ctx(&_actor)?;
+    if req.quantity > 0 {
+        insert_inventory_movement_tx(
+            &mut tx,
+            store_uuid.as_uuid(),
+            sku_uuid,
+            from_location_uuid,
+            "transfer_out",
+            req.quantity,
+            from_on_hand,
+            new_from_on_hand,
+            from_reserved,
+            from_reserved,
+            Some("transfer"),
+            None,
+            None,
+            actor_id,
+        )
+        .await?;
+        insert_inventory_movement_tx(
+            &mut tx,
+            store_uuid.as_uuid(),
+            sku_uuid,
+            to_location_uuid,
+            "transfer_in",
+            req.quantity,
+            to_on_hand,
+            new_to_on_hand,
+            to_reserved,
+            to_reserved,
+            Some("transfer"),
+            None,
+            None,
+            actor_id,
+        )
+        .await?;
+    }
+
+    tx.commit().await.map_err(db::error)?;
+
+    Ok(pb::TransferInventoryResponse {
+        from_inventory: Some(pb::InventoryAdmin {
+            sku_id: req.sku_id.clone(),
+            location_id: req.from_location_id,
+            on_hand: new_from_on_hand,
+            reserved: from_reserved,
+            available: new_from_on_hand - from_reserved,
+            updated_at: None,
+        }),
+        to_inventory: Some(pb::InventoryAdmin {
+            sku_id: req.sku_id,
+            location_id: req.to_location_id,
+            on_hand: new_to_on_hand,
+            reserved: to_reserved,
+            available: new_to_on_hand - to_reserved,
+            updated_at: None,
+        }),
+    })
+}
+
+fn inventory_page_params(page: Option<pb::PageInfo>) -> (i64, i64) {
+    let page = page.unwrap_or(pb::PageInfo {
+        page_size: 50,
+        page_token: String::new(),
+    });
+    let limit = (page.page_size.max(1).min(200)) as i64;
+    let offset = page.page_token.parse::<i64>().unwrap_or(0).max(0);
+    (limit, offset)
+}
+
+fn actor_id_from_ctx(
+    actor: &Option<pb::ActorContext>,
+) -> Result<Option<uuid::Uuid>, (StatusCode, Json<ConnectError>)> {
+    let Some(actor) = actor.as_ref() else {
+        return Ok(None);
+    };
+    if actor.actor_id.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(parse_uuid(&actor.actor_id, "actor_id")?))
+}
+
+async fn insert_inventory_movement_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    store_id: uuid::Uuid,
+    sku_id: uuid::Uuid,
+    location_id: uuid::Uuid,
+    movement_type: &str,
+    quantity: i32,
+    before_on_hand: i32,
+    after_on_hand: i32,
+    before_reserved: i32,
+    after_reserved: i32,
+    source_type: Option<&str>,
+    reason: Option<&str>,
+    source_id: Option<uuid::Uuid>,
+    actor_id: Option<uuid::Uuid>,
+) -> Result<(), (StatusCode, Json<ConnectError>)> {
+    sqlx::query(
+        r#"
+        INSERT INTO inventory_movements (
+            store_id, sku_id, location_id, movement_type, quantity,
+            before_on_hand, after_on_hand, before_reserved, after_reserved,
+            reason, source_type, source_id, actor_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+        "#,
+    )
+    .bind(store_id)
+    .bind(sku_id)
+    .bind(location_id)
+    .bind(movement_type)
+    .bind(quantity)
+    .bind(before_on_hand)
+    .bind(after_on_hand)
+    .bind(before_reserved)
+    .bind(after_reserved)
+    .bind(reason)
+    .bind(source_type)
+    .bind(source_id)
+    .bind(actor_id)
+    .execute(tx.as_mut())
+    .await
+    .map_err(db::error)?;
+    Ok(())
 }
 
 async fn fetch_product_admin(

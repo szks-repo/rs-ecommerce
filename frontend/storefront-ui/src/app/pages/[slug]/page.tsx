@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { getPageBySlug, getTenantId } from "@/lib/storefront";
+import { getPageBySlug, getStoreCode, getTenantId } from "@/lib/storefront";
 import type { StorefrontPage } from "@/gen/ecommerce/v1/storefront_pb";
 
 const TENANT_STORAGE_KEY = "storefront_tenant_id";
+const STORE_CODE_STORAGE_KEY = "storefront_store_code";
 
 function escapeHtml(value: string) {
   return value
@@ -49,6 +50,7 @@ export default function StorefrontPageBySlug() {
   }, [params]);
 
   const [tenantId, setTenantId] = useState(getTenantId());
+  const [storeCode, setStoreCode] = useState(getStoreCode());
   const [page, setPage] = useState<StorefrontPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -58,10 +60,18 @@ export default function StorefrontPageBySlug() {
     if (saved) {
       setTenantId(saved);
     }
+    const savedStore = window.localStorage.getItem(STORE_CODE_STORAGE_KEY);
+    if (savedStore) {
+      setStoreCode(savedStore);
+    }
   }, []);
 
   useEffect(() => {
     if (!tenantId || !slug) {
+      return;
+    }
+    if (!storeCode) {
+      setError("store_code is required. Set it on the storefront home page.");
       return;
     }
     setIsLoading(true);

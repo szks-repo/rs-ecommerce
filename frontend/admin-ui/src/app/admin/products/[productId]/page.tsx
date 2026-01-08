@@ -23,6 +23,7 @@ import VariantCreateForm from "@/components/variant-create-form";
 import VariantBulkUpdateForm from "@/components/variant-bulk-update-form";
 import SkuImageManager from "@/components/sku-image-manager";
 import SkuDigitalAssetManager from "@/components/sku-digital-asset-manager";
+import ProductInventoryPanel from "@/components/product-inventory-panel";
 import {
   listProductsAdmin,
   listVariantsAdmin,
@@ -721,6 +722,7 @@ export default function ProductDetailPage() {
 
       {selectedVariant ? (
         <div className="space-y-6">
+          <ProductInventoryPanel skuId={selectedVariant.id} skuLabel={selectedVariant.sku} />
           <SkuImageManager skuId={selectedVariant.id} />
           {selectedVariant.fulfillmentType === "digital" ? (
             <SkuDigitalAssetManager skuId={selectedVariant.id} />
